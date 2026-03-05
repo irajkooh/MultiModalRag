@@ -1,12 +1,12 @@
 ---
 title: Multimodal RAG
-emoji: ⬡
+emoji: 🧠
 colorFrom: green
 colorTo: purple
 sdk: docker
 pinned: false
 license: mit
-short_description: Multimodal RAG — PDFs, scans, tables, charts. Strict answers only.
+short_description: Multimodal RAG — PDFs, scans, tables, charts.
 ---
 
 # ⬡ Multimodal RAG System
