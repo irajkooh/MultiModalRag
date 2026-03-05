@@ -102,7 +102,7 @@ def chat_fn(message, history, n_results):
         yield history, ""
         return
     
-    resp = api_post("/query", json={"question": message, "n_results": n_results})
+    resp = api_post("/query", json={"question": message, "n_results": n_results}, timeout=300)
     if "error" in resp:
         answer = f"⚠️ {resp['error']}"
     else:

@@ -123,10 +123,11 @@ async def upload_document(file: UploadFile = File(...)):
         f.write(content)
     
     try:
-        n_chunks = index_file(str(save_path))
+        import asyncio
+        loop = asyncio.get_event_loop()
+        n_chunks = await loop.run_in_executor(None, index_file, str(save_path))
         return {"message": f"Uploaded and indexed '{file.filename}' ({n_chunks} chunks).", "chunks": n_chunks}
     except Exception as e:
-        # Clean up on failure
         save_path.unlink(missing_ok=True)
         raise HTTPException(500, f"Indexing failed: {str(e)}")
 
@@ -161,17 +162,23 @@ async def reindex_all():
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(req: QueryRequest):
     """Query the RAG system."""
+    import asyncio
     if vs.total_chunks() == 0:
         return QueryResponse(answer="I DON'T KNOW", sources=[])
-    
+
     results = vs.query(req.question, n_results=req.n_results)
     sources = list({r["metadata"].get("source", "") for r in results})
-    
-    answer_parts = []
-    for token in rag.query(req.question, memory, n_results=req.n_results, stream=False):
-        answer_parts.append(token)
-    answer = "".join(answer_parts)
-    
+
+    # Run blocking Ollama call in a thread so the event loop stays free
+    def _run_query():
+        parts = []
+        for token in rag.query(req.question, memory, n_results=req.n_results, stream=False):
+            parts.append(token)
+        return "".join(parts)
+
+    loop = asyncio.get_event_loop()
+    answer = await loop.run_in_executor(None, _run_query)
+
     return QueryResponse(answer=answer, sources=sources)
 
 
