@@ -196,6 +196,16 @@ CUSTOM_CSS = """
 
 * { box-sizing: border-box; }
 
+html, body {
+  height: 100vh !important;
+  overflow: hidden !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: var(--font-mono) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 body, .gradio-container {
   background: var(--bg) !important;
   color: var(--text) !important;
@@ -205,15 +215,19 @@ body, .gradio-container {
 .gradio-container {
   max-width: 1400px !important;
   margin: 0 auto !important;
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+  padding: 4px 10px 6px 10px !important;
 }
 
-/* Remove the default Gradio body top padding that clips content on HF Spaces */
-body, .gradio-container > .main, .gradio-container > div {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-}
+/* Left panel: scroll internally so it never expands the page */
+
+
+/* Row gaps inside Gradio */
+.gap { gap: 6px !important; padding: 0 !important; }
+.form { gap: 4px !important; }
+
+/* Block-level padding */
+.block { overflow: hidden !important; }
+
 
 /* Header */
 .app-header {
@@ -221,25 +235,30 @@ body, .gradio-container > .main, .gradio-container > div {
   border: 1px solid var(--border);
   border-bottom: 2px solid var(--accent);
   border-radius: var(--radius);
-  padding: 16px 24px;
-  margin-bottom: 16px;
+  padding: 6px 16px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .app-header h1 {
   font-family: var(--font-head) !important;
-  font-size: 1.8rem !important;
+  font-size: 1.2rem !important;
   font-weight: 800 !important;
   background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 4px 0 !important;
+  margin: 0 !important;
   letter-spacing: -0.5px;
+  white-space: nowrap;
 }
 
 .app-header p {
   color: var(--text-muted) !important;
   margin: 0 !important;
-  font-size: 0.9rem !important;
+  font-size: 0.78rem !important;
 }
 
 /* Panels */
@@ -247,17 +266,20 @@ body, .gradio-container > .main, .gradio-container > div {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
-  padding: 16px !important;
+  padding: 8px !important;
+  overflow-y: auto !important;
+  max-height: calc(100vh - 80px) !important;
 }
 
 .panel-label {
   font-family: var(--font-head) !important;
-  font-size: 0.75rem !important;
+  font-size: 0.72rem !important;
   font-weight: 700 !important;
   letter-spacing: 2px !important;
   text-transform: uppercase !important;
   color: var(--accent) !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 6px !important;
+  margin-top: 0 !important;
 }
 
 /* Buttons */
@@ -416,8 +438,8 @@ textarea::placeholder, input::placeholder {
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 0.82rem;
+  padding: 5px 10px;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
@@ -498,19 +520,23 @@ input[type="range"] {
   background: var(--surface2) !important;
 }
 
-/* Sample questions */
-.sample-questions-wrap {
-  margin-top: 10px;
+/* Sample questions accordion */
+.sample-accordion {
+  margin: 2px 0 4px 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: var(--surface2) !important;
 }
-
-.sample-q-label {
+.sample-accordion > .label-wrap {
+  padding: 4px 10px !important;
+  min-height: 28px !important;
+}
+.sample-accordion > .label-wrap span {
   font-size: 0.72rem !important;
   font-weight: 700 !important;
   letter-spacing: 2px !important;
   text-transform: uppercase !important;
   color: var(--text-muted) !important;
-  margin-bottom: 8px !important;
-  display: block;
 }
 
 .sample-q-grid {
@@ -524,16 +550,16 @@ input[type="range"] {
   border: 1px solid var(--border) !important;
   color: var(--text) !important;
   border-radius: 8px !important;
-  padding: 8px 10px !important;
+  padding: 4px 8px !important;
   font-family: var(--font-mono) !important;
-  font-size: 0.78rem !important;
+  font-size: 0.72rem !important;
   text-align: left !important;
   cursor: pointer !important;
   transition: all 0.18s ease !important;
-  line-height: 1.35 !important;
+  line-height: 1.3 !important;
   white-space: normal !important;
   height: auto !important;
-  min-height: 52px !important;
+  min-height: 36px !important;
 }
 
 .sample-q-btn:hover:not(:disabled) {
@@ -616,38 +642,32 @@ def build_ui():
                     delete_status = gr.HTML(value=_status_html(""))
 
             # ── Right Panel: Chat ───────────────────────────────────────────
-            with gr.Column(scale=2):
+            with gr.Column(scale=2, elem_id="chat-col"):
                 gr.HTML('<div class="panel-label">💬 Document Q&A</div>')
 
-                # ── Sample Questions ──────────────────────────────────────
-                gr.HTML('''
-                <div class="sample-questions-wrap">
-                  <span class="sample-q-label">✦ Try a sample question</span>
-                </div>
-                ''')
-
-                # Build 3-column grid of sample question buttons
+                # ── Sample Questions (collapsed by default to save space) ────
                 sample_btns = []
-                with gr.Row(elem_classes="sample-q-grid"):
-                    for col_idx in range(3):
-                        with gr.Column(scale=1, min_width=0):
-                            col_btns = []
-                            for row_idx in range(3):
-                                idx = row_idx * 3 + col_idx
-                                if idx < len(SAMPLE_QUESTIONS):
-                                    label, question = SAMPLE_QUESTIONS[idx]
-                                    btn = gr.Button(
-                                        f"{label}\n{question}",
-                                        elem_classes="sample-q-btn",
-                                        interactive=False,
-                                        size="sm",
-                                    )
-                                    col_btns.append((btn, question))
-                            sample_btns.extend(col_btns)
+                with gr.Accordion("✦ Sample questions", open=False, elem_classes="sample-accordion"):
+                    with gr.Row(elem_classes="sample-q-grid"):
+                        for col_idx in range(3):
+                            with gr.Column(scale=1, min_width=0):
+                                col_btns = []
+                                for row_idx in range(3):
+                                    idx = row_idx * 3 + col_idx
+                                    if idx < len(SAMPLE_QUESTIONS):
+                                        label, question = SAMPLE_QUESTIONS[idx]
+                                        btn = gr.Button(
+                                            f"{label}\n{question}",
+                                            elem_classes="sample-q-btn",
+                                            interactive=False,
+                                            size="sm",
+                                        )
+                                        col_btns.append((btn, question))
+                                sample_btns.extend(col_btns)
 
                 chatbot = gr.Chatbot(
                     label="",
-                    height=320,
+                    height=460,
                     bubble_full_width=False,
                     show_label=False,
                     elem_id="rag-chatbot",
@@ -708,8 +728,10 @@ def build_ui():
                 </script>
                 ''')
 
+
+
                 # ── Input row ────────────────────────────────────────────
-                with gr.Row():
+                with gr.Row(elem_id="input-row"):
                     msg_input = gr.Textbox(
                         placeholder="Ask a question about your documents...",
                         label="",
@@ -724,7 +746,7 @@ def build_ui():
                         interactive=False,
                     )
                 
-                with gr.Row():
+                with gr.Row(elem_id="controls-row"):
                     with gr.Column(scale=3, min_width=0):
                         gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K — Context chunks to retrieve</div>')
                         n_results_slider = gr.Slider(
