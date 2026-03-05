@@ -1,0 +1,75 @@
+"""
+HuggingFace Spaces entrypoint.
+
+Starts FastAPI (port 8000, internal) in a background thread,
+waits for it to be healthy, then launches Gradio on port 7860 (public).
+
+This file intentionally omits the local-only helpers in main.py
+(port killing, webbrowser.open, coloured terminal output).
+"""
+import threading
+import time
+import logging
+import asyncio
+
+import uvicorn
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+# ─── FastAPI background thread ────────────────────────────────────────────────
+
+def run_api():
+    uvicorn.run(
+        "api:app",
+        host="0.0.0.0",
+        port=8000,
+        log_level="warning",
+        reload=False,
+    )
+
+
+def wait_for_api(max_wait: int = 60) -> bool:
+    import requests
+    for _ in range(max_wait):
+        try:
+            r = requests.get("http://localhost:8000/status", timeout=2)
+            if r.status_code == 200:
+                logger.info("FastAPI is ready.")
+                return True
+        except Exception:
+            pass
+        time.sleep(1)
+    logger.warning("FastAPI did not become ready in time — continuing anyway.")
+    return False
+
+
+# ─── Start FastAPI ────────────────────────────────────────────────────────────
+
+api_thread = threading.Thread(target=run_api, daemon=True)
+api_thread.start()
+logger.info("Waiting for FastAPI backend...")
+wait_for_api()
+
+# ─── Ensure asyncio event loop (Gradio queue requirement) ─────────────────────
+
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
+# ─── Launch Gradio ────────────────────────────────────────────────────────────
+
+from app import build_ui  # noqa: E402
+
+ui = build_ui()
+ui.launch(
+    server_name="0.0.0.0",
+    server_port=7860,
+    show_error=True,
+    share=False,
+)
