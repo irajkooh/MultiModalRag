@@ -154,7 +154,7 @@ def get_memory_stats():
     return (
         f"💬 Messages: {stats.get('message_count', 0)} | "
         f"🔢 Tokens: {stats.get('total_tokens', 0)}/{stats.get('max_tokens', 2000)} | "
-        f"📝 Summarized: {'Yes' if stats.get('has_summary') else 'No'}"
+        f"📝 Ctx summarized: {'Yes' if stats.get('has_summary') else 'No'}"
     )
 
 
@@ -510,7 +510,7 @@ input[type="range"] {
 [data-testid="slider"] input[type="number"],
 [data-testid="slider"] .wrap span,
 [data-testid="slider"] > div > span {
-  color: #000000 !important;
+  color: #ffffff !important;
   background: transparent !important;
 }
 
@@ -518,6 +518,21 @@ input[type="range"] {
 [data-testid="slider"] > div,
 [data-testid="slider"] .wrap {
   background: var(--surface2) !important;
+}
+
+/* Chatbot processing status ("processing | 18.5s") */
+#rag-chatbot .status,
+#rag-chatbot .pending,
+#rag-chatbot .generating,
+#rag-chatbot [class*="status"],
+#rag-chatbot [class*="pending"],
+[data-testid="chatbot"] .status,
+[data-testid="chatbot"] .pending,
+[data-testid="chatbot"] [class*="status"],
+[data-testid="chatbot"] [class*="pending"],
+[data-testid="chatbot"] + div,
+[data-testid="chatbot"] ~ div {
+  color: #ffffff !important;
 }
 
 /* Sample questions accordion */
