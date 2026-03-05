@@ -205,6 +205,14 @@ body, .gradio-container {
 .gradio-container {
   max-width: 1400px !important;
   margin: 0 auto !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Remove the default Gradio body top padding that clips content on HF Spaces */
+body, .gradio-container > .main, .gradio-container > div {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 
 /* Header */
@@ -213,18 +221,18 @@ body, .gradio-container {
   border: 1px solid var(--border);
   border-bottom: 2px solid var(--accent);
   border-radius: var(--radius);
-  padding: 28px 32px;
-  margin-bottom: 20px;
+  padding: 16px 24px;
+  margin-bottom: 16px;
 }
 
 .app-header h1 {
   font-family: var(--font-head) !important;
-  font-size: 2.2rem !important;
+  font-size: 1.8rem !important;
   font-weight: 800 !important;
   background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 4px 0 !important;
   letter-spacing: -0.5px;
 }
 
@@ -564,8 +572,7 @@ def build_ui():
         # Header
         gr.HTML("""
         <div class="app-header">
-          <h1>⬡ MULTIMODAL RAG</h1>
-          <p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama + ChromaDB.</p>
+          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama + ChromaDB.</p>
         </div>
         """)
 
@@ -579,8 +586,6 @@ def build_ui():
                         value="⏳ Loading...",
                         elem_classes="status-bar",
                     )
-                    
-                    gr.HTML('<div style="height:12px"></div>')
                     
                     file_upload = gr.File(
                         label="Upload Documents",
@@ -640,11 +645,9 @@ def build_ui():
                                     col_btns.append((btn, question))
                             sample_btns.extend(col_btns)
 
-                gr.HTML('<div style="height:10px"></div>')
-
                 chatbot = gr.Chatbot(
                     label="",
-                    height=540,
+                    height=320,
                     bubble_full_width=False,
                     show_label=False,
                     elem_id="rag-chatbot",
