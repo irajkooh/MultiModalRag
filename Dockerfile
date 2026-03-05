@@ -7,6 +7,7 @@ FROM python:3.11-slim
 # curl           → Ollama installer + health checks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    zstd \
     poppler-utils \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
