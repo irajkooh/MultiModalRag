@@ -938,15 +938,18 @@ def build_ui():
             zones.forEach(function(zone) {
               zone.style.setProperty('background', DARK_BG, 'important');
               zone.style.setProperty('color', LIGHT_FG, 'important');
-              /* every child */
+              /* unconditionally darken every child */
               zone.querySelectorAll('*').forEach(function(el) {
-                var bg = window.getComputedStyle(el).backgroundColor;
-                /* if background is white or near-white, darken it */
-                if (bg === 'rgb(255, 255, 255)' || bg === 'rgba(255, 255, 255, 1)'
-                    || bg === 'rgb(249, 250, 251)' || bg === 'rgb(243, 244, 246)') {
+                el.style.setProperty('color', LIGHT_FG, 'important');
+                /* skip elements that are icons/svgs */
+                if (el.tagName !== 'svg' && el.tagName !== 'path' && el.tagName !== 'BUTTON') {
                   el.style.setProperty('background', DARK_BG2, 'important');
-                  el.style.setProperty('color', LIGHT_FG, 'important');
                 }
+              });
+              /* keep buttons readable */
+              zone.querySelectorAll('button').forEach(function(btn) {
+                btn.style.setProperty('background', '#2a3050', 'important');
+                btn.style.setProperty('color', LIGHT_FG, 'important');
               });
             });
 
@@ -954,19 +957,17 @@ def build_ui():
             root.querySelectorAll(
               'textarea, input[type="text"], input[type="number"], [data-testid="textbox"] *'
             ).forEach(function(el) {
-              var bg = window.getComputedStyle(el).backgroundColor;
-              if (bg === 'rgb(255, 255, 255)' || bg === 'rgba(255, 255, 255, 1)') {
-                el.style.setProperty('background', DARK_BG, 'important');
-                el.style.setProperty('color', LIGHT_FG, 'important');
-              }
+              el.style.setProperty('background', DARK_BG, 'important');
+              el.style.setProperty('color', LIGHT_FG, 'important');
             });
           }
 
           function run() { fixFileComponent(document); }
 
           /* Run once after initial render */
-          setTimeout(run, 500);
-          setTimeout(run, 1500);
+          setTimeout(run, 300);
+          setTimeout(run, 800);
+          setTimeout(run, 2000);
 
           /* Watch for dynamic DOM changes (file chips added after picking files) */
           var obs = new MutationObserver(function(mutations) {
