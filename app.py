@@ -552,17 +552,6 @@ textarea::placeholder, input::placeholder {
 
 /* ── Fixed-size Documents tab — prevent layout shifts ──────────── */
 
-/* Lock file upload zone to a strict height regardless of selection state */
-#file-upload,
-#file-upload .wrap,
-#file-upload > div,
-[data-testid="file"]#file-upload {
-  height: 60px !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
-  overflow: hidden !important;
-}
-
 /* Status boxes: strictly fixed height — no layout shift on content change */
 #upload-status,
 #delete-status {
@@ -946,16 +935,15 @@ def build_ui():
                 )
 
                 gr.HTML('<div class="panel-label" style="margin-top:12px">⬆ Upload Documents</div>')
-                file_upload = gr.File(
-                    label="",
+                file_upload = gr.UploadButton(
+                    label="⬆ Click or Drop Files to Upload & Index",
                     file_count="multiple",
                     file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff",
                                 ".docx", ".xlsx", ".csv", ".txt"],
-                    interactive=True,
-                    height=60,
+                    elem_classes="primary-btn",
                     elem_id="file-upload",
+                    size="sm",
                 )
-                upload_btn = gr.Button("⬆ Upload & Index", elem_classes="primary-btn", size="sm")
                 gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:6px;margin-bottom:2px;letter-spacing:1px;">UPLOAD STATUS</div>')
                 upload_status = gr.HTML(value=_status_html(""), elem_id="upload-status")
 
@@ -1155,14 +1143,13 @@ def build_ui():
                 *sample_updates,
             )
 
-        upload_btn.click(
+        file_upload.upload(
             fn=lambda files: (
                 _status_html(upload_files(files)[0]),
                 *refresh_and_update_samples(),
-                gr.update(value=None),
             ),
             inputs=[file_upload],
-            outputs=[upload_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components, file_upload],
+            outputs=[upload_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         delete_btn.click(
