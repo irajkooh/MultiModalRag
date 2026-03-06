@@ -1,7 +1,6 @@
 fastapi==0.115.0
 uvicorn==0.30.6
 gradio==6.8.0
-audioop-lts==0.2.2
 chromadb==1.5.2
 ollama==0.6.1
 pypdf==4.3.1
