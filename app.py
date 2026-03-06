@@ -994,7 +994,7 @@ def build_ui():
 
                 chatbot = gr.Chatbot(
                     label="",
-                    height=280,
+                    height=360,
                     layout="bubble",
                     show_label=False,
                     elem_id="rag-chatbot",
