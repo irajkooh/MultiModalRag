@@ -827,10 +827,10 @@ def build_ui():
         </style>
         """)
 
-        with gr.Tabs(selected=1):
+        with gr.Tabs(selected="chat"):
 
             # ── TAB 1 — Documents ──────────────────────────────────────────
-            with gr.Tab("📁 Documents"):
+            with gr.Tab("📁 Documents", id="documents"):
 
                 status_text = gr.Markdown(
                     value="⏳ Loading...",
@@ -869,7 +869,7 @@ def build_ui():
                 delete_status = gr.HTML(value=_status_html(""), elem_id="delete-status")
 
             # ── TAB 2 — Chat ───────────────────────────────────────────────
-            with gr.Tab("💬 Chat"):
+            with gr.Tab("💬 Chat", id="chat"):
 
                 sample_btns = []
                 with gr.Accordion("✦ Sample questions", open=False, elem_classes="sample-accordion"):
