@@ -873,42 +873,35 @@ def build_ui():
         </style>
         <script>
         (function() {
-          var DARK_BG  = '#1c2030';
-          var DARK_BG2 = '#242a3d';
-          var LIGHT_FG = '#e8eaf0';
+          /* Inject a persistent global stylesheet into <head>.
+             This is NOT scoped by Svelte and survives component re-renders. */
+          function injectGlobalStyle() {
+            if (document.getElementById('rag-global-fix')) return;
+            var s = document.createElement('style');
+            s.id = 'rag-global-fix';
+            s.textContent = [
+              /* ---- file upload widget: black text on light bg ---- */
+              '[data-testid="file"] *,',
+              '[data-testid="file"] ul li,',
+              '[data-testid="file"] ul li span,',
+              '[data-testid="file"] ul li div,',
+              '[data-testid="file"] table td,',
+              '[data-testid="file"] table span { color: #111111 !important; }',
 
-          function fixFileComponent(root) {
-            /* File upload widget — force black text on all children */
-            var zones = root.querySelectorAll('[data-testid="file"]');
-            zones.forEach(function(zone) {
-              zone.querySelectorAll('*').forEach(function(el) {
-                el.style.setProperty('color', '#111111', 'important');
-              });
-            });
-
-            /* All textboxes / inputs / textareas */
-            root.querySelectorAll(
-              'textarea, input[type="text"], input[type="number"], [data-testid="textbox"] *'
-            ).forEach(function(el) {
-              el.style.setProperty('background', '#1c2030', 'important');
-              el.style.setProperty('color', '#e8eaf0', 'important');
-            });
+              /* ---- textboxes: light text on dark bg ---- */
+              'textarea,',
+              'input[type="text"],',
+              'input[type="number"],',
+              '[data-testid="textbox"] textarea,',
+              '[data-testid="textbox"] input { background: #1c2030 !important; color: #e8eaf0 !important; }',
+            ].join('\n');
+            document.head.appendChild(s);
           }
 
-          function run() { fixFileComponent(document); }
-
-          /* Run once after initial render */
-          setTimeout(run, 300);
-          setTimeout(run, 800);
-          setTimeout(run, 2000);
-
-          /* Watch for dynamic DOM changes (file chips added after picking files) */
-          var obs = new MutationObserver(function(mutations) {
-            for (var i = 0; i < mutations.length; i++) {
-              if (mutations[i].addedNodes.length) { run(); break; }
-            }
-          });
-          obs.observe(document.body, { childList: true, subtree: true });
+          /* Run immediately and after a short delay to ensure <head> exists */
+          if (document.head) { injectGlobalStyle(); }
+          else { document.addEventListener('DOMContentLoaded', injectGlobalStyle); }
+          setTimeout(injectGlobalStyle, 500);
         })();
         </script>
         """)
