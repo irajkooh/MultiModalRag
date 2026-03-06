@@ -25,6 +25,7 @@ pandas==2.2.3
 # torch is pre-installed CPU-only in the Dockerfile RUN step above
 torch>=2.1.0
 numpy>=1.24.0
+transformers==4.49.0
 sentence-transformers==5.2.3
 
 # (no langchain packages needed — app uses chromadb and ollama directly)
