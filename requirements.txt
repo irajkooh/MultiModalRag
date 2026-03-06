@@ -1,8 +1,9 @@
 fastapi==0.115.0
 uvicorn==0.30.6
-gradio==4.44.1
-chromadb==0.5.15
-ollama==0.3.3
+gradio==6.8.0
+audioop-lts==0.2.2
+chromadb==1.5.2
+ollama==0.6.1
 pypdf==4.3.1
 pdf2image==1.17.0
 pytesseract==0.3.13
@@ -16,7 +17,7 @@ numpy==1.26.4
 # For CUDA: pip install torch==2.3.0+cu121 --index-url https://download.pytorch.org/whl/cu121
 # For CPU-only: pip install torch==2.3.0+cpu --index-url https://download.pytorch.org/whl/cpu
 torch>=2.1.0
-sentence-transformers==3.1.1
+sentence-transformers==5.2.3
 langchain==0.3.1
 langchain-community==0.3.1
 langchain-chroma==0.1.4

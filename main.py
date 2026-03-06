@@ -118,7 +118,7 @@ if __name__ == "__main__":
     logger.info("Waiting for FastAPI to start...")
     wait_for_api()
     print(f"{YELLOW}FastAPI backend started on port 8000 --> open http://localhost:8000/docs{RESET}")
-    webbrowser.open("http://localhost:8000/docs")
+    # webbrowser.open("http://localhost:8000/docs")
 
     # Launch Gradio UI
     # Ensure an asyncio event loop exists in the main thread before building
@@ -126,11 +126,12 @@ if __name__ == "__main__":
     # asyncio.get_event_loop() raises RuntimeError (Python 3.10+ behaviour).
     import asyncio
     try:
-        asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-    from app import build_ui
+    from app import build_ui, CUSTOM_CSS
     ui = build_ui()
 
     # Open Gradio UI in browser once the server is up
@@ -146,5 +147,6 @@ if __name__ == "__main__":
         server_port=7860,
         show_error=True,
         share=False,
+        css=CUSTOM_CSS,
     )
     

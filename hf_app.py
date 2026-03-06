@@ -58,13 +58,14 @@ wait_for_api()
 # ─── Ensure asyncio event loop (Gradio queue requirement) ─────────────────────
 
 try:
-    asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
 # ─── Launch Gradio ────────────────────────────────────────────────────────────
 
-from app import build_ui  # noqa: E402
+from app import build_ui, CUSTOM_CSS  # noqa: E402
 
 ui = build_ui()
 ui.launch(
@@ -72,4 +73,5 @@ ui.launch(
     server_port=7860,
     show_error=True,
     share=False,
+    css=CUSTOM_CSS,
 )

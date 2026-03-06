@@ -111,14 +111,15 @@ def chat_fn(message, history, n_results):
         if sources:
             answer += f"\n\n📄 *Sources: {', '.join(sources)}*"
 
-    history = history or []
-    history.append((message, ""))
-    
+    history = list(history) if history else []
+    history.append({"role": "user", "content": message})
+    history.append({"role": "assistant", "content": ""})
+
     # Simulate streaming for better UX
     displayed = ""
     for char in answer:
         displayed += char
-        history[-1] = (message, displayed)
+        history[-1] = {"role": "assistant", "content": displayed}
         yield history, ""
         time.sleep(0.005)
     
@@ -197,8 +198,6 @@ CUSTOM_CSS = """
 * { box-sizing: border-box; }
 
 html, body {
-  height: 100vh !important;
-  overflow: hidden !important;
   background: var(--bg) !important;
   color: var(--text) !important;
   font-family: var(--font-mono) !important;
@@ -213,20 +212,43 @@ body, .gradio-container {
 }
 
 .gradio-container {
-  max-width: 1400px !important;
+  max-width: 860px !important;
   margin: 0 auto !important;
-  padding: 4px 10px 6px 10px !important;
+  padding: 8px 16px 24px 16px !important;
 }
 
-/* Left panel: scroll internally so it never expands the page */
-
-
-/* Row gaps inside Gradio */
+/* Row/form gaps */
 .gap { gap: 6px !important; padding: 0 !important; }
 .form { gap: 4px !important; }
+.block { overflow: visible !important; }
 
-/* Block-level padding */
-.block { overflow: hidden !important; }
+/* Tab bar */
+.tab-nav {
+  border-bottom: 2px solid var(--border) !important;
+  margin-bottom: 14px !important;
+}
+.tab-nav button {
+  font-family: var(--font-head) !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: #ffffff !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  padding: 8px 22px !important;
+  margin-bottom: -2px !important;
+  transition: all 0.2s !important;
+}
+.tab-nav button.selected {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.tab-nav button:hover:not(.selected) {
+  color: var(--accent) !important;
+}
+
 
 
 /* Header */
@@ -405,31 +427,52 @@ textarea::placeholder, input::placeholder {
 .chatbot-wrap > div,
 .chatbot-wrap .wrap,
 .chatbot-wrap .bubble-wrap,
+.chatbot-wrap .message-wrap,
 [data-testid="chatbot"],
-[data-testid="chatbot"] > div {
+[data-testid="chatbot"] > div,
+[data-testid="chatbot"] .wrap {
   background: #1c2030 !important;
+  border: none !important;
 }
 
-/* Chatbot */
-.chatbot-wrap .message-bubble-border {
-  border-radius: 10px !important;
+/* ── Nuclear border removal: strip every border/outline/shadow
+   from every element inside the chatbot ────────────────────── */
+#rag-chatbot *,
+.chatbot-wrap *,
+[data-testid="chatbot"] * {
+  border: none !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-.chatbot-wrap [data-testid="bot"] {
+/* Chatbot bubble backgrounds & colours */
+.chatbot-wrap [data-testid="bot"],
+#rag-chatbot [data-testid="bot"] {
   background: #242a3d !important;
-  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
   color: #ffffff !important;
 }
 
-.chatbot-wrap [data-testid="user"] {
+.chatbot-wrap [data-testid="user"],
+#rag-chatbot [data-testid="user"] {
   background: linear-gradient(135deg, #1a2545 0%, #1c1a35 100%) !important;
-  border: 1px solid #2a3560 !important;
+  border-radius: 10px !important;
+  color: #ffed00 !important;
+  font-weight: 700 !important;
+}
+
+.chatbot-wrap [data-testid="bot"] * {
   color: #ffffff !important;
 }
 
-.chatbot-wrap [data-testid="bot"] *,
+.chatbot-wrap [data-testid="user"],
 .chatbot-wrap [data-testid="user"] * {
-  color: #ffffff !important;
+  color: #ffed00 !important;
+  font-weight: 700 !important;
 }
 
 /* Status bar */
@@ -489,7 +532,7 @@ textarea::placeholder, input::placeholder {
   font-family: var(--font-head) !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px !important;
-  color: var(--text-muted) !important;
+  color: #ffffff !important;
   background: transparent !important;
   border-bottom: 2px solid transparent !important;
 }
@@ -497,6 +540,50 @@ textarea::placeholder, input::placeholder {
 .tab-nav button.selected {
   color: var(--accent) !important;
   border-bottom-color: var(--accent) !important;
+}
+
+/* ── Fixed-size Documents tab — prevent layout shifts ──────────── */
+
+/* Lock file upload zone to a strict height regardless of selection state */
+#file-upload,
+#file-upload .wrap,
+#file-upload > div,
+[data-testid="file"]#file-upload {
+  height: 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  overflow: hidden !important;
+}
+
+/* Status boxes: strictly fixed height — no layout shift on content change */
+#upload-status,
+#delete-status {
+  height: 62px !important;
+  min-height: 62px !important;
+  max-height: 62px !important;
+  overflow: hidden !important;
+  overflow-y: auto !important;
+  flex-shrink: 0 !important;
+  contain: strict !important;
+}
+#upload-status > *,
+#delete-status > * {
+  min-height: unset !important;
+  max-height: 62px !important;
+  overflow: hidden !important;
+}
+#upload-status > * > *,
+#delete-status > * > * {
+  min-height: unset !important;
+  overflow: hidden !important;
+}
+
+/* Doc list: fixed height so adding entries doesn't push buttons down */
+.doc-list {
+  min-height: 120px !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  flex-shrink: 0 !important;
 }
 
 /* Slider */
@@ -507,11 +594,18 @@ input[type="range"] {
 /* Slider label and value */
 [data-testid="slider"] label,
 [data-testid="slider"] span,
-[data-testid="slider"] input[type="number"],
 [data-testid="slider"] .wrap span,
 [data-testid="slider"] > div > span {
-  color: #ffffff !important;
+  color: #e8eaf0 !important;
   background: transparent !important;
+}
+
+/* Slider number input — must have explicit light text or it disappears */
+[data-testid="slider"] input[type="number"] {
+  color: #ffffff !important;
+  background: #242a3d !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
 }
 
 [data-testid="slider"],
@@ -533,6 +627,90 @@ input[type="range"] {
 [data-testid="chatbot"] + div,
 [data-testid="chatbot"] ~ div {
   color: #ffffff !important;
+}
+
+/* ── Smaller text inside chat bubbles ──────────────────────────── */
+.chatbot-wrap [data-testid="bot"],
+.chatbot-wrap [data-testid="user"] {
+  font-size: 0.82rem !important;
+  line-height: 1.55 !important;
+}
+.chatbot-wrap [data-testid="bot"] p,
+.chatbot-wrap [data-testid="bot"] li,
+.chatbot-wrap [data-testid="bot"] span,
+.chatbot-wrap [data-testid="user"] p,
+.chatbot-wrap [data-testid="user"] li,
+.chatbot-wrap [data-testid="user"] span,
+.chatbot-wrap .message,
+.chatbot-wrap .message * {
+  font-size: 0.82rem !important;
+  line-height: 1.55 !important;
+}
+
+/* ── Global label / component-title contrast fixes ─────────────── */
+
+/* All block labels visible against dark surface */
+.block > label > span,
+.block .label-wrap > span,
+.block .label-wrap span,
+.block label span,
+fieldset legend,
+fieldset > div > span,
+.wrap > span,
+.form > div > label span {
+  color: #e8eaf0 !important;
+  background: transparent !important;
+}
+
+/* Markdown blocks — ensure prose text is visible */
+.prose, .prose p, .prose li, .prose span,
+.md p, .md li, .md span,
+[data-testid="markdown"] p,
+[data-testid="markdown"] span,
+[data-testid="markdown"] li,
+[data-testid="markdown"] div {
+  color: #e8eaf0 !important;
+}
+
+/* status-bar markdown inner text */
+.status-bar p, .status-bar span, .status-bar div,
+.status-bar .prose, .status-bar .prose p {
+  color: var(--text-muted) !important;
+  background: transparent !important;
+}
+
+/* Accordion label contrast */
+.sample-accordion .label-wrap span,
+.sample-accordion summary span,
+.sample-accordion > button span {
+  color: #c0c4d0 !important;
+}
+
+/* File upload inner text (drop zone description & file names) */
+[data-testid="file"] .wrap > span,
+[data-testid="file"] .file-preview span,
+[data-testid="file"] .file-name,
+[data-testid="file"] button span,
+[data-testid="file"] .upload-container span,
+[data-testid="file"] .upload-container p,
+[data-testid="file"] .upload-container div,
+[data-testid="file"] .label-wrap span {
+  color: #e8eaf0 !important;
+  background: transparent !important;
+}
+
+/* Textbox label / wrapper bg fix */
+[data-testid="textbox"] .label-wrap span {
+  color: #e8eaf0 !important;
+  background: transparent !important;
+}
+
+/* Radio group: label text must not be invisible on dark bg */
+[data-testid="radio"] label span,
+[data-testid="radio"] span.svelte-1p9xokt,
+.doc-list [data-testid="radio"] input + span {
+  color: #e8eaf0 !important;
+  background: transparent !important;
 }
 
 /* Sample questions accordion */
@@ -608,7 +786,7 @@ input[type="range"] {
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(css=CUSTOM_CSS, title="Multimodal RAG") as demo:
+    with gr.Blocks(title="Multimodal RAG") as demo:
         
         # Header
         gr.HTML("""
@@ -617,50 +795,74 @@ def build_ui():
         </div>
         """)
 
-        with gr.Row(equal_height=False):
-            # ── Left Panel: Document Management ────────────────────────────
-            with gr.Column(scale=1, min_width=300):
-                gr.HTML('<div class="panel-label">📁 Document Manager</div>')
-                
-                with gr.Group(elem_classes="panel-box"):
-                    status_text = gr.Markdown(
-                        value="⏳ Loading...",
-                        elem_classes="status-bar",
-                    )
-                    
-                    file_upload = gr.File(
-                        label="Upload Documents",
-                        file_count="multiple",
-                        file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff",
-                                    ".docx", ".xlsx", ".csv", ".txt"],
-                        interactive=True,
-                    )
-                    upload_btn = gr.Button("⬆ Upload & Index", elem_classes="primary-btn")
-                    gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">UPLOAD STATUS</div>')
-                    upload_status = gr.HTML(value=_status_html(""))
-                    
-                    gr.HTML('<hr style="border-color:#2a2f40; margin:16px 0">')
-                    gr.HTML('<div class="panel-label" style="margin-top:4px">🗂 Indexed Documents</div>')
-                    
-                    doc_list = gr.Radio(
-                        choices=[],
-                        label="",
-                        elem_classes="doc-list",
-                        interactive=True,
-                    )
-                    
-                    with gr.Row():
-                        delete_btn = gr.Button("🗑 Remove", elem_classes="danger-btn")
-                        refresh_btn = gr.Button("↻ Refresh", elem_classes="secondary-btn")
-                    
-                    gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
-                    delete_status = gr.HTML(value=_status_html(""))
+        # Global inline overrides — beat Gradio 6 Svelte-scoped styles
+        gr.HTML("""
+        <style>
+          /* Tab labels: always white; accent when selected */
+          .tab-nav button,
+          div[role="tablist"] button,
+          button[role="tab"] {
+            color: #ffffff !important;
+            opacity: 1 !important;
+          }
+          .tab-nav button.selected,
+          div[role="tablist"] button[aria-selected="true"],
+          button[role="tab"][aria-selected="true"] {
+            color: #4fffb0 !important;
+            border-bottom-color: #4fffb0 !important;
+          }
+          .tab-nav button:hover,
+          div[role="tablist"] button:hover,
+          button[role="tab"]:hover {
+            color: #4fffb0 !important;
+          }
+        </style>
+        """)
 
-            # ── Right Panel: Chat ───────────────────────────────────────────
-            with gr.Column(scale=2, elem_id="chat-col"):
-                gr.HTML('<div class="panel-label">💬 Document Q&A</div>')
+        with gr.Tabs():
 
-                # ── Sample Questions (collapsed by default to save space) ────
+            # ── TAB 1 — Documents ──────────────────────────────────────────
+            with gr.Tab("📁 Documents"):
+
+                status_text = gr.Markdown(
+                    value="⏳ Loading...",
+                    elem_classes="status-bar",
+                )
+
+                gr.HTML('<div class="panel-label" style="margin-top:12px">⬆ Upload Documents</div>')
+                file_upload = gr.File(
+                    label="",
+                    file_count="multiple",
+                    file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff",
+                                ".docx", ".xlsx", ".csv", ".txt"],
+                    interactive=True,
+                    height=120,
+                    elem_id="file-upload",
+                )
+                upload_btn = gr.Button("⬆ Upload & Index", elem_classes="primary-btn", size="sm")
+                gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:6px;margin-bottom:2px;letter-spacing:1px;">UPLOAD STATUS</div>')
+                upload_status = gr.HTML(value=_status_html(""), elem_id="upload-status")
+
+                gr.HTML('<hr style="border-color:#2a2f40; margin:16px 0">')
+                gr.HTML('<div class="panel-label">🗂 Indexed Documents</div>')
+
+                doc_list = gr.Radio(
+                    choices=[],
+                    label="",
+                    elem_classes="doc-list",
+                    interactive=True,
+                )
+
+                with gr.Row():
+                    delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn", size="sm")
+                    refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn", size="sm")
+
+                gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
+                delete_status = gr.HTML(value=_status_html(""), elem_id="delete-status")
+
+            # ── TAB 2 — Chat ───────────────────────────────────────────────
+            with gr.Tab("💬 Chat"):
+
                 sample_btns = []
                 with gr.Accordion("✦ Sample questions", open=False, elem_classes="sample-accordion"):
                     with gr.Row(elem_classes="sample-q-grid"):
@@ -683,70 +885,99 @@ def build_ui():
                 chatbot = gr.Chatbot(
                     label="",
                     height=460,
-                    bubble_full_width=False,
+                    layout="bubble",
                     show_label=False,
                     elem_id="rag-chatbot",
                     elem_classes="chatbot-wrap",
-                    show_copy_button=True,
-                    show_copy_all_button=True,
+                    buttons=["copy", "copy_all"],
                 )
 
-                # Auto-scroll after each DOM update
+                # Inline style override — wins over Gradio 6 Svelte-scoped styles
+                gr.HTML('''
+                <style>
+                  /* strip every border/shadow from every chatbot descendant */
+                  #rag-chatbot *, .chatbot-wrap * {
+                    border: none !important;
+                    border-top: none !important;
+                    border-right: none !important;
+                    border-bottom: none !important;
+                    border-left: none !important;
+                    outline: none !important;
+                    box-shadow: none !important;
+                  }
+                  /* match bubble bg to chat window bg */
+                  #rag-chatbot .bubble-wrap,
+                  #rag-chatbot .message-wrap,
+                  #rag-chatbot .message,
+                  #rag-chatbot [class$="-bubble"],
+                  #rag-chatbot [class*=" bubble"],
+                  .chatbot-wrap .bubble-wrap,
+                  .chatbot-wrap .message-wrap {
+                    background: #1c2030 !important;
+                  }
+                  /* bot bubble */
+                  #rag-chatbot [data-testid="bot"],
+                  .chatbot-wrap [data-testid="bot"] {
+                    background: #242a3d !important;
+                    border-radius: 10px !important;
+                    color: #ffffff !important;
+                  }
+                  #rag-chatbot [data-testid="bot"] *,
+                  .chatbot-wrap [data-testid="bot"] * {
+                    color: #ffffff !important;
+                  }
+                  /* user bubble */
+                  #rag-chatbot [data-testid="user"],
+                  .chatbot-wrap [data-testid="user"] {
+                    background: linear-gradient(135deg,#1a2545 0%,#1c1a35 100%) !important;
+                    border-radius: 10px !important;
+                    color: #ffed00 !important;
+                    font-weight: 700 !important;
+                  }
+                  #rag-chatbot [data-testid="user"] *,
+                  .chatbot-wrap [data-testid="user"] * {
+                    color: #ffed00 !important;
+                    font-weight: 700 !important;
+                  }
+                </style>
+                ''')
+
+                # Auto-scroll
                 gr.HTML('''
                 <script>
                 (function() {
-                  var _scrollEl = null;
-                  var _rafPending = false;
-
+                  var _scrollEl = null, _rafPending = false;
                   function findScrollable(root) {
                     if (!root) return null;
                     var all = root.querySelectorAll("*");
                     for (var i = 0; i < all.length; i++) {
-                      var el = all[i];
-                      var ov = window.getComputedStyle(el).overflowY;
-                      if ((ov === "auto" || ov === "scroll") && el.scrollHeight > el.clientHeight) {
-                        return el;
-                      }
+                      var ov = window.getComputedStyle(all[i]).overflowY;
+                      if ((ov==="auto"||ov==="scroll") && all[i].scrollHeight > all[i].clientHeight) return all[i];
                     }
                     return null;
                   }
-
                   function scheduleScroll() {
-                    if (_rafPending) return;
-                    _rafPending = true;
-                    requestAnimationFrame(function() {
-                      requestAnimationFrame(function() {
-                        _rafPending = false;
-                        var root = document.getElementById("rag-chatbot")
-                                || document.querySelector(".chatbot-wrap");
-                        if (!_scrollEl || !document.contains(_scrollEl)) {
-                          _scrollEl = findScrollable(root);
-                        }
-                        if (_scrollEl) _scrollEl.scrollTop = _scrollEl.scrollHeight;
-                      });
-                    });
+                    if (_rafPending) return; _rafPending = true;
+                    requestAnimationFrame(function() { requestAnimationFrame(function() {
+                      _rafPending = false;
+                      var root = document.getElementById("rag-chatbot") || document.querySelector(".chatbot-wrap");
+                      if (!_scrollEl || !document.contains(_scrollEl)) _scrollEl = findScrollable(root);
+                      if (_scrollEl) _scrollEl.scrollTop = _scrollEl.scrollHeight;
+                    }); });
                   }
-
                   function attach() {
-                    var root = document.getElementById("rag-chatbot")
-                            || document.querySelector(".chatbot-wrap");
+                    var root = document.getElementById("rag-chatbot") || document.querySelector(".chatbot-wrap");
                     if (!root) { setTimeout(attach, 200); return; }
-                    new MutationObserver(scheduleScroll)
-                      .observe(root, { childList: true, subtree: true, characterData: true });
+                    new MutationObserver(scheduleScroll).observe(root, {childList:true,subtree:true,characterData:true});
                     scheduleScroll();
                   }
-
-                  if (document.readyState === "loading") {
-                    document.addEventListener("DOMContentLoaded", attach);
-                  } else { attach(); }
+                  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", attach);
+                  else attach();
                 })();
                 </script>
                 ''')
 
-
-
-                # ── Input row ────────────────────────────────────────────
-                with gr.Row(elem_id="input-row"):
+                with gr.Row():
                     msg_input = gr.Textbox(
                         placeholder="Ask a question about your documents...",
                         label="",
@@ -760,23 +991,20 @@ def build_ui():
                         elem_classes="primary-btn",
                         interactive=False,
                     )
-                
-                with gr.Row(elem_id="controls-row"):
+
+                with gr.Row():
                     with gr.Column(scale=3, min_width=0):
                         gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K — Context chunks to retrieve</div>')
                         n_results_slider = gr.Slider(
                             minimum=1, maximum=10, value=5, step=1,
-                            label="",
-                            show_label=False,
+                            label="", show_label=False,
                             elem_id="topk-slider",
                         )
-                    memory_stats_text = gr.Markdown(
-                        value="",
-                        elem_id="memory-stats",
-                    )
+                    memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
                     clear_memory_btn = gr.Button(
                         "🧹 Clear Memory", scale=1, elem_classes="secondary-btn", size="sm"
                     )
+
         # ─── Event Handlers ───────────────────────────────────────────────
         all_sample_btn_components = [b for b, _ in sample_btns]
 
@@ -886,4 +1114,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         show_error=True,
+        css=CUSTOM_CSS,
     )
