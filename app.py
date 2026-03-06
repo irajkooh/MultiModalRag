@@ -557,9 +557,9 @@ textarea::placeholder, input::placeholder {
 #file-upload .wrap,
 #file-upload > div,
 [data-testid="file"]#file-upload {
-  height: 120px !important;
-  min-height: 120px !important;
-  max-height: 120px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
   overflow: hidden !important;
 }
 
@@ -997,7 +997,7 @@ def build_ui():
                     file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff",
                                 ".docx", ".xlsx", ".csv", ".txt"],
                     interactive=True,
-                    height=120,
+                    height=60,
                     elem_id="file-upload",
                 )
                 upload_btn = gr.Button("⬆ Upload & Index", elem_classes="primary-btn", size="sm")
