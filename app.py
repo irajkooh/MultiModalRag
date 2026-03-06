@@ -993,6 +993,11 @@ def build_ui():
                     delete_all_btn = gr.Button("🗑 Remove ALL", elem_classes="danger-btn", size="sm")
                     refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn", size="sm")
 
+                with gr.Row(visible=False) as confirm_row:
+                    gr.HTML('<span style="font-size:0.82rem;color:#f87171;align-self:center;">⚠️ Remove ALL embeddings?</span>')
+                    confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_classes="danger-btn", size="sm")
+                    confirm_no_btn = gr.Button("✖ Cancel", elem_classes="secondary-btn", size="sm")
+
                 gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
                 delete_status = gr.HTML(value=_status_html(""), elem_id="delete-status")
 
@@ -1203,13 +1208,29 @@ def build_ui():
             outputs=[delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
+        # First click on Remove ALL — show confirmation row
         delete_all_btn.click(
+            fn=lambda: gr.update(visible=True),
+            inputs=[],
+            outputs=[confirm_row],
+        )
+
+        # Confirm: execute delete, hide confirmation row
+        confirm_yes_btn.click(
             fn=lambda: (
+                gr.update(visible=False),
                 _status_html(delete_all_embeddings()[0]),
                 *refresh_and_update_samples(),
             ),
             inputs=[],
-            outputs=[delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+        )
+
+        # Cancel: just hide the confirmation row
+        confirm_no_btn.click(
+            fn=lambda: gr.update(visible=False),
+            inputs=[],
+            outputs=[confirm_row],
         )
 
         refresh_btn.click(
