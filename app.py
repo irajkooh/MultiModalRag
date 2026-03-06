@@ -831,7 +831,7 @@ def build_ui():
         _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
         gr.HTML(f"""
         <div class="app-header">
-          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama (<b>{_model_name}</b>) + ChromaDB.</p>
+          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama (<b style="color:#ffffff">{_model_name}</b>) + ChromaDB.</p>
         </div>
         """)
 
