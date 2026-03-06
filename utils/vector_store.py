@@ -99,6 +99,17 @@ class VectorStoreManager:
             logger.info(f"Removed {len(ids)} chunks for '{source_name}'")
         return len(ids)
 
+    def clear_all(self) -> int:
+        """Remove every chunk from the collection. Returns count removed."""
+        count = self.collection.count()
+        if count == 0:
+            return 0
+        all_ids = self.collection.get()["ids"]
+        if all_ids:
+            self.collection.delete(ids=all_ids)
+        logger.info(f"Cleared {count} chunks from collection")
+        return count
+
     def query(self, query_text: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """Semantic search. Returns list of {text, metadata, distance}."""
         count = self.collection.count()

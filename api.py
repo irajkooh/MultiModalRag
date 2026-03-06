@@ -142,6 +142,13 @@ async def delete_document(filename: str):
         raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
 
 
+@app.delete("/documents")
+async def delete_all_documents():
+    """Remove ALL embeddings from the vector store. Files are kept on disk."""
+    removed = vs.clear_all()
+    return {"message": f"Removed all {removed} indexed chunks. Files kept on disk.", "chunks_removed": removed}
+
+
 @app.post("/documents/reindex")
 async def reindex_all():
     """Force re-index all documents in data dir."""

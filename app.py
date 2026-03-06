@@ -101,6 +101,13 @@ def delete_document(filenames):
     return "\n".join(messages), *refresh_ui()
 
 
+def delete_all_embeddings():
+    resp = api_delete("/documents")
+    if "error" in resp:
+        return f"❌ {resp['error']}", *refresh_ui()
+    return f"🗑️ {resp['message']}", *refresh_ui()
+
+
 def refresh_ui():
     docs, files, status_msg, model = get_status()
     has_docs = len(docs) > 0
@@ -982,7 +989,8 @@ def build_ui():
                 )
 
                 with gr.Row():
-                    delete_btn = gr.Button("🗑 Remove embeddings", elem_classes="danger-btn", size="sm")
+                    delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn", size="sm")
+                    delete_all_btn = gr.Button("🗑 Remove ALL", elem_classes="danger-btn", size="sm")
                     refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn", size="sm")
 
                 gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
@@ -1192,6 +1200,15 @@ def build_ui():
                 *refresh_and_update_samples(),
             ),
             inputs=[doc_list],
+            outputs=[delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+        )
+
+        delete_all_btn.click(
+            fn=lambda: (
+                _status_html(delete_all_embeddings()[0]),
+                *refresh_and_update_samples(),
+            ),
+            inputs=[],
             outputs=[delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
