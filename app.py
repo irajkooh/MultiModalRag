@@ -706,6 +706,18 @@ fieldset > div > span,
   color: #e8eaf0 !important;
 }
 
+/* File selection chips (ul/li) — dark bg + light text */
+[data-testid="file"] ul,
+[data-testid="file"] ol,
+[data-testid="file"] li,
+[data-testid="file"] ul li,
+[data-testid="file"] ul li > div,
+[data-testid="file"] ul li > span,
+[data-testid="file"] ul li * {
+  background: #242a3d !important;
+  color: #e8eaf0 !important;
+}
+
 /* Upload progress overlay — prevent white-on-white */
 [data-testid="file"] .uploading,
 [data-testid="file"] .progress,
@@ -897,6 +909,16 @@ def build_ui():
           [data-testid="file"] tbody tr td,
           [data-testid="file"] tbody tr td span {
             color: #111111 !important;
+          }
+          /* File chips (ul/li) — dark bg, light text */
+          [data-testid="file"] ul,
+          [data-testid="file"] li,
+          [data-testid="file"] ul li,
+          [data-testid="file"] ul li > div,
+          [data-testid="file"] ul li > span,
+          [data-testid="file"] ul li * {
+            background: #242a3d !important;
+            color: #e8eaf0 !important;
           }
           /* Any leftover white surface elements */
           .gradio-container [class*="wrap"],
