@@ -20,7 +20,6 @@ DEFAULT_MODEL = "llama3.2"
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 _client = ollama.Client(host=OLLAMA_HOST)
 # Small models (1b) need a capped context; larger local models can use more
-_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "4096"))
 SYSTEM_PROMPT = """You are a document assistant. Answer questions using ONLY the [CONTEXT] provided.
 If the answer is not in the context, respond: "I DON'T KNOW"
 Be concise and factual. Cite source and page when available.
@@ -86,7 +85,6 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                     model=self.model,
                     messages=messages,
                     stream=True,
-                    options={"num_ctx": _NUM_CTX},
                 )
                 for chunk in stream_resp:
                     token = chunk["message"]["content"]
@@ -96,7 +94,7 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                 memory.add("user", question)
                 memory.add("assistant", response_text)
             else:
-                response = _client.chat(model=self.model, messages=messages, options={"num_ctx": _NUM_CTX})
+                response = _client.chat(model=self.model, messages=messages)
                 answer = response["message"]["content"]
                 memory.add("user", question)
                 memory.add("assistant", answer)

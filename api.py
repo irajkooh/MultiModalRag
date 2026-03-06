@@ -22,7 +22,7 @@ from utils.device import device_info
 # ─── Configuration ────────────────────────────────────────────────────────────
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 VECTORSTORE_DIR = os.environ.get("VECTORSTORE_DIR", "./vectorstore")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(VECTORSTORE_DIR, exist_ok=True)
@@ -48,7 +48,7 @@ app.add_middleware(
 # ─── Models ───────────────────────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     question: str
-    n_results: int = 3
+    n_results: int = 5
 
 
 class QueryResponse(BaseModel):

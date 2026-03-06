@@ -7,9 +7,9 @@
 
 set -e
 
-export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
+export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.1:8b}"
 MODEL="$OLLAMA_MODEL"
-export OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-4096}"
+export OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-8192}"
 
 echo "▶ Starting Ollama daemon..."
 ollama serve &

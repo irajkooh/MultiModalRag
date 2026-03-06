@@ -806,7 +806,7 @@ def build_ui():
     with gr.Blocks(title="Multimodal RAG") as demo:
         
         # Header
-        _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
+        _model_name = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
         gr.HTML(f"""
         <div class="app-header">
           <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama (<b style="color:#ffffff">{_model_name}</b>) + ChromaDB.</p>
@@ -1100,7 +1100,7 @@ def build_ui():
                     with gr.Column(scale=3, min_width=0):
                         gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K — Context chunks to retrieve</div>')
                         n_results_slider = gr.Slider(
-                            minimum=1, maximum=10, value=3, step=1,
+                            minimum=1, maximum=10, value=5, step=1,
                             label="", show_label=False,
                             elem_id="topk-slider",
                         )
