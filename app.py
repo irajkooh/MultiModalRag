@@ -910,6 +910,27 @@ def build_ui():
           if (document.head) { injectGlobalStyle(); }
           else { document.addEventListener('DOMContentLoaded', injectGlobalStyle); }
           setTimeout(injectGlobalStyle, 500);
+
+          /* MutationObserver: inline-style the ul the instant Svelte renders it.
+             Inline style with !important beats ALL Svelte scoped styles. */
+          function hideFileLists() {
+            document.querySelectorAll('[data-testid="file"] ul').forEach(function(ul) {
+              ul.style.setProperty('display', 'none', 'important');
+              ul.style.setProperty('visibility', 'hidden', 'important');
+              ul.style.setProperty('height', '0', 'important');
+              ul.style.setProperty('overflow', 'hidden', 'important');
+            });
+          }
+          hideFileLists();
+          var fileObs = new MutationObserver(function() { hideFileLists(); });
+          document.addEventListener('DOMContentLoaded', function() {
+            fileObs.observe(document.body, { childList: true, subtree: true });
+            hideFileLists();
+          });
+          setTimeout(function() {
+            fileObs.observe(document.body, { childList: true, subtree: true });
+            hideFileLists();
+          }, 300);
         })();
         </script>
         """)
