@@ -27,13 +27,21 @@ def api_get(path: str, timeout: int = 10):
         return {"error": str(e)}
 
 
-def api_post(path: str, json=None, files=None, timeout: int = 60):
-    try:
-        r = requests.post(f"{API_BASE}{path}", json=json, files=files, timeout=timeout)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
+def api_post(path: str, json=None, files=None, timeout: int = 60, _retries: int = 3):
+    import requests.exceptions
+    for attempt in range(_retries):
+        try:
+            r = requests.post(f"{API_BASE}{path}", json=json, files=files, timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.ConnectionError:
+            if attempt < _retries - 1:
+                time.sleep(3)
+                continue
+            return {"error": "⚠️ Backend not ready yet — please wait a moment and try again."}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"error": "⚠️ Backend unreachable after retries."}
 
 
 def api_delete(path: str, timeout: int = 10):

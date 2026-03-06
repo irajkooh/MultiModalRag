@@ -33,9 +33,9 @@ def run_api():
     )
 
 
-def wait_for_api(max_wait: int = 60) -> bool:
+def wait_for_api(max_wait: int = 180) -> bool:
     import requests
-    for _ in range(max_wait):
+    for i in range(max_wait):
         try:
             r = requests.get("http://localhost:8000/status", timeout=2)
             if r.status_code == 200:
@@ -43,6 +43,8 @@ def wait_for_api(max_wait: int = 60) -> bool:
                 return True
         except Exception:
             pass
+        if i % 15 == 0 and i > 0:
+            logger.info(f"Still waiting for FastAPI... ({i}s elapsed)")
         time.sleep(1)
     logger.warning("FastAPI did not become ready in time — continuing anyway.")
     return False
