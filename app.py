@@ -738,6 +738,20 @@ fieldset > div > span,
   background: transparent !important;
 }
 
+/* Uploaded file list rows — Gradio 6 renders these on a light bg, so use dark text */
+[data-testid="file"] table,
+[data-testid="file"] table tr,
+[data-testid="file"] table td,
+[data-testid="file"] table th,
+[data-testid="file"] table span,
+[data-testid="file"] table a,
+[data-testid="file"] .file-preview table *,
+[data-testid="file"] tbody tr td,
+[data-testid="file"] tbody tr td span {
+  color: #111111 !important;
+  background: transparent !important;
+}
+
 /* Textbox label / wrapper bg fix */
 [data-testid="textbox"] .label-wrap span {
   color: #e8eaf0 !important;
@@ -872,6 +886,17 @@ def build_ui():
           }
           [data-testid="file"] * {
             color: #e8eaf0 !important;
+          }
+          /* Uploaded file list rows have light bg — use dark text */
+          [data-testid="file"] table,
+          [data-testid="file"] table tr,
+          [data-testid="file"] table td,
+          [data-testid="file"] table th,
+          [data-testid="file"] table span,
+          [data-testid="file"] table a,
+          [data-testid="file"] tbody tr td,
+          [data-testid="file"] tbody tr td span {
+            color: #111111 !important;
           }
           /* Any leftover white surface elements */
           .gradio-container [class*="wrap"],
