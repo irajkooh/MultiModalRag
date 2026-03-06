@@ -926,6 +926,57 @@ def build_ui():
             background-color: transparent;
           }
         </style>
+        <script>
+        (function() {
+          var DARK_BG  = '#1c2030';
+          var DARK_BG2 = '#242a3d';
+          var LIGHT_FG = '#e8eaf0';
+
+          function fixFileComponent(root) {
+            /* File upload zone outer containers */
+            var zones = root.querySelectorAll('[data-testid="file"]');
+            zones.forEach(function(zone) {
+              zone.style.setProperty('background', DARK_BG, 'important');
+              zone.style.setProperty('color', LIGHT_FG, 'important');
+              /* every child */
+              zone.querySelectorAll('*').forEach(function(el) {
+                var bg = window.getComputedStyle(el).backgroundColor;
+                /* if background is white or near-white, darken it */
+                if (bg === 'rgb(255, 255, 255)' || bg === 'rgba(255, 255, 255, 1)'
+                    || bg === 'rgb(249, 250, 251)' || bg === 'rgb(243, 244, 246)') {
+                  el.style.setProperty('background', DARK_BG2, 'important');
+                  el.style.setProperty('color', LIGHT_FG, 'important');
+                }
+              });
+            });
+
+            /* All textboxes / inputs / textareas */
+            root.querySelectorAll(
+              'textarea, input[type="text"], input[type="number"], [data-testid="textbox"] *'
+            ).forEach(function(el) {
+              var bg = window.getComputedStyle(el).backgroundColor;
+              if (bg === 'rgb(255, 255, 255)' || bg === 'rgba(255, 255, 255, 1)') {
+                el.style.setProperty('background', DARK_BG, 'important');
+                el.style.setProperty('color', LIGHT_FG, 'important');
+              }
+            });
+          }
+
+          function run() { fixFileComponent(document); }
+
+          /* Run once after initial render */
+          setTimeout(run, 500);
+          setTimeout(run, 1500);
+
+          /* Watch for dynamic DOM changes (file chips added after picking files) */
+          var obs = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+              if (mutations[i].addedNodes.length) { run(); break; }
+            }
+          });
+          obs.observe(document.body, { childList: true, subtree: true });
+        })();
+        </script>
         """)
 
         with gr.Tabs(selected="chat"):
