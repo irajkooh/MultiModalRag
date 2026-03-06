@@ -134,17 +134,12 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.delete("/documents/{filename}")
 async def delete_document(filename: str):
-    """Remove a document from disk and the vector store."""
-    file_path = Path(DATA_DIR) / filename
+    """Remove a document's embeddings from the vector store only (file kept on disk)."""
     removed_chunks = vs.remove_document(filename)
-    
-    if file_path.exists():
-        file_path.unlink()
-        return {"message": f"Deleted '{filename}' and removed {removed_chunks} chunks."}
-    elif removed_chunks > 0:
-        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}' (file not on disk)."}
+    if removed_chunks > 0:
+        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}'. File kept on disk."}
     else:
-        raise HTTPException(404, f"Document '{filename}' not found.")
+        raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
 
 
 @app.post("/documents/reindex")

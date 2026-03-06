@@ -88,13 +88,17 @@ def upload_files(files):
     return "\n".join(messages), *refresh_ui()
 
 
-def delete_document(filename: str):
-    if not filename:
-        return "Please select a document to delete.", *refresh_ui()
-    resp = api_delete(f"/documents/{filename}")
-    if "error" in resp:
-        return f"❌ {resp['error']}", *refresh_ui()
-    return f"🗑️ {resp['message']}", *refresh_ui()
+def delete_document(filenames):
+    if not filenames:
+        return "Please select at least one document.", *refresh_ui()
+    messages = []
+    for filename in filenames:
+        resp = api_delete(f"/documents/{filename}")
+        if "error" in resp:
+            messages.append(f"❌ {filename}: {resp['error']}")
+        else:
+            messages.append(f"🗑️ {resp['message']}")
+    return "\n".join(messages), *refresh_ui()
 
 
 def refresh_ui():
@@ -211,8 +215,7 @@ html, body {
   font-family: var(--font-mono) !important;
   margin: 0 !important;
   padding: 0 !important;
-  height: 100% !important;
-  overflow: auto !important;
+  overflow-x: hidden !important;
 }
 
 body, .gradio-container {
@@ -223,12 +226,16 @@ body, .gradio-container {
 
 .gradio-container {
   max-width: 960px !important;
-  margin: 3vh auto !important;
+  margin: 0 auto !important;
   padding: 4px 12px 4px 12px !important;
-  height: 94vh !important;
-  max-height: 94vh !important;
-  overflow: hidden !important;
   box-sizing: border-box !important;
+  zoom: 0.78;
+  transform-origin: top center;
+}
+
+/* Undo zoom effect on html/body so the scaled container is centered */
+html, body {
+  overflow-x: hidden !important;
 }
 
 /* Row/form gaps */
@@ -304,7 +311,7 @@ body, .gradio-container {
   border-radius: var(--radius) !important;
   padding: 8px !important;
   overflow-y: auto !important;
-  max-height: calc(94vh - 80px) !important;
+  max-height: 50vh !important;
 }
 
 .panel-label {
@@ -583,10 +590,21 @@ textarea::placeholder, input::placeholder {
 
 /* Doc list: fixed height so adding entries doesn't push buttons down */
 .doc-list {
-  min-height: 120px !important;
-  max-height: 200px !important;
+  min-height: 80px !important;
+  max-height: 180px !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   flex-shrink: 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 4px !important;
+}
+/* Inner CheckboxGroup container must not grow beyond parent */
+.doc-list > .wrap,
+.doc-list fieldset,
+.doc-list > div {
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 /* Slider */
@@ -809,7 +827,7 @@ fieldset > div > span,
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(title="Multimodal RAG", fill_height=True) as demo:
+    with gr.Blocks(title="Multimodal RAG") as demo:
         
         # Header
         _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
@@ -956,7 +974,7 @@ def build_ui():
                 gr.HTML('<hr style="border-color:#2a2f40; margin:16px 0">')
                 gr.HTML('<div class="panel-label">🗂 Indexed Documents</div>')
 
-                doc_list = gr.Radio(
+                doc_list = gr.CheckboxGroup(
                     choices=[],
                     label="",
                     elem_classes="doc-list",
@@ -964,7 +982,7 @@ def build_ui():
                 )
 
                 with gr.Row():
-                    delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn", size="sm")
+                    delete_btn = gr.Button("🗑 Remove embeddings", elem_classes="danger-btn", size="sm")
                     refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn", size="sm")
 
                 gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:8px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
@@ -1052,36 +1070,46 @@ def build_ui():
                 </style>
                 ''')
 
-                # Auto-scroll
+                # Auto-scroll to bottom on every new message
                 gr.HTML('''
                 <script>
                 (function() {
-                  var _scrollEl = null, _rafPending = false;
-                  function findScrollable(root) {
-                    if (!root) return null;
-                    var all = root.querySelectorAll("*");
-                    for (var i = 0; i < all.length; i++) {
-                      var ov = window.getComputedStyle(all[i]).overflowY;
-                      if ((ov==="auto"||ov==="scroll") && all[i].scrollHeight > all[i].clientHeight) return all[i];
+                  function scrollBottom() {
+                    // Try the chatbot element itself first
+                    var candidates = [
+                      document.getElementById("rag-chatbot"),
+                      document.querySelector(".chatbot-wrap"),
+                      document.querySelector("#rag-chatbot .bubble-wrap"),
+                      document.querySelector("#rag-chatbot .messages"),
+                      document.querySelector("#rag-chatbot > div"),
+                    ];
+                    for (var i = 0; i < candidates.length; i++) {
+                      var el = candidates[i];
+                      if (!el) continue;
+                      // Try the element itself
+                      var ov = window.getComputedStyle(el).overflowY;
+                      if (ov === "auto" || ov === "scroll") {
+                        el.scrollTop = el.scrollHeight; continue;
+                      }
+                      // Try all its descendants
+                      var all = el.querySelectorAll("*");
+                      for (var j = 0; j < all.length; j++) {
+                        var dov = window.getComputedStyle(all[j]).overflowY;
+                        if ((dov === "auto" || dov === "scroll") && all[j].scrollHeight > all[j].clientHeight + 4) {
+                          all[j].scrollTop = all[j].scrollHeight;
+                        }
+                      }
                     }
-                    return null;
-                  }
-                  function scheduleScroll() {
-                    if (_rafPending) return; _rafPending = true;
-                    requestAnimationFrame(function() { requestAnimationFrame(function() {
-                      _rafPending = false;
-                      var root = document.getElementById("rag-chatbot") || document.querySelector(".chatbot-wrap");
-                      if (!_scrollEl || !document.contains(_scrollEl)) _scrollEl = findScrollable(root);
-                      if (_scrollEl) _scrollEl.scrollTop = _scrollEl.scrollHeight;
-                    }); });
                   }
                   function attach() {
                     var root = document.getElementById("rag-chatbot") || document.querySelector(".chatbot-wrap");
-                    if (!root) { setTimeout(attach, 200); return; }
-                    new MutationObserver(scheduleScroll).observe(root, {childList:true,subtree:true,characterData:true});
-                    scheduleScroll();
+                    if (!root) { setTimeout(attach, 300); return; }
+                    // Watch for any DOM change inside the chatbot
+                    new MutationObserver(function() {
+                      requestAnimationFrame(function() { requestAnimationFrame(scrollBottom); });
+                    }).observe(root, {childList:true, subtree:true, characterData:true});
                   }
-                  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", attach);
+                  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attach);
                   else attach();
                 })();
                 </script>
