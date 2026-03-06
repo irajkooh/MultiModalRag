@@ -1,4 +1,5 @@
 # ── Web framework (let pip resolve compatible versions with gradio 6) ──────────
+# cache-bust: 2026-03-06
 fastapi>=0.115.2
 uvicorn>=0.30.0
 gradio==6.8.0
