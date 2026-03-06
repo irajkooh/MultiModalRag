@@ -163,23 +163,26 @@ async def reindex_all():
 async def query_documents(req: QueryRequest):
     """Query the RAG system."""
     import asyncio
-    if vs.total_chunks() == 0:
-        return QueryResponse(answer="I DON'T KNOW", sources=[])
+    try:
+        if vs.total_chunks() == 0:
+            return QueryResponse(answer="I DON'T KNOW", sources=[])
 
-    results = vs.query(req.question, n_results=req.n_results)
-    sources = list({r["metadata"].get("source", "") for r in results})
+        # Run all blocking work (embedding + Ollama) in a thread executor
+        def _run_query():
+            results = vs.query(req.question, n_results=req.n_results)
+            sources = list({r["metadata"].get("source", "") for r in results})
+            parts = []
+            for token in rag.query(req.question, memory, n_results=req.n_results, stream=False):
+                parts.append(token)
+            return "".join(parts), sources
 
-    # Run blocking Ollama call in a thread so the event loop stays free
-    def _run_query():
-        parts = []
-        for token in rag.query(req.question, memory, n_results=req.n_results, stream=False):
-            parts.append(token)
-        return "".join(parts)
+        loop = asyncio.get_running_loop()
+        answer, sources = await loop.run_in_executor(None, _run_query)
 
-    loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(None, _run_query)
-
-    return QueryResponse(answer=answer, sources=sources)
+        return QueryResponse(answer=answer, sources=sources)
+    except Exception as e:
+        logger.error(f"Query endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/memory/clear")
