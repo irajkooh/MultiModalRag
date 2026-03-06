@@ -827,7 +827,7 @@ def build_ui():
         </style>
         """)
 
-        with gr.Tabs():
+        with gr.Tabs(selected=1):
 
             # ── TAB 1 — Documents ──────────────────────────────────────────
             with gr.Tab("📁 Documents"):
