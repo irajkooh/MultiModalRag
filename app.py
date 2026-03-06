@@ -865,6 +865,11 @@ def build_ui():
           [data-testid="file"] * {
             color: #111111 !important;
           }
+          /* Hide the selected-files list inside the upload widget */
+          #file-upload ul,
+          [data-testid="file"]#file-upload ul {
+            display: none !important;
+          }
           /* Any leftover white surface elements */
           .gradio-container [class*="wrap"],
           .gradio-container .block > div {
@@ -880,6 +885,9 @@ def build_ui():
             var s = document.createElement('style');
             s.id = 'rag-global-fix';
             s.textContent = [
+              /* ---- file upload widget: hide selected-files list ---- */
+              '#file-upload ul { display: none !important; }',
+
               /* ---- file upload widget: black text on light bg ---- */
               '[data-testid="file"] *,',
               '[data-testid="file"] ul li,',
