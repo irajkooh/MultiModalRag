@@ -7,7 +7,7 @@
 
 set -e
 
-export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.1:8b}"
+export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
 MODEL="$OLLAMA_MODEL"
 export OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-8192}"
 
