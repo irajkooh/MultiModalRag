@@ -828,9 +828,10 @@ def build_ui():
     with gr.Blocks(title="Multimodal RAG") as demo:
         
         # Header
-        gr.HTML("""
+        _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
+        gr.HTML(f"""
         <div class="app-header">
-          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama + ChromaDB.</p>
+          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama (<b>{_model_name}</b>) + ChromaDB.</p>
         </div>
         """)
 
