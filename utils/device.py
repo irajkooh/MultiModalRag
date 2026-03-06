@@ -83,3 +83,4 @@ def device_info() -> dict:
         logger.debug(f"device_info detail error: {e}")
 
     logger.info(f"Device info: {info['label']}")
+    return info
