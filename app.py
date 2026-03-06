@@ -211,6 +211,8 @@ html, body {
   font-family: var(--font-mono) !important;
   margin: 0 !important;
   padding: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
 }
 
 body, .gradio-container {
@@ -220,9 +222,13 @@ body, .gradio-container {
 }
 
 .gradio-container {
-  max-width: 860px !important;
+  max-width: 960px !important;
   margin: 0 auto !important;
-  padding: 8px 16px 24px 16px !important;
+  padding: 4px 12px 4px 12px !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 /* Row/form gaps */
@@ -233,7 +239,7 @@ body, .gradio-container {
 /* Tab bar */
 .tab-nav {
   border-bottom: 2px solid var(--border) !important;
-  margin-bottom: 14px !important;
+  margin-bottom: 4px !important;
 }
 .tab-nav button {
   font-family: var(--font-head) !important;
@@ -265,8 +271,8 @@ body, .gradio-container {
   border: 1px solid var(--border);
   border-bottom: 2px solid var(--accent);
   border-radius: var(--radius);
-  padding: 6px 16px;
-  margin-bottom: 6px;
+  padding: 4px 12px;
+  margin-bottom: 2px;
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -803,7 +809,7 @@ fieldset > div > span,
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(title="Multimodal RAG") as demo:
+    with gr.Blocks(title="Multimodal RAG", fill_height=True) as demo:
         
         # Header
         _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
@@ -988,7 +994,7 @@ def build_ui():
 
                 chatbot = gr.Chatbot(
                     label="",
-                    height=460,
+                    height=320,
                     layout="bubble",
                     show_label=False,
                     elem_id="rag-chatbot",
