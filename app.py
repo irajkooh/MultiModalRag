@@ -694,6 +694,37 @@ fieldset > div > span,
   color: #c0c4d0 !important;
 }
 
+/* File upload drop-zone — force dark background everywhere */
+[data-testid="file"],
+[data-testid="file"] > div,
+[data-testid="file"] .wrap,
+[data-testid="file"] .upload-container,
+[data-testid="file"] .dndzone,
+[data-testid="file"] .file-preview,
+[data-testid="file"] .pending {
+  background: #1c2030 !important;
+  color: #e8eaf0 !important;
+}
+
+/* Upload progress overlay — prevent white-on-white */
+[data-testid="file"] .uploading,
+[data-testid="file"] .progress,
+[data-testid="file"] .progress-bar,
+[data-testid="file"] .progress-level,
+[data-testid="file"] .progress-level-inner,
+[data-testid="file"] .loading,
+[data-testid="file"] [class*="progress"],
+[data-testid="file"] [class*="uploading"],
+[data-testid="file"] [class*="loading"] {
+  background: #1c2030 !important;
+  color: #e8eaf0 !important;
+}
+[data-testid="file"] [class*="progress"] span,
+[data-testid="file"] [class*="uploading"] span,
+[data-testid="file"] [class*="loading"] span {
+  color: #e8eaf0 !important;
+}
+
 /* File upload inner text (drop zone description & file names) */
 [data-testid="file"] .wrap > span,
 [data-testid="file"] .file-preview span,
@@ -823,6 +854,28 @@ def build_ui():
           div[role="tablist"] button:hover,
           button[role="tab"]:hover {
             color: #4fffb0 !important;
+          }
+          /* File upload zone — dark background to prevent white-on-white */
+          [data-testid="file"],
+          [data-testid="file"] > div,
+          [data-testid="file"] .wrap,
+          [data-testid="file"] .upload-container,
+          [data-testid="file"] .dndzone,
+          [data-testid="file"] .uploading,
+          [data-testid="file"] .pending,
+          [data-testid="file"] [class*="progress"],
+          [data-testid="file"] [class*="uploading"],
+          [data-testid="file"] [class*="loading"] {
+            background: #1c2030 !important;
+            color: #e8eaf0 !important;
+          }
+          [data-testid="file"] * {
+            color: #e8eaf0 !important;
+          }
+          /* Any leftover white surface elements */
+          .gradio-container [class*="wrap"],
+          .gradio-container .block > div {
+            background-color: transparent;
           }
         </style>
         """)
