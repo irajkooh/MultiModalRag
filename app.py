@@ -1204,9 +1204,10 @@ def build_ui():
             fn=lambda files: (
                 _status_html(upload_files(files)[0]),
                 *refresh_and_update_samples(),
+                gr.update(value=None),
             ),
             inputs=[file_upload],
-            outputs=[upload_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[upload_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components, file_upload],
         )
 
         delete_btn.click(
