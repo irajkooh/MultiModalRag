@@ -48,7 +48,7 @@ app.add_middleware(
 # ─── Models ───────────────────────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     question: str
-    n_results: int = 5
+    n_results: int = 3
 
 
 class QueryResponse(BaseModel):

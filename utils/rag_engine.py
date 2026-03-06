@@ -19,15 +19,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL = "llama3.2"
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 _client = ollama.Client(host=OLLAMA_HOST)
-SYSTEM_PROMPT = """You are a precise document assistant. Your ONLY job is to answer questions based on the provided document context.
-
-STRICT RULES:
-1. ONLY use information explicitly found in the [CONTEXT] section below.
-2. If the answer is NOT in the context, respond EXACTLY with: "I DON'T KNOW"
-3. Do NOT use any prior knowledge, make assumptions, or speculate.
-4. Do NOT be creative. Be factual and concise.
-5. Always cite the source document and page number when available.
-6. If asked something unrelated to the documents, respond: "I DON'T KNOW"
+SYSTEM_PROMPT = """You are a document assistant. Answer questions using ONLY the [CONTEXT] provided.
+If the answer is not in the context, respond: "I DON'T KNOW"
+Be concise and factual. Cite source and page when available.
 """
 
 
@@ -90,6 +84,7 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                     model=self.model,
                     messages=messages,
                     stream=True,
+                    options={"num_ctx": 4096},
                 )
                 for chunk in stream_resp:
                     token = chunk["message"]["content"]
@@ -99,7 +94,7 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                 memory.add("user", question)
                 memory.add("assistant", response_text)
             else:
-                response = _client.chat(model=self.model, messages=messages)
+                response = _client.chat(model=self.model, messages=messages, options={"num_ctx": 4096})
                 answer = response["message"]["content"]
                 memory.add("user", question)
                 memory.add("assistant", answer)
