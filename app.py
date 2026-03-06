@@ -212,7 +212,7 @@ html, body {
   margin: 0 !important;
   padding: 0 !important;
   height: 100% !important;
-  overflow: hidden !important;
+  overflow: auto !important;
 }
 
 body, .gradio-container {
@@ -223,10 +223,10 @@ body, .gradio-container {
 
 .gradio-container {
   max-width: 960px !important;
-  margin: 0 auto !important;
+  margin: 3vh auto !important;
   padding: 4px 12px 4px 12px !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
+  height: 94vh !important;
+  max-height: 94vh !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
 }
@@ -304,7 +304,7 @@ body, .gradio-container {
   border-radius: var(--radius) !important;
   padding: 8px !important;
   overflow-y: auto !important;
-  max-height: calc(100vh - 80px) !important;
+  max-height: calc(94vh - 80px) !important;
 }
 
 .panel-label {
@@ -994,7 +994,7 @@ def build_ui():
 
                 chatbot = gr.Chatbot(
                     label="",
-                    height=320,
+                    height=280,
                     layout="bubble",
                     show_label=False,
                     elem_id="rag-chatbot",
