@@ -7,7 +7,7 @@
 
 set -e
 
-MODEL="${OLLAMA_MODEL:-llama3.2}"
+MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
 
 echo "▶ Starting Ollama daemon..."
 ollama serve &
