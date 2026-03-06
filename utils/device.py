@@ -46,9 +46,11 @@ def get_device() -> str:
         return "cpu"
 
 
+@lru_cache(maxsize=1)
 def device_info() -> dict:
     """
     Return a dict with device name, label, and extra GPU info where available.
+    Cached so detection only runs once per process.
     """
     device = get_device()
     info = {"device": device, "label": device.upper()}
@@ -64,7 +66,16 @@ def device_info() -> dict:
             info["label"] = f"CUDA — {info['gpu_name']} ({info['vram_gb']} GB)"
 
         elif device == "mps":
-            info["label"] = "MPS — Apple Silicon GPU"
+            # Try to get Apple chip name
+            try:
+                import subprocess
+                chip = subprocess.check_output(
+                    ["sysctl", "-n", "machdep.cpu.brand_string"],
+                    stderr=subprocess.DEVNULL
+                ).decode().strip()
+            except Exception:
+                chip = "Apple Silicon"
+            info["label"] = f"MPS — {chip}"
 
         else:
             info["label"] = "CPU"
@@ -72,4 +83,4 @@ def device_info() -> dict:
     except Exception as e:
         logger.debug(f"device_info detail error: {e}")
 
-    return info
+    logger.info(f"Device info: {info['label']}")
