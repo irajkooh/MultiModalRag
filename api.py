@@ -22,7 +22,7 @@ from utils.device import device_info
 # ─── Configuration ────────────────────────────────────────────────────────────
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 VECTORSTORE_DIR = os.environ.get("VECTORSTORE_DIR", "./vectorstore")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(VECTORSTORE_DIR, exist_ok=True)
