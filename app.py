@@ -694,50 +694,27 @@ fieldset > div > span,
   color: #c0c4d0 !important;
 }
 
-/* File upload drop-zone — force dark background everywhere */
+/* File upload widget — keep natural bg, force black text */
 [data-testid="file"],
 [data-testid="file"] > div,
 [data-testid="file"] .wrap,
 [data-testid="file"] .upload-container,
 [data-testid="file"] .dndzone,
 [data-testid="file"] .file-preview,
-[data-testid="file"] .pending {
-  background: #1c2030 !important;
-  color: #e8eaf0 !important;
-}
-
-/* File selection chips (ul/li) — dark bg + light text */
+[data-testid="file"] .pending,
 [data-testid="file"] ul,
 [data-testid="file"] ol,
 [data-testid="file"] li,
 [data-testid="file"] ul li,
 [data-testid="file"] ul li > div,
 [data-testid="file"] ul li > span,
-[data-testid="file"] ul li * {
-  background: #242a3d !important;
-  color: #e8eaf0 !important;
-}
-
-/* Upload progress overlay — prevent white-on-white */
+[data-testid="file"] ul li *,
 [data-testid="file"] .uploading,
-[data-testid="file"] .progress,
-[data-testid="file"] .progress-bar,
-[data-testid="file"] .progress-level,
-[data-testid="file"] .progress-level-inner,
-[data-testid="file"] .loading,
 [data-testid="file"] [class*="progress"],
 [data-testid="file"] [class*="uploading"],
-[data-testid="file"] [class*="loading"] {
-  background: #1c2030 !important;
-  color: #e8eaf0 !important;
-}
-[data-testid="file"] [class*="progress"] span,
-[data-testid="file"] [class*="uploading"] span,
-[data-testid="file"] [class*="loading"] span {
-  color: #e8eaf0 !important;
-}
-
-/* File upload inner text (drop zone description & file names) */
+[data-testid="file"] [class*="loading"],
+[data-testid="file"] table,
+[data-testid="file"] table *,
 [data-testid="file"] .wrap > span,
 [data-testid="file"] .file-preview span,
 [data-testid="file"] .file-name,
@@ -745,23 +722,9 @@ fieldset > div > span,
 [data-testid="file"] .upload-container span,
 [data-testid="file"] .upload-container p,
 [data-testid="file"] .upload-container div,
-[data-testid="file"] .label-wrap span {
-  color: #e8eaf0 !important;
-  background: transparent !important;
-}
-
-/* Uploaded file list rows — Gradio 6 renders these on a light bg, so use dark text */
-[data-testid="file"] table,
-[data-testid="file"] table tr,
-[data-testid="file"] table td,
-[data-testid="file"] table th,
-[data-testid="file"] table span,
-[data-testid="file"] table a,
-[data-testid="file"] .file-preview table *,
-[data-testid="file"] tbody tr td,
-[data-testid="file"] tbody tr td span {
+[data-testid="file"] .label-wrap span,
+[data-testid="file"] * {
   color: #111111 !important;
-  background: transparent !important;
 }
 
 /* Textbox label / wrapper bg fix */
@@ -882,7 +845,7 @@ def build_ui():
           button[role="tab"]:hover {
             color: #4fffb0 !important;
           }
-          /* File upload zone — dark background to prevent white-on-white */
+          /* File upload widget — black text on natural light background */
           [data-testid="file"],
           [data-testid="file"] > div,
           [data-testid="file"] .wrap,
@@ -892,33 +855,15 @@ def build_ui():
           [data-testid="file"] .pending,
           [data-testid="file"] [class*="progress"],
           [data-testid="file"] [class*="uploading"],
-          [data-testid="file"] [class*="loading"] {
-            background: #1c2030 !important;
-            color: #e8eaf0 !important;
-          }
-          [data-testid="file"] * {
-            color: #e8eaf0 !important;
-          }
-          /* Uploaded file list rows have light bg — use dark text */
-          [data-testid="file"] table,
-          [data-testid="file"] table tr,
-          [data-testid="file"] table td,
-          [data-testid="file"] table th,
-          [data-testid="file"] table span,
-          [data-testid="file"] table a,
-          [data-testid="file"] tbody tr td,
-          [data-testid="file"] tbody tr td span {
-            color: #111111 !important;
-          }
-          /* File chips (ul/li) — dark bg, light text */
+          [data-testid="file"] [class*="loading"],
           [data-testid="file"] ul,
           [data-testid="file"] li,
           [data-testid="file"] ul li,
           [data-testid="file"] ul li > div,
           [data-testid="file"] ul li > span,
-          [data-testid="file"] ul li * {
-            background: #242a3d !important;
-            color: #e8eaf0 !important;
+          [data-testid="file"] ul li *,
+          [data-testid="file"] * {
+            color: #111111 !important;
           }
           /* Any leftover white surface elements */
           .gradio-container [class*="wrap"],
@@ -933,23 +878,11 @@ def build_ui():
           var LIGHT_FG = '#e8eaf0';
 
           function fixFileComponent(root) {
-            /* File upload zone outer containers */
+            /* File upload widget — force black text on all children */
             var zones = root.querySelectorAll('[data-testid="file"]');
             zones.forEach(function(zone) {
-              zone.style.setProperty('background', DARK_BG, 'important');
-              zone.style.setProperty('color', LIGHT_FG, 'important');
-              /* unconditionally darken every child */
               zone.querySelectorAll('*').forEach(function(el) {
-                el.style.setProperty('color', LIGHT_FG, 'important');
-                /* skip elements that are icons/svgs */
-                if (el.tagName !== 'svg' && el.tagName !== 'path' && el.tagName !== 'BUTTON') {
-                  el.style.setProperty('background', DARK_BG2, 'important');
-                }
-              });
-              /* keep buttons readable */
-              zone.querySelectorAll('button').forEach(function(btn) {
-                btn.style.setProperty('background', '#2a3050', 'important');
-                btn.style.setProperty('color', LIGHT_FG, 'important');
+                el.style.setProperty('color', '#111111', 'important');
               });
             });
 
@@ -957,8 +890,8 @@ def build_ui():
             root.querySelectorAll(
               'textarea, input[type="text"], input[type="number"], [data-testid="textbox"] *'
             ).forEach(function(el) {
-              el.style.setProperty('background', DARK_BG, 'important');
-              el.style.setProperty('color', LIGHT_FG, 'important');
+              el.style.setProperty('background', '#1c2030', 'important');
+              el.style.setProperty('color', '#e8eaf0', 'important');
             });
           }
 
