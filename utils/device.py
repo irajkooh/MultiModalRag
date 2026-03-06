@@ -9,10 +9,12 @@ Usage:
 """
 import logging
 import os
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
 
+@lru_cache(maxsize=1)
 def get_device() -> str:
     """
     Detect the best available torch device.
