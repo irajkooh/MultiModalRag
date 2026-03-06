@@ -46,11 +46,10 @@ def get_device() -> str:
         return "cpu"
 
 
-@lru_cache(maxsize=1)
 def device_info() -> dict:
     """
     Return a dict with device name, label, and extra GPU info where available.
-    Cached so detection only runs once per process.
+    get_device() is cached so this is cheap to call repeatedly.
     """
     device = get_device()
     info = {"device": device, "label": device.upper()}
