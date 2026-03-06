@@ -7,7 +7,7 @@
 
 set -e
 
-export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
+export OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2m:latest}"
 MODEL="$OLLAMA_MODEL"
 
 echo "▶ Starting Ollama daemon..."
