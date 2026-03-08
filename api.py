@@ -35,9 +35,12 @@ vs = VectorStoreManager(persist_dir=VECTORSTORE_DIR)
 rag = RAGEngine(vector_store=vs, model=OLLAMA_MODEL)
 memory = ConversationMemory()
 
+
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Multimodal RAG API", version="1.0.0")
-app.add_middleware(
+
+# CORS is a browser security mechanism that blocks web pages from making requests to a different domain than the one that served the page. For example, if your Gradio frontend runs on localhost:7860 and tries to call your FastAPI backend on localhost:8000, the browser would normally block that request.
+app.add_middleware( 
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
