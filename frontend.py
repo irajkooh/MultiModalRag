@@ -176,11 +176,9 @@ def get_memory_stats():
     max_tok = stats.get('max_tokens', 2000)
     pct = int(used / max_tok * 100) if max_tok else 0
     bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
-    summarized = "✅ summarized" if stats.get("has_summary") else "—"
     return (
-        f"💬 **{msgs}** messages · "
-        f"🔢 **{used}** / {max_tok} tokens used ({pct}%)  `{bar}`  "
-        f"📝 {summarized}"
+      f"💬 **{msgs}** messages · "
+      f"🔢 **{used}** / {max_tok} tokens used ({pct}%)  `{bar}`"
     )
 
 
@@ -689,19 +687,7 @@ input[type="range"] {
 }
 
 /* Chatbot processing status ("processing | 18.5s") */
-#rag-chatbot .status,
-#rag-chatbot .pending,
-#rag-chatbot .generating,
-#rag-chatbot [class*="status"],
-#rag-chatbot [class*="pending"],
-[data-testid="chatbot"] .status,
-[data-testid="chatbot"] .pending,
-[data-testid="chatbot"] [class*="status"],
-[data-testid="chatbot"] [class*="pending"],
-[data-testid="chatbot"] + div,
-[data-testid="chatbot"] ~ div {
-  color: #ffffff !important;
-}
+/* Removed processing status styles as requested */
 
 /* ── Smaller text inside chat bubbles ──────────────────────────── */
 .chatbot-wrap [data-testid="bot"],
@@ -1128,6 +1114,31 @@ def build_ui():
                   .chatbot-wrap [data-testid="user"] * {
                     color: #ffed00 !important;
                     font-weight: 700 !important;
+                  }
+
+                  /* Hide any Gradio/Chatbot processing/elapsed time/status indicators */
+                  .chatbot-wrap .svelte-spinner,
+                  .chatbot-wrap .svelte-status,
+                  .chatbot-wrap [class*="processing"],
+                  .chatbot-wrap [class*="elapsed"],
+                  .chatbot-wrap [class*="status"],
+                  .chatbot-wrap [class*="progress"],
+                  .chatbot-wrap [class*="wait"],
+                  .chatbot-wrap [class*="loading"],
+                  #rag-chatbot .svelte-spinner,
+                  #rag-chatbot .svelte-status,
+                  #rag-chatbot [class*="processing"],
+                  #rag-chatbot [class*="elapsed"],
+                  #rag-chatbot [class*="status"],
+                  #rag-chatbot [class*="progress"],
+                  #rag-chatbot [class*="wait"],
+                  #rag-chatbot [class*="loading"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    height: 0 !important;
+                    min-height: 0 !important;
+                    max-height: 0 !important;
+                    opacity: 0 !important;
                   }
                 </style>
                 ''')
