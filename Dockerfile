@@ -40,21 +40,23 @@ RUN mkdir -p data vectorstore .ollama && \
 
 # Tell Ollama where to store model weights
 ENV OLLAMA_MODELS=/app/.ollama
+# Default model — override via Space secret OLLAMA_MODEL
+ENV OLLAMA_MODEL=llama3.2
+ENV OLLAMA_NUM_CTX=8192
 
 # ─── HuggingFace Spaces requires port 7860 ───────────────────────────────────
 EXPOSE 7860
 
 # ─── Startup: launch Ollama, pull model, then start the app ──────────────────
+# NOTE: ollama serve is backgrounded first (alone), then the rest runs in
+# the foreground shell — this ensures ENV vars are visible to ollama pull.
 CMD ["/bin/bash", "-c", "\
-export OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2} && \
-export OLLAMA_NUM_CTX=${OLLAMA_NUM_CTX:-8192} && \
-echo '▶ Starting Ollama daemon...' && \
 ollama serve & \
 echo '⏳ Waiting for Ollama to be ready...' && \
 until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
 echo '✅ Ollama is ready.' && \
-echo \"⬇  Pulling model: $OLLAMA_MODEL ...\" && \
-ollama pull $OLLAMA_MODEL && \
+echo \"⬇  Pulling model: ${OLLAMA_MODEL} ...\" && \
+ollama pull ${OLLAMA_MODEL} && \
 echo '✅ Model ready.' && \
 exec python app.py\
 "]
