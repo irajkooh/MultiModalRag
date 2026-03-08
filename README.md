@@ -46,7 +46,7 @@ pip install -r requirements.txt
 ### Run
 
 ```bash
-python main.py
+python app.py
 ```
 
 - Gradio UI: http://localhost:7860  
@@ -65,9 +65,10 @@ python main.py
 
 ```
 multimodal-rag/
-├── main.py                  # Entry point (runs API + UI)
-├── api.py                   # FastAPI backend
-├── app.py                   # Gradio UI
+├── app.py                   # Entrypoint (local dev + HuggingFace Spaces)
+├── frontend.py              # Gradio UI
+├── backend.py               # FastAPI backend
+├── Dockerfile               # HF Spaces Docker build
 ├── requirements.txt
 ├── data/                    # Uploaded documents
 ├── vectorstore/             # ChromaDB persistent storage

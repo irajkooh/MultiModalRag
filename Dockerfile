@@ -58,3 +58,4 @@ ollama pull $OLLAMA_MODEL && \
 echo '✅ Model ready.' && \
 exec python app.py\
 "]
+# backend.py = FastAPI REST API  |  frontend.py = Gradio UI  |  app.py = entrypoint

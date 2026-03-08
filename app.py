@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 def run_api():
     uvicorn.run(
-        "api:app",
+        "backend:app",
         host="0.0.0.0",
         port=8000,
         log_level="warning",
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    from ui import build_ui, CUSTOM_CSS
+    from frontend import build_ui, CUSTOM_CSS
     ui = build_ui()
 
     if not IS_HF:

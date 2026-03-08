@@ -55,9 +55,9 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 
 | File | Purpose |
 |---|---|
-| `main.py` | **Local development** — kills stale ports, auto-starts Ollama if needed, auto-pulls model, opens browser |
-| `hf_app.py` | **HuggingFace Spaces** — started by `startup.sh` inside Docker, no browser/port-kill |
-| `startup.sh` | Docker CMD — starts `ollama serve`, waits, pulls model, then runs `hf_app.py` |
+| `app.py` | **Single entrypoint for both environments** — detects HF Spaces via `SPACE_ID` env var. Locally: kills stale ports, auto-starts Ollama, opens browser. On HF: skips all local helpers |
+| `frontend.py` | Gradio UI — `build_ui()` and `CUSTOM_CSS` imported by `app.py` |
+| `Dockerfile` | HF Spaces Docker build — inlines Ollama startup, model pull, and runs `app.py` |
 
 **Key design principle:** The LLM is instructed to answer *only* from retrieved context. If the answer is not in the documents, it responds exactly: `I DON'T KNOW`.
 
@@ -189,7 +189,7 @@ API_BASE=http://localhost:8000
 ### Start everything with one command
 
 ```bash
-python main.py
+python app.py
 ```
 
 This will:
@@ -198,7 +198,7 @@ This will:
 3. Start the FastAPI backend on `http://localhost:8000`
 4. Auto-index any documents already in the `data/` folder
 5. Launch the Gradio UI on `http://localhost:7860`
-6. Open both `http://localhost:8000/docs` and `http://localhost:7860` in your browser automatically
+6. Open `http://localhost:7860` in your browser automatically
 
 > You no longer need to run `ollama serve` manually before starting the app.
 
@@ -206,12 +206,12 @@ This will:
 
 **Backend only:**
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn backend:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**UI only** (after backend is running):
+**Frontend only** (after backend is running):
 ```bash
-python app.py
+python frontend.py
 ```
 
 **API docs** (Swagger UI):
@@ -264,9 +264,9 @@ Key files:
 
 | File | Role |
 |---|---|
-| `Dockerfile` | Installs Python, Tesseract, Poppler, Ollama, CPU-only PyTorch, all deps |
-| `startup.sh` | Container CMD: starts `ollama serve`, waits, pulls model, runs `hf_app.py` |
-| `hf_app.py` | HF-specific entrypoint (no browser/port-kill, Gradio on port 7860) |
+| `Dockerfile` | Installs Python, Tesseract, Poppler, Ollama, CPU-only PyTorch, all deps. Inlines Ollama startup + model pull in `CMD` |
+| `app.py` | Single entrypoint — auto-detects HF via `SPACE_ID` env var |
+| `frontend.py` | Gradio UI imported by `app.py` |
 | `README.md` | Must have `sdk: docker` in the YAML front-matter |
 | `.dockerignore` | Excludes `.venv/`, `data/`, `vectorstore/`, `.DS_Store` from build |
 
@@ -337,7 +337,7 @@ By default, uploaded documents and the vector store reset when the Space restart
 To change the model, either set the env variable before running:
 
 ```bash
-OLLAMA_MODEL=mistral python main.py
+OLLAMA_MODEL=mistral python app.py
 ```
 
 Or edit `.env`.
@@ -369,7 +369,7 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 
 **Force MPS explicitly** (optional — it's auto-detected):
 ```bash
-TORCH_DEVICE=mps python main.py
+TORCH_DEVICE=mps python app.py
 ```
 
 Or set in `.env`:
@@ -391,7 +391,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 ### Force CPU
 
 ```bash
-TORCH_DEVICE=cpu python main.py
+TORCH_DEVICE=cpu python app.py
 ```
 
 ### Choosing a larger embedding model
@@ -480,7 +480,7 @@ python -c "from sentence_transformers import SentenceTransformer; SentenceTransf
 Delete and recreate the vectorstore (you'll need to re-upload documents):
 ```bash
 rm -rf ./vectorstore
-python main.py
+python app.py
 ```
 
 ### Upload fails for large PDFs
@@ -494,9 +494,9 @@ Make sure the FastAPI backend is running:
 ```bash
 curl http://localhost:8000/status
 ```
-If using `main.py`, the backend starts automatically. Run it directly if needed:
+The backend starts automatically when running `app.py`. Run it directly if needed:
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
+uvicorn backend:app --host 0.0.0.0 --port 8000
 ```
 
 ### Memory fills up quickly
@@ -509,12 +509,10 @@ Reduce `MAX_HISTORY_TOKENS` in `utils/memory.py` (default: 2000), or click **�
 ```
 multimodal-rag/
 │
-├── main.py                     # Local dev entrypoint: auto-starts Ollama, opens browser
-├── hf_app.py                   # HuggingFace Spaces entrypoint (Docker)
-├── api.py                      # FastAPI REST backend
-├── app.py                      # Gradio UI (sample questions, chat, doc manager)
-├── startup.sh                  # Docker CMD: starts ollama, pulls model, runs hf_app.py
-├── Dockerfile                  # HF Spaces Docker build
+├── app.py                      # Single entrypoint (local + HF Spaces) — detects env via SPACE_ID
+├── frontend.py                 # Gradio UI: chat, document manager, sample questions
+├── backend.py                  # FastAPI REST backend
+├── Dockerfile                  # HF Spaces Docker build (inlines Ollama startup in CMD)
 ├── .dockerignore               # Excludes .venv/, data/, vectorstore/ from image
 ├── requirements.txt            # Python dependencies
 ├── .gitignore
