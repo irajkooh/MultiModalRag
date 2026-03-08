@@ -1,6 +1,0 @@
-git clone https://huggingface.co/spaces/irajkoohi/MultiModalRag
-cp -r /Users/ik/UVcodes/Multi-modal\ RAG_3/* ./MultiModalRag/
-cd MultiModalRag
-git add .
-git commit -m "Update all files from local project"
-git push
