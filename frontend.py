@@ -63,8 +63,8 @@ def get_status():
     chunks = data.get("total_chunks", 0)
     model = data.get("model", "unknown")
     device = data.get("device", "CPU")
-    status_msg = f"✅ {len(docs)} document(s) indexed | {chunks} chunks | Model: {model} | 🖥 {device}"
-    return docs, files, status_msg, model
+    status_msg = f"✅ {len(docs)} document(s) indexed | {chunks} chunks"
+    return docs, files, status_msg, model, device
 
 
 def upload_files(files):
@@ -109,7 +109,7 @@ def delete_all_embeddings():
 
 
 def refresh_ui():
-    docs, files, status_msg, model = get_status()
+    docs, files, status_msg, model, _ = get_status()
     has_docs = len(docs) > 0
     # Return: doc_list choices, status_msg, submit_interactive
     return gr.update(choices=docs, value=None), status_msg, gr.update(interactive=has_docs)
@@ -171,10 +171,11 @@ def get_memory_stats():
     stats = api_get("/memory/stats")
     if "error" in stats:
         return f"⚠️ {stats['error']}"
+    summarized = "Yes" if stats.get("has_summary") else "No"
     return (
-        f"💬 Messages: {stats.get('message_count', 0)} | "
-        f"🔢 Tokens: {stats.get('total_tokens', 0)}/{stats.get('max_tokens', 2000)} | "
-        f"📝 Ctx summarized: {'Yes' if stats.get('has_summary') else 'No'}"
+        f"💬 {stats.get('message_count', 0)} msg | "
+        f"🔢 {stats.get('total_tokens', 0)}/{stats.get('max_tokens', 2000)} tok | "
+        f"📝 {'summ' if stats.get('has_summary') else 'no summ'}"
     )
 
 
@@ -520,7 +521,22 @@ textarea::placeholder, input::placeholder {
 #memory-stats span,
 #memory-stats div {
   color: #ffffff !important;
-  font-size: 0.82rem !important;
+  font-size: 0.72rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Chat tab device info */
+#chat-device-info,
+#chat-device-info p,
+#chat-device-info span,
+#chat-device-info div {
+  color: #8890a4 !important;
+  font-size: 0.78rem !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
 }
 
 /* Document list */
@@ -836,13 +852,16 @@ fieldset > div > span,
 def build_ui():
     with gr.Blocks(title="Multimodal RAG") as demo:
         
-        # Header
+        # Header (dynamic — device info injected on load)
         _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
-        gr.HTML(f"""
-        <div class="app-header">
-          <h1>🧠 MULTIMODAL RAG</h1><p>Query your PDFs, scanned images, tables and charts — grounded answers only. Powered by Ollama (<b style="color:#ffffff">{_model_name}</b>) + ChromaDB.</p>
-        </div>
-        """)
+        def _header_html(model, device=""):
+            dev = f" | 🖥 {device}" if device else ""
+            return (f'<div class="app-header">'
+                    f'<h1>🧠 MULTIMODAL RAG</h1>'
+                    f'<p>Query your PDFs, scanned images, tables and charts — grounded answers only. '
+                    f'Powered by Ollama (<b style="color:#ffffff">{model}</b>) + ChromaDB{dev}.</p>'
+                    f'</div>')
+        header_html = gr.HTML(value=_header_html(_model_name))
 
         # Global inline overrides — beat Gradio 6 Svelte-scoped styles
         gr.HTML("""
@@ -1145,14 +1164,14 @@ def build_ui():
 
                 with gr.Row():
                     with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K — Context chunks to retrieve</div>')
+                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K<br><span style="color:#8890a4;font-size:0.75rem;">Context chunks to retrieve</span></div>')
                         n_results_slider = gr.Slider(
                             minimum=1, maximum=10, value=5, step=1,
                             label="", show_label=False,
                             elem_id="topk-slider",
                         )
                     with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Temperature — LLM creativity (0 = deterministic)</div>')
+                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Temperature<br><span style="color:#8890a4;font-size:0.75rem;">LLM creativity (0 = deterministic)</span></div>')
                         temperature_slider = gr.Slider(
                             minimum=0.0, maximum=2.0, value=0.0, step=0.1,
                             label="", show_label=False,
@@ -1167,11 +1186,12 @@ def build_ui():
         all_sample_btn_components = [b for b, _ in sample_btns]
 
         def on_load():
-            docs, files, status_msg, model = get_status()
+            docs, files, status_msg, model, device = get_status()
             has_docs = len(docs) > 0
             mem_stat = get_memory_stats()
             sample_updates = [gr.update(interactive=has_docs) for _ in sample_btns]
             return (
+                gr.update(value=_header_html(model, device)),
                 gr.update(choices=docs, value=None),
                 status_msg,
                 gr.update(interactive=has_docs),
@@ -1181,15 +1201,16 @@ def build_ui():
 
         demo.load(
             fn=on_load,
-            outputs=[doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         def refresh_and_update_samples():
-            docs, files, status_msg, model = get_status()
+            docs, files, status_msg, model, device = get_status()
             has_docs = len(docs) > 0
             mem_stat = get_memory_stats()
             sample_updates = [gr.update(interactive=has_docs) for _ in sample_btns]
             return (
+                gr.update(value=_header_html(model, device)),
                 gr.update(choices=docs, value=None),
                 status_msg,
                 gr.update(interactive=has_docs),
@@ -1203,7 +1224,7 @@ def build_ui():
                 *refresh_and_update_samples(),
             ),
             inputs=[file_upload],
-            outputs=[upload_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[upload_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         delete_btn.click(
@@ -1212,7 +1233,7 @@ def build_ui():
                 *refresh_and_update_samples(),
             ),
             inputs=[doc_list],
-            outputs=[delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[delete_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         # First click on Remove ALL — show confirmation row
@@ -1230,7 +1251,7 @@ def build_ui():
                 *refresh_and_update_samples(),
             ),
             inputs=[],
-            outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[confirm_row, delete_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         # Cancel: just hide the confirmation row
@@ -1242,7 +1263,7 @@ def build_ui():
 
         refresh_btn.click(
             fn=refresh_and_update_samples,
-            outputs=[doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
         def on_submit(message, history, n, temp):
