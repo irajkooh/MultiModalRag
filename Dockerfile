@@ -28,6 +28,10 @@ RUN pip install --no-cache-dir \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ─── Pre-download embedding model (cached before COPY . . so code changes don't bust this layer) ───
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 # ─── Application code ─────────────────────────────────────────────────────────
 COPY . .
 
