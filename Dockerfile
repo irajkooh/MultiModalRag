@@ -1,5 +1,5 @@
 # ─── Base image ───────────────────────────────────────────────────────────────
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # ─── System packages ──────────────────────────────────────────────────────────
 # poppler-utils  → pdf2image (PDF rendering)
@@ -45,11 +45,11 @@ ENV OLLAMA_MODEL=llama3.2
 ENV OLLAMA_NUM_CTX=8192
 
 # ─── Pre-pull model at build time so restarts don't re-download ──────────────
-RUN ollama serve & \
+RUN ollama serve & OLLAMA_PID=$! && \
     sleep 5 && \
     until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
     ollama pull ${OLLAMA_MODEL} && \
-    pkill ollama || true
+    kill $OLLAMA_PID 2>/dev/null || true
 
 # ─── HuggingFace Spaces requires port 7860 ───────────────────────────────────
 EXPOSE 7860

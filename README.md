@@ -9,14 +9,14 @@ license: mit
 short_description: Multimodal RAG — PDFs, scans, tables, charts.
 ---
 
-# ⬡ Multimodal RAG System
+## ⬡ Multimodal RAG System
 
 A fully local, deployable **Multimodal Retrieval-Augmented Generation** system that answers questions **strictly** from your uploaded documents.
 
 ## Features
 
 | Feature | Details |
-|---|---|
+| --- | --- |
 | 📄 **Document types** | PDF (text + embedded images), scanned images (OCR), XLSX, DOCX, CSV, TXT |
 | 🔍 **Multimodal** | Extracts text, tables, charts, and images from PDFs |
 | 🧠 **Strict grounding** | Answers ONLY from documents — responds "I DON'T KNOW" otherwise |
@@ -30,12 +30,12 @@ A fully local, deployable **Multimodal Retrieval-Augmented Generation** system t
 
 ### Prerequisites
 
-1. **Install Ollama**: https://ollama.com  
-2. **Pull a model**: `ollama pull llama3.2`  
-3. **Install Tesseract** (for OCR):  
-   - macOS: `brew install tesseract`  
-   - Ubuntu: `sudo apt-get install tesseract-ocr`  
-   - Windows: https://github.com/UB-Mannheim/tesseract/wiki
+1. **Install Ollama**: <https://ollama.com>
+2. **Pull a model**: `ollama pull llama3.2`
+3. **Install Tesseract** (for OCR):
+   - macOS: `brew install tesseract`
+   - Ubuntu: `sudo apt-get install tesseract-ocr`
+   - Windows: <https://github.com/UB-Mannheim/tesseract/wiki>
 
 ### Installation
 
@@ -49,13 +49,13 @@ pip install -r requirements.txt
 python app.py
 ```
 
-- Gradio UI: http://localhost:7860  
-- FastAPI docs: http://localhost:8000/docs
+- Gradio UI: <http://localhost:7860>
+- FastAPI docs: <http://localhost:8000/docs>
 
 ## Environment Variables
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `DATA_DIR` | `./data` | Directory for uploaded documents |
 | `VECTORSTORE_DIR` | `./vectorstore` | ChromaDB persistence directory |
 | `OLLAMA_MODEL` | `llama3.2` | Ollama model to use |
@@ -63,7 +63,7 @@ python app.py
 
 ## Project Structure
 
-```
+```text
 multimodal-rag/
 ├── app.py                   # Entrypoint (local dev + HuggingFace Spaces)
 ├── frontend.py              # Gradio UI
@@ -82,7 +82,7 @@ multimodal-rag/
 ## API Endpoints
 
 | Method | Endpoint | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/status` | System status, indexed docs, chunk count |
 | POST | `/documents/upload` | Upload and index a document |
 | DELETE | `/documents/{filename}` | Remove a document |

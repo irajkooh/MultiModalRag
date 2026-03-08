@@ -18,13 +18,13 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 10. [Troubleshooting](#troubleshooting)
 11. [Project Structure](#project-structure)
 
-> **Live Space:** https://huggingface.co/spaces/irajkoohi/MultiModalRag
+> **Live Space:** <https://huggingface.co/spaces/irajkoohi/MultiModalRag>
 
 ---
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │                   Gradio UI (port 7860)              │
 │  • Document upload/remove   • Sample question pills  │
@@ -54,7 +54,7 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 ### Entry points
 
 | File | Purpose |
-|---|---|
+| --- | --- |
 | `app.py` | **Single entrypoint for both environments** — detects HF Spaces via `SPACE_ID` env var. Locally: kills stale ports, auto-starts Ollama, opens browser. On HF: skips all local helpers |
 | `frontend.py` | Gradio UI — `build_ui()` and `CUSTOM_CSS` imported by `app.py` |
 | `Dockerfile` | HF Spaces Docker build — inlines Ollama startup, model pull, and runs `app.py` |
@@ -71,11 +71,11 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 python --version   # must be 3.10 or higher
 ```
 
-Download from https://python.org if needed.
+Download from <https://python.org> if needed.
 
 ### 2. Ollama
 
-Ollama runs LLMs locally. Install it from https://ollama.com and pull at least one model:
+Ollama runs LLMs locally. Install it from <https://ollama.com> and pull at least one model:
 
 ```bash
 # Install Ollama (macOS / Linux)
@@ -91,6 +91,7 @@ ollama pull phi3
 ```
 
 Confirm it's running:
+
 ```bash
 ollama list    # should show pulled models
 ```
@@ -100,20 +101,23 @@ ollama list    # should show pulled models
 Required for processing scanned images and image-based PDFs.
 
 **macOS:**
+
 ```bash
 brew install tesseract
 ```
 
 **Ubuntu / Debian:**
+
 ```bash
 sudo apt-get update && sudo apt-get install -y tesseract-ocr
 ```
 
 **Windows:**
-Download the installer from https://github.com/UB-Mannheim/tesseract/wiki  
+Download the installer from <https://github.com/UB-Mannheim/tesseract/wiki>  
 Add the install directory (e.g. `C:\Program Files\Tesseract-OCR`) to your `PATH`.
 
 Verify:
+
 ```bash
 tesseract --version
 ```
@@ -123,16 +127,18 @@ tesseract --version
 Needed if you want better PDF image rendering.
 
 **macOS:**
+
 ```bash
 brew install poppler
 ```
 
 **Ubuntu:**
+
 ```bash
 sudo apt-get install -y poppler-utils
 ```
 
-**Windows:** Download from https://github.com/oschwartz10612/poppler-windows
+**Windows:** Download from <https://github.com/oschwartz10612/poppler-windows>
 
 ---
 
@@ -193,6 +199,7 @@ python app.py
 ```
 
 This will:
+
 1. **Auto-start Ollama** if `ollama serve` is not already running
 2. **Auto-pull the model** (`llama3.2` by default) if not already downloaded — first pull is ~2 GB
 3. Start the FastAPI backend on `http://localhost:8000`
@@ -205,17 +212,20 @@ This will:
 ### Run components separately (optional)
 
 **Backend only:**
+
 ```bash
 uvicorn backend:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Frontend only** (after backend is running):
+
 ```bash
 python frontend.py
 ```
 
 **API docs** (Swagger UI):
-```
+
+```text
 http://localhost:8000/docs
 ```
 
@@ -226,7 +236,7 @@ http://localhost:8000/docs
 ### Document Manager (left panel)
 
 | Action | How |
-|---|---|
+| --- | --- |
 | **Upload documents** | Click the file picker, select one or more files, then click **⬆ Upload & Index** |
 | **Remove a document** | Select a document from the radio list, click **🗑 Remove** |
 | **Refresh the list** | Click **↻ Refresh** |
@@ -244,7 +254,7 @@ The **Ask →** button and all sample question buttons are **automatically disab
 ### Memory Controls
 
 | Control | Description |
-|---|---|
+| --- | --- |
 | **Memory stats bar** | Shows message count, token usage, and `Summarized: Yes/No` |
 | **🧹 Clear Memory** | Wipes conversation history so the next question starts fresh |
 | **Context chunks slider** | Number of document chunks retrieved per query (1–10, default 5). Increase for broader questions |
@@ -257,13 +267,13 @@ When the conversation history exceeds ~2,000 tokens, older messages are automati
 
 ## Deploying to HuggingFace Spaces
 
-This project is deployed at: **https://huggingface.co/spaces/irajkoohi/MultiModalRag**
+This project is deployed at: <https://huggingface.co/spaces/irajkoohi/MultiModalRag>
 
 The deployment uses a **Docker Space** with Ollama bundled inside the container.
 Key files:
 
 | File | Role |
-|---|---|
+| --- | --- |
 | `Dockerfile` | Installs Python, Tesseract, Poppler, Ollama, CPU-only PyTorch, all deps. Inlines Ollama startup + model pull in `CMD` |
 | `app.py` | Single entrypoint — auto-detects HF via `SPACE_ID` env var |
 | `frontend.py` | Gradio UI imported by `app.py` |
@@ -297,7 +307,7 @@ git push space main
 ### Build timeline
 
 | Stage | Duration |
-|---|---|
+| --- | --- |
 | Docker build + pip install | ~3–4 min |
 | `ollama pull llama3.2` (~2 GB) | ~2–3 min (first cold start only) |
 | App ready | ~30 s after model is pulled |
@@ -309,7 +319,7 @@ Subsequent restarts skip the pull if the model is already cached.
 Set in **Space Settings → Variables and secrets**:
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `OLLAMA_MODEL` | `llama3.2` | Any model available on Ollama — `llama3.2:1b` is faster/smaller |
 | `OLLAMA_HOST` | `http://localhost:11434` | Override to point at an external Ollama server |
 | `DATA_DIR` | `./data` | Document storage path |
@@ -325,7 +335,7 @@ By default, uploaded documents and the vector store reset when the Space restart
 ## Configuration Reference
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `DATA_DIR` | `./data` | Folder where uploaded documents are stored |
 | `VECTORSTORE_DIR` | `./vectorstore` | ChromaDB persistence directory |
 | `OLLAMA_MODEL` | `llama3.2` | Model name as shown in `ollama list` |
@@ -349,7 +359,8 @@ Or edit `.env`.
 The embedding model (`sentence-transformers`) runs on the best available device, detected automatically at startup. The active device is shown in the UI status bar.
 
 ### Priority order
-```
+
+```text
 CUDA (NVIDIA GPU) → MPS (Apple Silicon) → CPU
 ```
 
@@ -358,6 +369,7 @@ CUDA (NVIDIA GPU) → MPS (Apple Silicon) → CPU
 MPS is supported on M1/M2/M3/M4 Macs running macOS 12.3+ with PyTorch 2.1+.
 
 **Install PyTorch with MPS support:**
+
 ```bash
 # Standard pip install already includes MPS on macOS arm64:
 pip install torch>=2.1.0
@@ -368,11 +380,13 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 ```
 
 **Force MPS explicitly** (optional — it's auto-detected):
+
 ```bash
 TORCH_DEVICE=mps python app.py
 ```
 
 Or set in `.env`:
+
 ```env
 TORCH_DEVICE=mps
 ```
@@ -409,7 +423,7 @@ EMBED_MODEL=BAAI/bge-base-en-v1.5    # state-of-the-art retrieval
 ### Performance notes
 
 | Device | Embedding speed (500 chunks) | Notes |
-|---|---|---|
+| --- | --- | --- |
 | CPU (M2) | ~12 s | Baseline |
 | MPS (M2) | ~3 s | ~4× faster |
 | CUDA (RTX 3080) | ~1.5 s | ~8× faster |
@@ -421,7 +435,7 @@ Ollama's LLM inference runs independently through its own process and already us
 ## Supported File Types
 
 | Extension | Content Extracted |
-|---|---|
+| --- | --- |
 | `.pdf` | Text per page, embedded images (OCR), table detection |
 | `.png` `.jpg` `.jpeg` `.tiff` `.bmp` | Full OCR via Tesseract |
 | `.docx` | Paragraphs + tables |
@@ -436,7 +450,7 @@ Ollama's LLM inference runs independently through its own process and already us
 The FastAPI backend is self-documented at `http://localhost:8000/docs`.
 
 | Method | Endpoint | Description |
-|---|---|---|
+| --- | --- | --- |
 | `GET` | `/status` | System status: indexed docs, chunk count, model |
 | `POST` | `/documents/upload` | Upload + index a file (multipart/form-data) |
 | `DELETE` | `/documents/{filename}` | Remove a document from index and disk |
@@ -459,54 +473,68 @@ curl -X POST http://localhost:8000/query \
 ## Troubleshooting
 
 ### "Ollama error: model not found"
+
 ```bash
 ollama pull llama3.2   # or whichever model is set in OLLAMA_MODEL
 ```
 
 ### "Tesseract not found"
+
 Make sure Tesseract is installed and on your `PATH`:
+
 ```bash
 which tesseract       # macOS/Linux
 where tesseract       # Windows
 ```
 
 ### Embedding model download hangs
+
 The first run downloads `all-MiniLM-L6-v2` (~90 MB). This is cached in `~/.cache/huggingface/`. If it times out, run:
+
 ```bash
 python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 ```
 
 ### ChromaDB / vectorstore errors
+
 Delete and recreate the vectorstore (you'll need to re-upload documents):
+
 ```bash
 rm -rf ./vectorstore
 python app.py
 ```
 
 ### Upload fails for large PDFs
+
 Increase the FastAPI timeout or upload timeout in `app.py`:
+
 ```python
 resp = api_post("/documents/upload", ..., timeout=300)  # 5 minutes
 ```
 
 ### "API unavailable" in the UI
+
 Make sure the FastAPI backend is running:
+
 ```bash
 curl http://localhost:8000/status
 ```
+
 The backend starts automatically when running `app.py`. Run it directly if needed:
+
 ```bash
 uvicorn backend:app --host 0.0.0.0 --port 8000
 ```
 
 ### Memory fills up quickly
+
 Reduce `MAX_HISTORY_TOKENS` in `utils/memory.py` (default: 2000), or click **🧹 Clear Memory** regularly.
 
 ---
 
 ## Project Structure
 
-```
+```text
 multimodal-rag/
 │
 ├── app.py                      # Single entrypoint (local + HF Spaces) — detects env via SPACE_ID
