@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from utils.document_processor import process_document_chunked, SUPPORTED_EXTENSIONS
 from utils.vector_store import VectorStoreManager
 from utils.rag_engine import RAGEngine
-from utils.memory import ConversationMemory
+from utils.memory import ConversationMemory, estimate_tokens
 from utils.device import device_info
 
 # ─── Configuration ────────────────────────────────────────────────────────────
@@ -58,6 +58,8 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: List[str]
+    tokens_user: int = 0  # tokens in user message
+    tokens_assistant: int = 0  # tokens in assistant response
 
 
 class StatusResponse(BaseModel):
@@ -174,18 +176,29 @@ async def query_documents(req: QueryRequest):
             return QueryResponse(answer="I DON'T KNOW", sources=[])
 
         # Run all blocking work (embedding + Ollama) in a thread executor
+
         def _run_query():
             results = vs.query(req.question, n_results=req.n_results)
             sources = list({r["metadata"].get("source", "") for r in results})
+            # Build context for token count
+            context = rag._build_context(results)
+            user_message = f"[CONTEXT]\n{context}\n\n[QUESTION]\n{req.question}\n\nRemember: Answer ONLY from the context above. If not found, say \"I DON'T KNOW\"."
+            # Compose full prompt for LLM
+            system_prompt = getattr(rag, "SYSTEM_PROMPT", "You are a document assistant. Answer questions using ONLY the [CONTEXT] provided. If the answer is not in the context, respond: 'I DON'T KNOW'. Be concise and factual. Cite source and page when available.")
+            prompt = f"{system_prompt}\n{user_message}"
             parts = []
             for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False):
                 parts.append(token)
-            return "".join(parts), sources
+            answer = "".join(parts)
+            # Per-message token counts
+            tokens_user = estimate_tokens(req.question)
+            tokens_assistant = estimate_tokens(answer)
+            return answer, sources, tokens_user, tokens_assistant
 
         loop = asyncio.get_running_loop()
-        answer, sources = await loop.run_in_executor(None, _run_query)
+        answer, sources, tokens_user, tokens_assistant = await loop.run_in_executor(None, _run_query)
 
-        return QueryResponse(answer=answer, sources=sources)
+        return QueryResponse(answer=answer, sources=sources, tokens_user=tokens_user, tokens_assistant=tokens_assistant)
     except Exception as e:
         logger.error(f"Query endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

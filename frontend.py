@@ -1,6 +1,6 @@
 """
-Gradio UI for the Multimodal RAG system.
-Connects to the FastAPI backend for all operations.
+Modern Gradio UI for Multimodal RAG system.
+Chat and document management with clean, responsive layout.
 """
 import os
 import time
@@ -8,84 +8,71 @@ import requests
 import gradio as gr
 from pathlib import Path
 
-GREEN      = "\033[92m"
-DARK_GREEN = "\033[32m"
-RED        = "\033[91m"
-YELLOW     = "\033[93m"
-BLUE       = "\033[94m"  
-RESET      = "\033[0m"
-
 API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
 
-# ─── API helpers ──────────────────────────────────────────────────────────────
 def api_get(path: str, timeout: int = 10):
-    try:
-        r = requests.get(f"{API_BASE}{path}", timeout=timeout)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
-
+  try:
+    r = requests.get(f"{API_BASE}{path}", timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+  except Exception as e:
+    return {"error": str(e)}
 
 def api_post(path: str, json=None, files=None, timeout: int = 60, _retries: int = 3):
-    import requests.exceptions
-    for attempt in range(_retries):
-        try:
-            r = requests.post(f"{API_BASE}{path}", json=json, files=files, timeout=timeout)
-            r.raise_for_status()
-            return r.json()
-        except requests.exceptions.ConnectionError:
-            if attempt < _retries - 1:
-                time.sleep(3)
-                continue
-            return {"error": "⚠️ Backend not ready yet — please wait a moment and try again."}
-        except Exception as e:
-            return {"error": str(e)}
-    return {"error": "⚠️ Backend unreachable after retries."}
-
+  import requests.exceptions
+  for attempt in range(_retries):
+    try:
+      r = requests.post(f"{API_BASE}{path}", json=json, files=files, timeout=timeout)
+      r.raise_for_status()
+      return r.json()
+    except requests.exceptions.ConnectionError:
+      if attempt < _retries - 1:
+        time.sleep(3)
+        continue
+      return {"error": "⚠️ Backend not ready yet — please wait a moment and try again."}
+    except Exception as e:
+      return {"error": str(e)}
+  return {"error": "⚠️ Backend unreachable after retries."}
 
 def api_delete(path: str, timeout: int = 10):
-    try:
-        r = requests.delete(f"{API_BASE}{path}", timeout=timeout)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
+  try:
+    r = requests.delete(f"{API_BASE}{path}", timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+  except Exception as e:
+    return {"error": str(e)}
 
-
-# ─── UI Logic ──────────────────────────────────────────────────────────────────
 def get_status():
-    data = api_get("/status")
-    if "error" in data:
-        return [], [], "⚠️ API unavailable", "Unknown"
-    docs = data.get("documents", [])
-    files = data.get("data_dir_files", [])
-    chunks = data.get("total_chunks", 0)
-    model = data.get("model", "unknown")
-    device = data.get("device", "CPU")
-    status_msg = f"✅ {len(docs)} document(s) indexed | {chunks} chunks"
-    return docs, files, status_msg, model, device
+  data = api_get("/status")
+  if not data or "error" in data:
+    # Always return a tuple of the right length
+    return [], [], "⚠️ API unavailable", "Unknown", "Unknown"
+  docs = data.get("documents", [])
+  files = data.get("data_dir_files", [])
+  chunks = data.get("total_chunks", 0)
+  model = data.get("model", "unknown")
+  device = data.get("device", "CPU")
+  status_msg = f"✅ {len(docs)} document(s) indexed | {chunks} chunks"
+  return docs, files, status_msg, model, device
 
 
 def upload_files(files):
-    if not files:
-        return "No files selected.", *refresh_ui()
-    
-    messages = []
-    for file in files:
-        path = Path(file.name)
-        with open(path, "rb") as f:
-            resp = api_post(
-                "/documents/upload",
-                files={"file": (path.name, f, "application/octet-stream")},
-                timeout=120,
-            )
-        if "error" in resp:
-            messages.append(f"❌ {path.name}: {resp['error']}")
-        else:
-            messages.append(f"✅ {path.name}: {resp['message']}")
-    
-    return "\n".join(messages), *refresh_ui()
+  if not files:
+    return "No files selected.", *refresh_ui()
+  messages = []
+  for file in files:
+    path = Path(file.name)
+    with open(path, "rb") as f:
+      resp = api_post(
+        "/documents/upload",
+        files={"file": (path.name, f, "application/octet-stream")},
+        timeout=120,
+      )
+    if "error" in resp:
+      messages.append(f"❌ {path.name}: {resp['error']}")
+    else:
+      messages.append(f"✅ {path.name}: {resp['message']}")
+  return "\n".join(messages), *refresh_ui()
 
 
 def delete_document(filenames):
@@ -110,39 +97,44 @@ def delete_all_embeddings():
 
 def refresh_ui():
     docs, files, status_msg, model, _ = get_status()
-    has_docs = len(docs) > 0
-    # Return: doc_list choices, status_msg, submit_interactive
-    return gr.update(choices=docs, value=None), status_msg, gr.update(interactive=has_docs)
+    has_docs = len(docs) > 0 if docs is not None else False
+    return gr.update(choices=docs or [], value=None), status_msg, gr.update(interactive=has_docs)
 
 
 def chat_fn(message, history, n_results, temperature):
-    """Send query to API, stream response token by token."""
-    if not message.strip():
-        yield history, ""
-        return
-    
-    resp = api_post("/query", json={"question": message, "n_results": n_results, "temperature": temperature}, timeout=480)
-    if "error" in resp:
-        answer = f"⚠️ {resp['error']}"
-    else:
-        answer = resp.get("answer", "I DON'T KNOW")
-        sources = resp.get("sources", [])
-        if sources:
-            answer += f"\n\n📄 *Sources: {', '.join(sources)}*"
-
-    history = list(history) if history else []
-    history.append({"role": "user", "content": message})
-    history.append({"role": "assistant", "content": ""})
-
-    # Simulate streaming for better UX
-    displayed = ""
-    for char in answer:
-        displayed += char
-        history[-1] = {"role": "assistant", "content": displayed}
-        yield history, ""
-        time.sleep(0.005)
-    
+  """Send query to API, stream response token by token."""
+  if not message.strip():
     yield history, ""
+    return
+  resp = api_post("/query", json={"question": message, "n_results": n_results, "temperature": temperature}, timeout=480)
+  tokens_user = resp.get("tokens_user", 0)
+  tokens_assistant = resp.get("tokens_assistant", 0)
+  if "error" in resp:
+    answer = f"⚠️ {resp['error']}"
+  else:
+    answer = resp.get("answer", "I DON'T KNOW")
+    sources = resp.get("sources", [])
+    if sources:
+      answer += f"\n\n📄 *Sources: {', '.join(sources)}*"
+  # Gradio 6.x expects: list of dicts with 'role' and 'content' keys
+  history = list(history) if history else []
+  if history and isinstance(history[0], tuple):
+    new_hist = []
+    for user, bot in history:
+      if user is not None:
+        new_hist.append({"role": "user", "content": user})
+      if bot is not None:
+        new_hist.append({"role": "assistant", "content": bot})
+    history = new_hist
+  history.append({"role": "user", "content": message})
+  history.append({"role": "assistant", "content": ""})
+  displayed = ""
+  for char in answer:
+    displayed += char
+    history[-1]["content"] = displayed
+    yield history, {"tokens_user": tokens_user, "tokens_assistant": tokens_assistant}
+    time.sleep(0.005)
+  yield history, {"tokens_user": tokens_user, "tokens_assistant": tokens_assistant}
 
 
 def clear_memory():
@@ -199,317 +191,422 @@ SAMPLE_QUESTIONS = [
 ]
 
 
+# ─── Custom CSS ───────────────────────────────────────────────────────────────
+CUSTOM_CSS = """
+/* Ensure chat and documents tab panels have the same height */
+.panel-box, #chat > div, #chat .panel-box {
+  min-height: 480px !important;
+  max-height: 600px !important;
+  box-sizing: border-box !important;
+}
+/* Ensure chat and documents tab panels have the same height */
+.panel-box, #chat > div, #chat .panel-box {
+  min-height: 340px !important;
+  max-height: 420px !important;
+  box-sizing: border-box !important;
+}
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+
+:root {
+  --bg: #0d0f14;
+  --surface: #141720;
+  --surface2: #1c2030;
+  --border: #2a2f40;
+  --accent: #4fffb0;
+  --accent2: #7c5cfc;
+  --accent3: #ff6b6b;
+  --text: #e8eaf0;
+  --text-muted: #8890a4;
+  --radius: 10px;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+html, body, .gradio-container {
+  min-height: unset !important;
+  height: auto !important;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: var(--font-mono) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+}
+
+body, .gradio-container {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: var(--font-mono) !important;
+}
+
+.gradio-container {
+  max-width: 1100px !important;
+  margin: 0 auto !important;
+  padding: 0 8px 0 8px !important;
+  box-sizing: border-box !important;
+  zoom: 0.82;
+  transform-origin: top center;
+}
+
+/* Undo zoom effect on html/body so the scaled container is centered */
+html, body {
+  overflow-x: hidden !important;
+}
+
+/* Row/form gaps */
+.gap { gap: 6px !important; padding: 0 !important; }
+.form { gap: 4px !important; }
+.block { overflow: visible !important; }
+
+/* Tab bar */
+.tab-nav {
+  border-bottom: 2px solid var(--border) !important;
+  margin-bottom: 4px !important;
+}
+.tab-nav button {
+  font-family: var(--font-head) !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: #ffffff !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  padding: 8px 22px !important;
+  margin-bottom: -2px !important;
+  transition: all 0.2s !important;
+}
+.tab-nav button.selected {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.tab-nav button:hover:not(.selected) {
+  color: var(--accent) !important;
+}
+
+
+
+/* Header */
+  background: linear-gradient(135deg, #141720 0%, #1c2030 100%);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 6px 14px !important;
+  margin-bottom: 6px !important;
+  display: flex;
+  align-items: baseline;
+  gap: 8px !important;
+  flex-wrap: wrap;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.app-header h1, .app-header p {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  box-sizing: border-box;
+}
+
+.app-header h1 {
+  font-family: var(--font-head) !important;
+  font-size: 1.2rem !important;
+  font-weight: 800 !important;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 !important;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.app-header p {
+  color: var(--text-muted) !important;
+  margin: 0 !important;
+  font-size: 0.78rem !important;
+}
+
+/* Panels */
+.panel-box {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 10px !important;
+  overflow-y: auto !important;
+  max-height: 42vh !important;
+  min-height: 40px !important;
+  height: 40px !important;
+}
+
+.panel-label {
+  font-family: var(--font-head) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+  color: var(--accent) !important;
+  margin-bottom: 6px !important;
+  margin-top: 0 !important;
+}
+
+/* Buttons */
+button.primary-btn {
+  background: var(--accent) !important;
+  color: #0d0f14 !important;
+  border: none !important;
+  font-family: var(--font-head) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s !important;
+}
+
+button.primary-btn:hover:not(:disabled) {
+  background: #2dffa0 !important;
+  transform: translateY(-1px) !important;
+}
+
+button.primary-btn:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+}
+
+button.danger-btn {
+  background: transparent !important;
+  color: var(--accent3) !important;
+  border: 1px solid var(--accent3) !important;
+  font-family: var(--font-head) !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s !important;
+}
+
+button.danger-btn:hover:not(:disabled) {
+  background: var(--accent3) !important;
+  color: #0d0f14 !important;
+}
+
+button.secondary-btn {
+  background: transparent !important;
+  color: var(--accent2) !important;
+  border: 1px solid var(--accent2) !important;
+  font-family: var(--font-head) !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s !important;
+}
+
+button.secondary-btn:hover {
+  background: var(--accent2) !important;
+  color: white !important;
+}
+
+
+/* File upload widget */
+.gr-file, [data-testid="file"],
+[data-testid="file"] > div, [data-testid="file"] .wrap,
+.file-preview, .file-preview-title,
+.file-preview span, label.svelte-1b53jlb,
+.upload-container, .upload-container span, .upload-container p,
+.dndzone, .dndzone span, .dndzone p, .dndzone label,
+.dndzone > div, [data-testid="file"] span,
+[data-testid="file"] p,
+/* uploaded file list items */
+[data-testid="file"] .file-preview li,
+[data-testid="file"] .file-preview a,
+[data-testid="file"] .file-preview .file-name,
+[data-testid="file"] ul li,
+[data-testid="file"] ul li span,
+[data-testid="file"] .upload-container *,
+.file-preview *, [data-testid="file"] * {
+  color: #ffffff !important;
+}
+
+/* ...existing code... */
+"""
+
+
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(title="Multimodal RAG") as demo:
-        
-        # Header (dynamic — device info injected on load)
-        _model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
-        def _header_html(model, device=""):
-                dev = f" | 🖥 {device}" if device else ""
-                return (f'<div class="app-header">'
-                    f'<h1>🧠 MULTIMODAL RAG</h1>'
-                    f'<p>Query your PDFs, scanned images, tables and charts — grounded answers only. '
-                    f'Powered by Ollama (<b style="color:#000000;font-weight:bold">{model}</b>) + ChromaDB{dev}.</p>'
-                    f'</div>')
-        header_html = gr.HTML(value=_header_html(_model_name))
-
-        # ...existing code...
-
-
-        with gr.Tabs(selected="chat"):
-            # ── TAB 1 — Documents ──────────────────────────────────────────
-            with gr.Tab("📁 Documents", id="documents"):
-
-                status_text = gr.Markdown(
-                    value="⏳ Loading...",
-                    elem_classes="status-bar",
+    with gr.Blocks(title="Multimodal RAG", theme=gr.themes.Soft(), css="""
+    .main-col {max-width: 900px; margin: 0 auto;}
+    .chatbot-wrap {background: #181c24; border-radius: 12px;}
+    .gradio-container {background: #10131a;}
+    .gr-button.primary-btn {background: #4fffb0; color: #181c24; font-weight: bold;}
+    .gr-button.secondary-btn {background: #23263a; color: #4fffb0;}
+    .gr-button.danger-btn {background: #ff6b6b; color: #fff;}
+    .gr-chatbot .message.user {color: #ffe066; font-weight: bold;}
+    .gr-chatbot .message.bot {color: #fff;}
+    /* #token-stats color override removed to allow inline color */
+    """) as demo:
+        with gr.Row():
+            with gr.Column(elem_classes="main-col"):
+                docs, files, status_msg, model, device = get_status()
+                gr.Markdown(f"""
+                # 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>
+                <span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>
+                <br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span> <span style='color:#7c5cfc;font-weight:bold;'>Powered by Ollama + ChromaDB</span>
+                """, elem_id="header")
+        with gr.Tabs(selected=0) as tabs:
+          with gr.TabItem("💬 Chat"):
+            chatbot = gr.Chatbot(
+              label="Chat",
+              height=380,
+              elem_classes="chatbot-wrap",
+            )
+            with gr.Row():
+              msg_input = gr.Textbox(
+                placeholder="Ask a question about your documents...",
+                show_label=False,
+                scale=5,
+                lines=1,
+                autofocus=True,
+              )
+              submit_btn = gr.Button("Ask →", elem_classes="primary-btn", scale=1)
+            with gr.Row():
+              n_results_slider = gr.Slider(
+                minimum=1, maximum=10, value=5, step=1,
+                label="Top K (context chunks)",
+                elem_id="topk-slider",
+              )
+              temperature_slider = gr.Slider(
+                minimum=0.0, maximum=2.0, value=0.0, step=0.1,
+                label="Temperature (0 = deterministic)",
+                elem_id="temperature-slider",
+              )
+              with gr.Column():
+                clear_memory_btn = gr.Button("🧹 Clear Memory", elem_classes="secondary-btn")
+                token_stats_text = gr.Markdown(
+                  value="<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>",
+                    elem_id="token-stats",
+                    visible=True,
                 )
-
-                gr.HTML('<div class="panel-label" style="margin-top:2px;margin-bottom:2px;">⬆ Upload Documents</div>')
-                file_upload = gr.UploadButton(
-                    label="⬆ Click or Drop Files to Upload & Index",
-                    file_count="multiple",
-                    file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff",
-                                ".docx", ".xlsx", ".csv", ".txt"],
-                    elem_classes="primary-btn",
-                    elem_id="file-upload",
-                    size="sm",
-                )
-                gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:2px;margin-bottom:2px;letter-spacing:1px;">UPLOAD STATUS</div>')
-                upload_status = gr.HTML(value=_status_html(""), elem_id="upload-status")
-
-                gr.HTML('<hr style="border-color:#2a2f40; margin:6px 0">')
-                gr.HTML('<div class="panel-label" style="margin-bottom:2px;">🗂 Indexed Documents</div>')
-
-                doc_list = gr.CheckboxGroup(
-                    choices=[],
-                    label="",
-                    elem_classes="doc-list",
-                    interactive=True,
-                )
-
-                with gr.Row():
-                    delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn", size="sm")
-                    delete_all_btn = gr.Button("🗑 Remove ALL", elem_classes="danger-btn", size="sm")
-                    refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn", size="sm")
-
-                with gr.Row(visible=False) as confirm_row:
-                    gr.HTML('<span style="font-size:0.82rem;color:#f87171;align-self:center;">⚠️ Remove ALL embeddings?</span>')
-                    confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_classes="danger-btn", size="sm")
-                    confirm_no_btn = gr.Button("✖ Cancel", elem_classes="secondary-btn", size="sm")
-
-                gr.HTML('<div style="font-size:0.75rem;color:#8890a4;margin-top:2px;margin-bottom:2px;letter-spacing:1px;">ACTION</div>')
-                delete_status = gr.HTML(value=_status_html(""), elem_id="delete-status")
-
-            # ── TAB 2 — Chat ───────────────────────────────────────────────
-            with gr.Tab("💬 Chat", id="chat"):
-
-                sample_btns = []
-                with gr.Accordion("✦ Sample questions", open=False, elem_classes="sample-accordion"):
-                    with gr.Row(elem_classes="sample-q-grid"):
-                        for col_idx in range(3):
-                            with gr.Column(scale=1, min_width=0):
-                                col_btns = []
-                                for row_idx in range(3):
-                                    idx = row_idx * 3 + col_idx
-                                    if idx < len(SAMPLE_QUESTIONS):
-                                        label, question = SAMPLE_QUESTIONS[idx]
-                                        btn = gr.Button(
-                                            f"{label}\n{question}",
-                                            elem_classes="sample-q-btn",
-                                            interactive=False,
-                                            size="sm",
-                                        )
-                                        col_btns.append((btn, question))
-                                sample_btns.extend(col_btns)
-
-                chatbot = gr.Chatbot(
-                    label="",
-                    height=240,
-                    layout="bubble",
-                    show_label=False,
-                    elem_id="rag-chatbot",
-                    elem_classes="chatbot-wrap",
-                    buttons=["copy", "copy_all"],
-                )
-
-
-                # Auto-scroll to bottom on every new message
-                gr.HTML('''
-                <script>
-                (function() {
-                  function scrollBottom() {
-                    // Try the chatbot element itself first
-                    var candidates = [
-                      document.getElementById("rag-chatbot"),
-                      document.querySelector(".chatbot-wrap"),
-                      document.querySelector("#rag-chatbot .bubble-wrap"),
-                      document.querySelector("#rag-chatbot .messages"),
-                      document.querySelector("#rag-chatbot > div"),
-                    ];
-                    for (var i = 0; i < candidates.length; i++) {
-                      var el = candidates[i];
-                      if (!el) continue;
-                      // Try the element itself
-                      var ov = window.getComputedStyle(el).overflowY;
-                      if (ov === "auto" || ov === "scroll") {
-                        el.scrollTop = el.scrollHeight; continue;
-                      }
-                      // Try all its descendants
-                      var all = el.querySelectorAll("*");
-                      for (var j = 0; j < all.length; j++) {
-                        var dov = window.getComputedStyle(all[j]).overflowY;
-                        if ((dov === "auto" || dov === "scroll") && all[j].scrollHeight > all[j].clientHeight + 4) {
-                          all[j].scrollTop = all[j].scrollHeight;
-                        }
-                      }
-                    }
-                  }
-                  function attach() {
-                    var root = document.getElementById("rag-chatbot") || document.querySelector(".chatbot-wrap");
-                    if (!root) { setTimeout(attach, 300); return; }
-                    // Watch for any DOM change inside the chatbot
-                    new MutationObserver(function() {
-                      requestAnimationFrame(function() { requestAnimationFrame(scrollBottom); });
-                    }).observe(root, {childList:true, subtree:true, characterData:true});
-                  }
-                  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attach);
-                  else attach();
-                })();
-                </script>
-                ''')
-
-                with gr.Row():
-                    msg_input = gr.Textbox(
-                        placeholder="Ask a question about your documents...",
-                        show_label=False,
-                        scale=5,
-                        lines=1,
-                        autofocus=True,
-                    )
-                    submit_btn = gr.Button(
-                        "Ask →",
-                        scale=1,
-                        elem_classes="primary-btn",
-                        interactive=False,
-                    )
-
-                with gr.Row():
-                    with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#8890a4;font-size:0.72rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:0px;">Top K &nbsp;<span style="opacity:0.6">— context chunks</span></div>')
-                        n_results_slider = gr.Slider(
-                            minimum=1, maximum=10, value=5, step=1,
-                            label="", show_label=False,
-                            elem_id="topk-slider",
-                        )
-                    with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#8890a4;font-size:0.72rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:0px;">Temperature &nbsp;<span style="opacity:0.6">— 0 = deterministic</span></div>')
-                        temperature_slider = gr.Slider(
-                            minimum=0.0, maximum=2.0, value=0.0, step=0.1,
-                            label="", show_label=False,
-                            elem_id="temperature-slider",
-                        )
-                    clear_memory_btn = gr.Button(
-                        "🧹 Clear Memory", scale=1, elem_classes="secondary-btn", size="sm"
-                    )
-
-                memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
-
-        # ─── Event Handlers ───────────────────────────────────────────────
-        all_sample_btn_components = [b for b, _ in sample_btns]
+            memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
+          with gr.TabItem("📁 Documents"):
+            status_text = gr.Markdown(value="⏳ Loading...", elem_classes="status-bar")
+            file_upload = gr.UploadButton(
+              label="⬆ Upload & Index Files",
+              file_count="multiple",
+              file_types=[".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".docx", ".xlsx", ".csv", ".txt"],
+              elem_classes="primary-btn",
+              elem_id="file-upload",
+            )
+            upload_status = gr.Markdown(value="", elem_id="upload-status")
+            doc_list = gr.CheckboxGroup(
+              choices=[],
+              label="Indexed Documents",
+              elem_classes="doc-list",
+              interactive=True,
+            )
+            with gr.Row():
+              delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn")
+              delete_all_btn = gr.Button("🗑 Remove ALL", elem_classes="danger-btn")
+              refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn")
+            # Confirmation row for Remove ALL
+            with gr.Row(visible=False) as confirm_row:
+              gr.Markdown('<span style="font-size:0.95em;color:#f87171;">⚠️ Remove ALL embeddings? This cannot be undone.</span>')
+              confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_classes="danger-btn")
+              confirm_no_btn = gr.Button("✖ Cancel", elem_classes="secondary-btn")
+            delete_status = gr.Markdown(value="", elem_id="delete-status")
 
         def on_load():
-            docs, files, status_msg, model, device = get_status()
-            has_docs = len(docs) > 0
-            mem_stat = get_memory_stats()
-            sample_updates = [gr.update(interactive=has_docs) for _ in sample_btns]
-            return (
-                gr.update(value=_header_html(model, device)),
-                gr.update(choices=docs, value=None),
-                status_msg,
-                gr.update(interactive=has_docs),
-                mem_stat,
-                *sample_updates,
-            )
-
+          docs, files, status_msg, model, device = get_status()
+          has_docs = len(docs) > 0 if docs is not None else False
+          return (
+            gr.update(choices=docs or [], value=None),
+            status_msg,
+            gr.update(interactive=has_docs),
+          )
         demo.load(
             fn=on_load,
-            outputs=[header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[doc_list, status_text, submit_btn],
         )
-
-        def refresh_and_update_samples():
-            docs, files, status_msg, model, device = get_status()
-            has_docs = len(docs) > 0
-            mem_stat = get_memory_stats()
-            sample_updates = [gr.update(interactive=has_docs) for _ in sample_btns]
-            return (
-                gr.update(value=_header_html(model, device)),
-                gr.update(choices=docs, value=None),
-                status_msg,
-                gr.update(interactive=has_docs),
-                mem_stat,
-                *sample_updates,
-            )
-
+        def refresh_and_update():
+          docs, files, status_msg, model, device = get_status()
+          has_docs = len(docs) > 0 if docs is not None else False
+          return (
+            gr.update(choices=docs or [], value=None),
+            status_msg,
+            gr.update(interactive=has_docs),
+          )
         file_upload.upload(
-            fn=lambda files: (
-                _status_html(upload_files(files)[0]),
-                *refresh_and_update_samples(),
-            ),
+            fn=lambda files: (upload_files(files)[0], *refresh_and_update()),
             inputs=[file_upload],
-            outputs=[upload_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+            outputs=[upload_status, doc_list, status_text, submit_btn],
         )
-
         delete_btn.click(
-            fn=lambda doc: (
-                _status_html(delete_document(doc)[0]),
-                *refresh_and_update_samples(),
-            ),
-            inputs=[doc_list],
-            outputs=[delete_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+          fn=lambda doc: (delete_document(doc)[0], *refresh_and_update()),
+          inputs=[doc_list],
+          outputs=[delete_status, doc_list, status_text, submit_btn],
         )
-
-        # First click on Remove ALL — show confirmation row
+        # Show confirmation row when Remove ALL is clicked
         delete_all_btn.click(
-            fn=lambda: gr.update(visible=True),
-            inputs=[],
-            outputs=[confirm_row],
+          fn=lambda: gr.update(visible=True),
+          outputs=[confirm_row],
         )
-
         # Confirm: execute delete, hide confirmation row
         confirm_yes_btn.click(
-            fn=lambda: (
-                gr.update(visible=False),
-                _status_html(delete_all_embeddings()[0]),
-                *refresh_and_update_samples(),
-            ),
-            inputs=[],
-            outputs=[confirm_row, delete_status, header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+          fn=lambda: (gr.update(visible=False), delete_all_embeddings()[0], *refresh_and_update()),
+          outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn],
         )
-
         # Cancel: just hide the confirmation row
         confirm_no_btn.click(
-            fn=lambda: gr.update(visible=False),
-            inputs=[],
-            outputs=[confirm_row],
+          fn=lambda: gr.update(visible=False),
+          outputs=[confirm_row],
         )
-
         refresh_btn.click(
-            fn=refresh_and_update_samples,
-            outputs=[header_html, doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
+          fn=refresh_and_update,
+          outputs=[doc_list, status_text, submit_btn],
         )
-
         def on_submit(message, history, n, temp):
-            history = history or []
-            for updated_history, _ in chat_fn(message, history, n, temp):
-                yield updated_history, "", ""
-            yield updated_history, "", get_memory_stats()
-
+          history = history or []
+          last_resp = None
+          tokens_user = 0
+          tokens_assistant = 0
+          for updated_history, _ in chat_fn(message, history, n, temp):
+            if isinstance(_, dict):
+              tokens_user = _.get("tokens_user", 0)
+              tokens_assistant = _.get("tokens_assistant", 0)
+            last_resp = updated_history
+            yield updated_history, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
+          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
         submit_btn.click(
-            fn=on_submit,
-            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-            outputs=[chatbot, msg_input, memory_stats_text],
+          fn=on_submit,
+          inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
+          outputs=[chatbot, msg_input, token_stats_text],
         )
-
         msg_input.submit(
-            fn=on_submit,
-            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-            outputs=[chatbot, msg_input, memory_stats_text],
+          fn=on_submit,
+          inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
+          outputs=[chatbot, msg_input, token_stats_text],
         )
-
-        # Wire each sample question button → prefill input and auto-submit
-        def make_sample_handler(question_text):
-            def handler(history, n, temp):
-                for updated_history, _ in chat_fn(question_text, history or [], n, temp):
-                    yield updated_history, "", ""
-                yield updated_history, "", get_memory_stats()
-            return handler
-
-        for btn, question_text in sample_btns:
-            btn.click(
-                fn=make_sample_handler(question_text),
-                inputs=[chatbot, n_results_slider, temperature_slider],
-                outputs=[chatbot, msg_input, memory_stats_text],
-            )
-
         def on_clear_memory():
-            status, history = clear_memory()
-            return history, _status_html(status), get_memory_stats()
-
+          status, history = clear_memory()
+          # Ensure history is a list of dicts for Gradio 6.x
+          if history and history and isinstance(history[0], tuple):
+            new_hist = []
+            for user, bot in history:
+              if user is not None:
+                new_hist.append({"role": "user", "content": user})
+              if bot is not None:
+                new_hist.append({"role": "assistant", "content": bot})
+            history = new_hist
+          return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
         clear_memory_btn.click(
-            fn=on_clear_memory,
-            outputs=[chatbot, delete_status, memory_stats_text],
+          fn=on_clear_memory,
+          outputs=[chatbot, memory_stats_text, token_stats_text],
         )
-
     demo.queue()
     return demo
 
-
 if __name__ == "__main__":
     ui = build_ui()
-    ui.launch(
-      server_name="0.0.0.0",
-      server_port=7860,
-      show_error=True,
-    )
+    ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True)

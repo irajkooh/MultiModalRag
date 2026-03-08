@@ -32,7 +32,7 @@ YELLOW     = "\033[93m"
 BLUE       = "\033[94m"
 RESET      = "\033[0m"
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 
