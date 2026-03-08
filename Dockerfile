@@ -44,20 +44,22 @@ ENV OLLAMA_MODELS=/app/.ollama
 ENV OLLAMA_MODEL=llama3.2
 ENV OLLAMA_NUM_CTX=8192
 
+# ─── Pre-pull model at build time so restarts don't re-download ──────────────
+RUN ollama serve & \
+    sleep 5 && \
+    until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
+    ollama pull ${OLLAMA_MODEL} && \
+    pkill ollama || true
+
 # ─── HuggingFace Spaces requires port 7860 ───────────────────────────────────
 EXPOSE 7860
 
-# ─── Startup: launch Ollama, pull model, then start the app ──────────────────
-# NOTE: ollama serve is backgrounded first (alone), then the rest runs in
-# the foreground shell — this ensures ENV vars are visible to ollama pull.
+# ─── Startup: launch Ollama (model already cached) then start the app ────────
 CMD ["/bin/bash", "-c", "\
 ollama serve & \
 echo '⏳ Waiting for Ollama to be ready...' && \
 until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
-echo '✅ Ollama is ready.' && \
-echo \"⬇  Pulling model: ${OLLAMA_MODEL} ...\" && \
-ollama pull ${OLLAMA_MODEL} && \
-echo '✅ Model ready.' && \
+echo '✅ Ollama ready (model pre-cached).' && \
 exec python app.py\
 "]
 # backend.py = FastAPI REST API  |  frontend.py = Gradio UI  |  app.py = entrypoint
