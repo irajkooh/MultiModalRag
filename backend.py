@@ -52,6 +52,7 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     question: str
     n_results: int = 5
+    temperature: float = 0.0
 
 
 class QueryResponse(BaseModel):
@@ -177,7 +178,7 @@ async def query_documents(req: QueryRequest):
             results = vs.query(req.question, n_results=req.n_results)
             sources = list({r["metadata"].get("source", "") for r in results})
             parts = []
-            for token in rag.query(req.question, memory, n_results=req.n_results, stream=False):
+            for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False):
                 parts.append(token)
             return "".join(parts), sources
 

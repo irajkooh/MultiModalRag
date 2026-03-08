@@ -50,6 +50,7 @@ class RAGEngine:
         question: str,
         memory: ConversationMemory,
         n_results: int = 5,
+        temperature: float = 0.0,
         stream: bool = False,
     ) -> Generator[str, None, None]:
         """
@@ -85,6 +86,7 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                     model=self.model,
                     messages=messages,
                     stream=True,
+                    options={"temperature": temperature},
                 )
                 for chunk in stream_resp:
                     token = chunk["message"]["content"]
@@ -94,7 +96,7 @@ Remember: Answer ONLY from the context above. If not found, say "I DON'T KNOW"."
                 memory.add("user", question)
                 memory.add("assistant", response_text)
             else:
-                response = _client.chat(model=self.model, messages=messages)
+                response = _client.chat(model=self.model, messages=messages, options={"temperature": temperature})
                 answer = response["message"]["content"]
                 memory.add("user", question)
                 memory.add("assistant", answer)

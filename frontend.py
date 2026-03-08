@@ -115,13 +115,13 @@ def refresh_ui():
     return gr.update(choices=docs, value=None), status_msg, gr.update(interactive=has_docs)
 
 
-def chat_fn(message, history, n_results):
+def chat_fn(message, history, n_results, temperature):
     """Send query to API, stream response token by token."""
     if not message.strip():
         yield history, ""
         return
     
-    resp = api_post("/query", json={"question": message, "n_results": n_results}, timeout=480)
+    resp = api_post("/query", json={"question": message, "n_results": n_results, "temperature": temperature}, timeout=480)
     if "error" in resp:
         answer = f"⚠️ {resp['error']}"
     else:
@@ -1151,6 +1151,13 @@ def build_ui():
                             label="", show_label=False,
                             elem_id="topk-slider",
                         )
+                    with gr.Column(scale=3, min_width=0):
+                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Temperature — LLM creativity (0 = deterministic)</div>')
+                        temperature_slider = gr.Slider(
+                            minimum=0.0, maximum=2.0, value=0.0, step=0.1,
+                            label="", show_label=False,
+                            elem_id="temperature-slider",
+                        )
                     memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
                     clear_memory_btn = gr.Button(
                         "🧹 Clear Memory", scale=1, elem_classes="secondary-btn", size="sm"
@@ -1238,28 +1245,28 @@ def build_ui():
             outputs=[doc_list, status_text, submit_btn, memory_stats_text, *all_sample_btn_components],
         )
 
-        def on_submit(message, history, n):
+        def on_submit(message, history, n, temp):
             history = history or []
-            for updated_history, _ in chat_fn(message, history, n):
+            for updated_history, _ in chat_fn(message, history, n, temp):
                 yield updated_history, "", ""
             yield updated_history, "", get_memory_stats()
 
         submit_btn.click(
             fn=on_submit,
-            inputs=[msg_input, chatbot, n_results_slider],
+            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
             outputs=[chatbot, msg_input, memory_stats_text],
         )
 
         msg_input.submit(
             fn=on_submit,
-            inputs=[msg_input, chatbot, n_results_slider],
+            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
             outputs=[chatbot, msg_input, memory_stats_text],
         )
 
         # Wire each sample question button → prefill input and auto-submit
         def make_sample_handler(question_text):
-            def handler(history, n):
-                for updated_history, _ in chat_fn(question_text, history or [], n):
+            def handler(history, n, temp):
+                for updated_history, _ in chat_fn(question_text, history or [], n, temp):
                     yield updated_history, "", ""
                 yield updated_history, "", get_memory_stats()
             return handler
@@ -1267,7 +1274,7 @@ def build_ui():
         for btn, question_text in sample_btns:
             btn.click(
                 fn=make_sample_handler(question_text),
-                inputs=[chatbot, n_results_slider],
+                inputs=[chatbot, n_results_slider, temperature_slider],
                 outputs=[chatbot, msg_input, memory_stats_text],
             )
 
