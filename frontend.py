@@ -171,11 +171,16 @@ def get_memory_stats():
     stats = api_get("/memory/stats")
     if "error" in stats:
         return f"⚠️ {stats['error']}"
-    summarized = "Yes" if stats.get("has_summary") else "No"
+    msgs = stats.get('message_count', 0)
+    used = stats.get('total_tokens', 0)
+    max_tok = stats.get('max_tokens', 2000)
+    pct = int(used / max_tok * 100) if max_tok else 0
+    bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
+    summarized = "✅ summarized" if stats.get("has_summary") else "—"
     return (
-        f"💬 {stats.get('message_count', 0)} msg | "
-        f"🔢 {stats.get('total_tokens', 0)}/{stats.get('max_tokens', 2000)} tok | "
-        f"📝 {'summ' if stats.get('has_summary') else 'no summ'}"
+        f"💬 **{msgs}** messages · "
+        f"🔢 **{used}** / {max_tok} tokens used ({pct}%)  `{bar}`  "
+        f"📝 {summarized}"
     )
 
 
@@ -520,11 +525,19 @@ textarea::placeholder, input::placeholder {
 #memory-stats p,
 #memory-stats span,
 #memory-stats div {
+  color: #8890a4 !important;
+  font-size: 0.78rem !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  margin: 4px 0 0 0 !important;
+  padding: 0 !important;
+}
+#memory-stats strong, #memory-stats b {
   color: #ffffff !important;
+}
+#memory-stats code {
+  color: #4fffb0 !important;
+  background: transparent !important;
   font-size: 0.72rem !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
 }
 
 /* Chat tab device info */
@@ -537,6 +550,23 @@ textarea::placeholder, input::placeholder {
   font-family: 'IBM Plex Mono', monospace !important;
   margin: 0 0 8px 0 !important;
   padding: 0 !important;
+}
+
+/* Squeeze slider row vertical padding */
+#topk-slider, #temperature-slider {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+#topk-slider .wrap, #temperature-slider .wrap {
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+/* Remove extra bottom gap on chat input row */
+#rag-chatbot + div {
+  margin-top: 4px !important;
 }
 
 /* Document list */
@@ -1150,7 +1180,7 @@ def build_ui():
                 with gr.Row():
                     msg_input = gr.Textbox(
                         placeholder="Ask a question about your documents...",
-                        label="",
+                        show_label=False,
                         scale=5,
                         lines=1,
                         autofocus=True,
@@ -1164,23 +1194,24 @@ def build_ui():
 
                 with gr.Row():
                     with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Top K<br><span style="color:#8890a4;font-size:0.75rem;">Context chunks to retrieve</span></div>')
+                        gr.HTML('<div style="color:#8890a4;font-size:0.72rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:2px;">Top K &nbsp;<span style="opacity:0.6">— context chunks</span></div>')
                         n_results_slider = gr.Slider(
                             minimum=1, maximum=10, value=5, step=1,
                             label="", show_label=False,
                             elem_id="topk-slider",
                         )
                     with gr.Column(scale=3, min_width=0):
-                        gr.HTML('<div style="color:#ffffff;font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:4px;">Temperature<br><span style="color:#8890a4;font-size:0.75rem;">LLM creativity (0 = deterministic)</span></div>')
+                        gr.HTML('<div style="color:#8890a4;font-size:0.72rem;font-family:\'IBM Plex Mono\',monospace;margin-bottom:2px;">Temperature &nbsp;<span style="opacity:0.6">— 0 = deterministic</span></div>')
                         temperature_slider = gr.Slider(
                             minimum=0.0, maximum=2.0, value=0.0, step=0.1,
                             label="", show_label=False,
                             elem_id="temperature-slider",
                         )
-                    memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
                     clear_memory_btn = gr.Button(
                         "🧹 Clear Memory", scale=1, elem_classes="secondary-btn", size="sm"
                     )
+
+                memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
 
         # ─── Event Handlers ───────────────────────────────────────────────
         all_sample_btn_components = [b for b, _ in sample_btns]
