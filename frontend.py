@@ -2,6 +2,8 @@
 Modern Gradio UI for Multimodal RAG system.
 Chat and document management with clean, responsive layout.
 """
+import io
+import base64 as _base64
 import os
 import time
 import requests as _requests
@@ -258,6 +260,17 @@ def _clean_for_tts(text: str) -> str:
     text = _EMOJI_RE.sub("", text)                          # remove emojis
     return text.strip()
 
+
+def _generate_tts_b64(text: str) -> str:
+    """Generate MP3 audio via gTTS, return as base64 string (empty string on failure)."""
+    try:
+        from gtts import gTTS
+        buf = io.BytesIO()
+        gTTS(text=text[:3000], lang="en", slow=False).write_to_fp(buf)
+        buf.seek(0)
+        return _base64.b64encode(buf.read()).decode()
+    except Exception:
+        return ""
 
 _tts_counter  = [0]
 _copy_counter = [0]
@@ -625,10 +638,10 @@ def build_ui():
           return (
             gr.update(choices=docs or [], value=None),
             status_msg,
-            gr.update(interactive=has_docs),
+            gr.update(interactive=True),
           )
         tts_box      = gr.Textbox(value="", visible=False, elem_id="tts-box")
-        tts_ready_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
+        tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
         ended_box  = gr.Textbox(value="0", visible=True,  elem_id="ended-box", label="", container=False)
         read_state = gr.State(False)
@@ -784,59 +797,61 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Mobile/iOS fix: speak directly in touchstart on the stable container.
-                //    iOS blocks speechSynthesis.speak() from async callbacks after a
-                //    Python round-trip. touchstart fires within the user-gesture context
-                //    iOS requires. Attaching to #read-btn (the wrapper div, not the inner
-                //    <button>) survives Gradio re-renders that replace the button element.
-                window._ttsText    = '';
+                // 6. Mobile/iOS fix: use pre-loaded Audio object played in touchstart.
+                //    iOS blocks speechSynthesis from async callbacks (Python round-trip).
+                //    Audio.play() within a touchstart IS allowed. tts_audio_box pre-loads
+                //    a base64 MP3 after each response, stored in window._ttsAudio.
+                window._ttsAudio   = null;
                 window._mobileSpoke = false;
+                function signalEnded() {
+                    const endedWrap = document.getElementById('ended-box');
+                    const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
+                    if (endedEl) {
+                        const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                        setter.call(endedEl, String(Date.now()));
+                        endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
+                        endedEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+                function styleOrange(btn) {
+                    btn.dataset.speaking = '1';
+                    btn.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                    btn.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                    btn.style.setProperty('color',         '#fff',  'important');
+                    btn.style.setProperty('border',        'none',  'important');
+                    btn.style.setProperty('font-weight',   '700',   'important');
+                    btn.style.setProperty('border-radius', '8px',   'important');
+                    btn.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                }
+                function styleBlue(btn) {
+                    delete btn.dataset.speaking;
+                    btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                    btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                }
+                window._signalEnded = signalEnded;
+                window._styleOrange = styleOrange;
+                window._styleBlue   = styleBlue;
                 function attachMobileTTS() {
                     const container = document.getElementById('read-btn');
                     if (!container) { setTimeout(attachMobileTTS, 500); return; }
                     container.addEventListener('touchstart', function() {
+                        if (!window._ttsAudio) return;
                         const btn = container.querySelector('button');
                         if (!btn) return;
                         const label = btn.textContent.trim();
                         if (label === '⏹ Stop') {
-                            // Cancel immediately — don't wait for server round-trip
-                            window.speechSynthesis.cancel();
-                            delete btn.dataset.speaking;
-                            if (window._applyColors) window._applyColors();
+                            window._ttsAudio.pause();
+                            window._ttsAudio.currentTime = 0;
+                            styleBlue(btn);
+                            signalEnded();
                             return;
                         }
-                        if (label !== '🔊 Read' || !window._ttsText) return;
+                        if (label !== '🔊 Read') return;
                         window._mobileSpoke = true;
-                        const utt = new SpeechSynthesisUtterance(window._ttsText);
-                        setTimeout(() => {
-                            const b = container.querySelector('button');
-                            if (!b) return;
-                            b.dataset.speaking = '1';
-                            b.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
-                            b.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
-                            b.style.setProperty('color',         '#fff',  'important');
-                            b.style.setProperty('border',        'none',  'important');
-                            b.style.setProperty('font-weight',   '700',   'important');
-                            b.style.setProperty('border-radius', '8px',   'important');
-                            b.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
-                        }, 80);
-                        utt.onend = () => {
-                            const b = container.querySelector('button');
-                            if (b) {
-                                delete b.dataset.speaking;
-                                b.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
-                                b.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
-                            }
-                            const endedWrap = document.getElementById('ended-box');
-                            const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
-                            if (endedEl) {
-                                const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                                setter.call(endedEl, String(Date.now()));
-                                endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
-                                endedEl.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        };
-                        window.speechSynthesis.speak(utt);
+                        window._ttsAudio.currentTime = 0;
+                        window._ttsAudio.play().catch(() => {});
+                        window._ttsAudio.onended = () => { styleBlue(btn); signalEnded(); };
+                        setTimeout(() => styleOrange(container.querySelector('button') || btn), 80);
                     }, { passive: true });
                 }
                 attachMobileTTS();
@@ -848,7 +863,7 @@ def build_ui():
           return (
             gr.update(choices=docs or [], value=None),
             status_msg,
-            gr.update(interactive=has_docs),
+            gr.update(interactive=True),
           )
         file_upload.upload(
             fn=lambda files: (upload_files(files)[0], *refresh_and_update()),
@@ -890,17 +905,17 @@ def build_ui():
               tokens_assistant = _.get("tokens_assistant", 0)
             last_resp = updated_history
             yield updated_history, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", gr.update()
-          tts_text = _clean_for_tts(get_last_answer(last_resp)) if last_resp else ""
-          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", tts_text
+          tts_b64 = _generate_tts_b64(_clean_for_tts(get_last_answer(last_resp))) if last_resp else ""
+          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", tts_b64
         submit_btn.click(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text, tts_ready_box],
+          outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
         )
         msg_input.submit(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text, tts_ready_box],
+          outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
         )
         def on_clear_chat():
           status, history = clear_memory()
@@ -919,64 +934,40 @@ def build_ui():
           inputs=[chatbot, read_state],
           outputs=[tts_box, read_state, read_btn],
         )
-        tts_ready_box.change(
+        tts_audio_box.change(
           fn=None,
-          inputs=[tts_ready_box],
-          js="(val) => { if (val) window._ttsText = val; }",
+          inputs=[tts_audio_box],
+          js="(val) => { if (val) { window._ttsAudio = new Audio('data:audio/mpeg;base64,' + val); window._ttsAudio.load(); } }",
         )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
-            // Mobile native handler already spoke — skip desktop path
+            // Mobile touchstart already handled playback — skip
             if (window._mobileSpoke) { window._mobileSpoke = false; return; }
-            const text = val.split('\\n').slice(1).join('\\n').trim();
-            // Find the read/stop button by current label
+            if (!window._ttsAudio) return;
             function getReadBtn() {
                 return [...document.querySelectorAll('button')]
                     .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
             }
-            function signalEnded() {
-                const endedWrap = document.getElementById('ended-box');
-                const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
-                if (endedEl) {
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                    setter.call(endedEl, String(Date.now()));
-                    endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
-                    endedEl.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
+            const isStop = val.split('\\n').slice(1).join('\\n').trim() === '';
+            if (isStop) {
+                window._ttsAudio.pause();
+                window._ttsAudio.currentTime = 0;
                 const btn = getReadBtn();
-                if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
-            } else if (text) {
-                const utt = new SpeechSynthesisUtterance(text);
-                // Mark button as speaking so applyColors won't stomp the orange
+                if (btn && window._styleBlue) window._styleBlue(btn);
+            } else {
+                window._ttsAudio.currentTime = 0;
+                window._ttsAudio.play().catch(() => {});
+                window._ttsAudio.onended = () => {
+                    const btn = getReadBtn();
+                    if (btn && window._styleBlue) window._styleBlue(btn);
+                    if (window._signalEnded) window._signalEnded();
+                };
                 setTimeout(() => {
                     const btn = getReadBtn();
-                    if (btn) {
-                        btn.dataset.speaking = '1';
-                        btn.style.setProperty('background',   'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
-                        btn.style.setProperty('box-shadow',   '0 4px 18px rgba(234,88,12,0.6)', 'important');
-                        btn.style.setProperty('color',        '#fff',  'important');
-                        btn.style.setProperty('border',       'none',  'important');
-                        btn.style.setProperty('font-weight',  '700',   'important');
-                        btn.style.setProperty('border-radius','8px',   'important');
-                        btn.style.setProperty('text-shadow',  '0 1px 3px rgba(0,0,0,0.35)', 'important');
-                    }
+                    if (btn && window._styleOrange) window._styleOrange(btn);
                 }, 80);
-                utt.onend = () => {
-                    // Immediately reset to Read blue BEFORE signaling Python
-                    const btn = getReadBtn();
-                    if (btn) {
-                        delete btn.dataset.speaking;
-                        btn.style.setProperty('background',   'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
-                        btn.style.setProperty('box-shadow',   '0 4px 16px rgba(37,99,235,0.55)', 'important');
-                    }
-                    signalEnded();
-                };
-                window.speechSynthesis.speak(utt);
             }
           }""",
         )
