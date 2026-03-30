@@ -7,6 +7,7 @@ sdk: docker
 pinned: false
 license: mit
 short_description: Multimodal RAG — PDFs, scans, tables, charts.
+sleep_time: -1
 ---
 
 ## ⬡ Multimodal RAG System
