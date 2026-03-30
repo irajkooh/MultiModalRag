@@ -784,50 +784,60 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Mobile/iOS fix: speak directly in the user-gesture click handler.
-                //    Mobile browsers block speechSynthesis.speak() from async callbacks
-                //    (like tts_box.change after a Python round-trip). The only reliable
-                //    fix is to call speak() synchronously within the tap/click event.
-                //    tts_ready_box is pre-populated with cleaned text after each response,
-                //    so the text is ready before the user taps Read.
-                window._ttsText   = '';
+                // 6. Mobile/iOS fix: speak directly in touchstart on the stable container.
+                //    iOS blocks speechSynthesis.speak() from async callbacks after a
+                //    Python round-trip. touchstart fires within the user-gesture context
+                //    iOS requires. Attaching to #read-btn (the wrapper div, not the inner
+                //    <button>) survives Gradio re-renders that replace the button element.
+                window._ttsText    = '';
                 window._mobileSpoke = false;
                 function attachMobileTTS() {
                     const container = document.getElementById('read-btn');
                     if (!container) { setTimeout(attachMobileTTS, 500); return; }
-                    const btn = container.querySelector('button');
-                    if (!btn) { setTimeout(attachMobileTTS, 500); return; }
-                    btn.addEventListener('click', function() {
+                    container.addEventListener('touchstart', function() {
+                        const btn = container.querySelector('button');
+                        if (!btn) return;
                         const label = btn.textContent.trim();
-                        if (label === '🔊 Read' && window._ttsText) {
-                            window._mobileSpoke = true;
-                            const utt = new SpeechSynthesisUtterance(window._ttsText);
-                            setTimeout(() => {
-                                btn.dataset.speaking = '1';
-                                btn.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
-                                btn.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
-                                btn.style.setProperty('color',         '#fff',  'important');
-                                btn.style.setProperty('border',        'none',  'important');
-                                btn.style.setProperty('font-weight',   '700',   'important');
-                                btn.style.setProperty('border-radius', '8px',   'important');
-                                btn.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
-                            }, 80);
-                            utt.onend = () => {
-                                delete btn.dataset.speaking;
-                                btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
-                                btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
-                                const endedWrap = document.getElementById('ended-box');
-                                const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
-                                if (endedEl) {
-                                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                                    setter.call(endedEl, String(Date.now()));
-                                    endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
-                                    endedEl.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                            };
-                            window.speechSynthesis.speak(utt);
+                        if (label === '⏹ Stop') {
+                            // Cancel immediately — don't wait for server round-trip
+                            window.speechSynthesis.cancel();
+                            delete btn.dataset.speaking;
+                            if (window._applyColors) window._applyColors();
+                            return;
                         }
-                    }, true);  // capture phase — fires before Gradio's handler
+                        if (label !== '🔊 Read' || !window._ttsText) return;
+                        window._mobileSpoke = true;
+                        const utt = new SpeechSynthesisUtterance(window._ttsText);
+                        setTimeout(() => {
+                            const b = container.querySelector('button');
+                            if (!b) return;
+                            b.dataset.speaking = '1';
+                            b.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                            b.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                            b.style.setProperty('color',         '#fff',  'important');
+                            b.style.setProperty('border',        'none',  'important');
+                            b.style.setProperty('font-weight',   '700',   'important');
+                            b.style.setProperty('border-radius', '8px',   'important');
+                            b.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                        }, 80);
+                        utt.onend = () => {
+                            const b = container.querySelector('button');
+                            if (b) {
+                                delete b.dataset.speaking;
+                                b.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                                b.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                            }
+                            const endedWrap = document.getElementById('ended-box');
+                            const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
+                            if (endedEl) {
+                                const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                                setter.call(endedEl, String(Date.now()));
+                                endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
+                                endedEl.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        };
+                        window.speechSynthesis.speak(utt);
+                    }, { passive: true });
                 }
                 attachMobileTTS();
             }"""
