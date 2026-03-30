@@ -782,6 +782,28 @@ def build_ui():
                         if (attachChatScroller() || ++tries > 20) clearInterval(t);
                     }, 300);
                 }
+
+                // 6. Mobile/iOS fix: unlock speechSynthesis in user-gesture context.
+                //    Mobile browsers block speechSynthesis.speak() called from async
+                //    callbacks (like tts_box.change after a Python round-trip).
+                //    Calling speak() once inside a direct click handler unlocks it
+                //    for the entire page session — even for subsequent async calls.
+                window._pendingRead = false;
+                function attachMobileTTSUnlock() {
+                    const container = document.getElementById('read-btn');
+                    if (!container) { setTimeout(attachMobileTTSUnlock, 500); return; }
+                    const btn = container.querySelector('button');
+                    if (!btn) { setTimeout(attachMobileTTSUnlock, 500); return; }
+                    btn.addEventListener('click', function() {
+                        if (btn.textContent.trim() === '🔊 Read') {
+                            window._pendingRead = true;
+                            const unlock = new SpeechSynthesisUtterance(' ');
+                            unlock.volume = 0;
+                            window.speechSynthesis.speak(unlock);
+                        }
+                    }, true);  // capture phase — fires before Gradio's handler
+                }
+                attachMobileTTSUnlock();
             }"""
         )
         def refresh_and_update():
@@ -880,11 +902,14 @@ def build_ui():
                     endedEl.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
-            if (window.speechSynthesis.speaking) {
+            if (window.speechSynthesis.speaking && !window._pendingRead) {
                 window.speechSynthesis.cancel();
                 const btn = getReadBtn();
                 if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
             } else if (text) {
+                window._pendingRead = false;
+                // Cancel the silent unlock utterance (if still playing) before speaking real text
+                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
                 const utt = new SpeechSynthesisUtterance(text);
                 // Mark button as speaking so applyColors won't stomp the orange
                 setTimeout(() => {
