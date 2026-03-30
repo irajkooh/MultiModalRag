@@ -13,3 +13,7 @@ venv/
 .DS_Store
 **/.DS_Store
 HF_token.txt
+.HF_TOKEN.txt
+.GROQ_API_KEY.txt
+*.key.txt
+*API_KEY*

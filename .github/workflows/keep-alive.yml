@@ -2,13 +2,38 @@ name: Keep HF Space Alive
 
 on:
   schedule:
-    - cron: "*/20 * * * *"
-  workflow_dispatch:
+    - cron: "*/20 * * * *"   # every 20 minutes — prevents sleep
+    - cron: "0 9 * * 1"      # every Monday 09:00 UTC — heartbeat commit
+  workflow_dispatch:           # manual trigger from GitHub UI
+
+permissions:
+  contents: write
 
 jobs:
   ping:
+    name: Ping HF Space
     runs-on: ubuntu-latest
     steps:
-      - name: Ping HF Space
+      - name: Wake / keep alive
         run: |
-          curl -s -o /dev/null -w "%{http_code}" ${{ secrets.HF_SPACE_URL }}
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 30 --retry 3 --retry-delay 5 \
+            https://irajkoohi-multimodalrag.hf.space)
+          echo "Response status: $STATUS"
+
+  heartbeat:
+    name: Weekly heartbeat commit
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 9 * * 1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write heartbeat timestamp
+        run: |
+          echo "Last heartbeat: $(date -u '+%Y-%m-%d %H:%M UTC')" > .github/heartbeat.txt
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/heartbeat.txt
+          git commit -m "chore: weekly heartbeat $(date -u '+%Y-%m-%d')"
+          git push

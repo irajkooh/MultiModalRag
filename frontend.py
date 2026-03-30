@@ -4,9 +4,34 @@ Chat and document management with clean, responsive layout.
 """
 import os
 import time
+import requests as _requests
 import requests
 import gradio as gr
 from pathlib import Path
+
+
+def _ping_self(url: str):
+    """Lightweight GET to keep the HF Space from going to sleep."""
+    try:
+        _requests.get(url, timeout=10)
+    except Exception:
+        pass
+
+
+def start_keep_alive_scheduler(space_url: str):
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.interval import IntervalTrigger
+
+    scheduler = BackgroundScheduler(timezone="UTC", daemon=True)
+    scheduler.add_job(
+        _ping_self,
+        trigger=IntervalTrigger(minutes=20),
+        args=[space_url],
+        id="keep_alive_20m",
+        replace_existing=True,
+    )
+    scheduler.start()
+    return scheduler
 
 API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
 
@@ -69,10 +94,11 @@ def upload_files(files):
         timeout=120,
       )
     if "error" in resp:
-      messages.append(f"❌ {path.name}: {resp['error']}")
+      messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
     else:
-      messages.append(f"✅ {path.name}: {resp['message']}")
-  return "\n".join(messages), *refresh_ui()
+      messages.append(f"<span style='color:#fff'>✅ {path.name}: {resp['message']}</span>")
+  status_html = '<br>'.join(messages)
+  return status_html, *refresh_ui()
 
 
 def delete_document(filenames):
@@ -499,7 +525,7 @@ def build_ui():
               elem_classes="primary-btn",
               elem_id="file-upload",
             )
-            upload_status = gr.Markdown(value="", elem_id="upload-status")
+            upload_status = gr.HTML(value="", elem_id="upload-status")
             doc_list = gr.CheckboxGroup(
               choices=[],
               label="Indexed Documents",
@@ -608,5 +634,8 @@ def build_ui():
     return demo
 
 if __name__ == "__main__":
+    if os.environ.get("SPACE_ID"):
+        _space_url = "https://irajkoohi-multimodalrag.hf.space"
+        start_keep_alive_scheduler(_space_url)
     ui = build_ui()
     ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True)

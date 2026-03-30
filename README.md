@@ -4,7 +4,7 @@ emoji: 🧠
 colorFrom: green
 colorTo: purple
 sdk: docker
-pinned: false
+pinned: true
 license: mit
 short_description: Multimodal RAG — PDFs, scans, tables, charts.
 sleep_time: -1
