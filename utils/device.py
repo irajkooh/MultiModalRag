@@ -48,9 +48,23 @@ def get_device() -> str:
 
 def device_info() -> dict:
     """
-    Return a dict with device name, label, and extra GPU info where available.
-    get_device() is cached so this is cheap to call repeatedly.
+    Return a dict with device name and label.
+    Priority: DEVICE_LABEL env var → Groq API key → CUDA → MPS → CPU
+    No hardcoded strings — everything derived from environment or torch.
     """
+    # Explicit override (e.g. set in HF Space secrets)
+    label_override = os.environ.get("DEVICE_LABEL", "").strip()
+    if label_override:
+        return {"device": "override", "label": label_override}
+
+    # Groq: LLM runs on Groq cloud, not local hardware
+    if os.environ.get("GROQ_API_KEY"):
+        groq_model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+        label = f"Groq LPU ({groq_model})"
+        logger.info(f"Device info: {label}")
+        return {"device": "groq", "label": label}
+
+    # Local torch device detection
     device = get_device()
     info = {"device": device, "label": device.upper()}
 
@@ -65,7 +79,6 @@ def device_info() -> dict:
             info["label"] = f"CUDA — {info['gpu_name']} ({info['vram_gb']} GB)"
 
         elif device == "mps":
-            # Try to get Apple chip name
             try:
                 import subprocess
                 chip = subprocess.check_output(

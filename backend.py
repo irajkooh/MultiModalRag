@@ -112,7 +112,7 @@ async def get_status():
         total_chunks=vs.total_chunks(),
         data_dir_files=data_files,
         model=rag.model,
-        device="Cloud — Groq LPU" if USE_GROQ else device_info()["label"],
+        device=device_info()["label"],
     )
 
 
