@@ -37,11 +37,11 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 │  /memory/clear       /memory/stats      /status      │
 └──────┬────────────────────────┬────────────────────┘
        │                        │
-┌──────▼──────┐        ┌────────▼────────────────────┐
-│  ChromaDB   │        │   Ollama LLM                 │
-│ (persists   │        │  (llama3.2 by default)       │
-│  to disk)   │        │  OLLAMA_HOST configurable    │
-└─────────────┘        └─────────────────────────────┘
+┌──────▼──────┐        ┌────────▼──────────────────────────────────────┐
+│  ChromaDB   │        │  LLM (auto-selected at startup)               │
+│ (persists   │        │  • Groq API — if GROQ_API_KEY set (HF Space)  │
+│  to disk)   │        │  • Ollama   — default for local dev            │
+└─────────────┘        └───────────────────────────────────────────────┘
        ▲
 ┌──────┴──────────────────────────────┐
 │       Document Processor            │
@@ -320,7 +320,9 @@ Set in **Space Settings → Variables and secrets**:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OLLAMA_MODEL` | `llama3.2` | Any model available on Ollama — `llama3.2:1b` is faster/smaller |
+| `GROQ_API_KEY` | *(unset)* | **Set this to enable Groq** — auto-switches LLM from Ollama to Groq (much faster on free CPU) |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model to use when `GROQ_API_KEY` is set |
+| `OLLAMA_MODEL` | `llama3.2` | Ollama model — only used if `GROQ_API_KEY` is not set |
 | `OLLAMA_HOST` | `http://localhost:11434` | Override to point at an external Ollama server |
 | `DATA_DIR` | `./data` | Document storage path |
 | `VECTORSTORE_DIR` | `./vectorstore` | ChromaDB storage path |
@@ -336,9 +338,11 @@ By default, uploaded documents and the vector store reset when the Space restart
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `GROQ_API_KEY` | *(unset)* | Set to enable Groq cloud LLM — auto-detected, no code change needed |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model name (only used when `GROQ_API_KEY` is set) |
 | `DATA_DIR` | `./data` | Folder where uploaded documents are stored |
 | `VECTORSTORE_DIR` | `./vectorstore` | ChromaDB persistence directory |
-| `OLLAMA_MODEL` | `llama3.2` | Model name as shown in `ollama list` |
+| `OLLAMA_MODEL` | `llama3.2` | Ollama model — used when `GROQ_API_KEY` is not set |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama API URL — change to use a remote Ollama server |
 | `API_BASE` | `http://localhost:8000` | URL of the FastAPI backend (used by Gradio) |
 | `TORCH_DEVICE` | *(auto)* | Force embedding device: `mps`, `cuda`, or `cpu` |
@@ -554,7 +558,7 @@ multimodal-rag/
     ├── __init__.py
     ├── document_processor.py   # Multimodal extraction: PDF, images, DOCX, XLSX
     ├── vector_store.py         # ChromaDB manager + sentence-transformers embeddings
-    ├── rag_engine.py           # RAG pipeline: retrieval → prompt → Ollama (OLLAMA_HOST aware)
+    ├── rag_engine.py           # RAG pipeline: retrieval → prompt → Groq (HF) or Ollama (local)
     └── memory.py               # Sliding-window conversation memory with auto-summary
 ```
 

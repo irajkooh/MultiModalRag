@@ -8,6 +8,12 @@ pinned: true
 license: mit
 short_description: Multimodal RAG — PDFs, scans, tables, charts.
 sleep_time: -1
+tags:
+  - rag
+  - multimodal
+  - groq
+  - ollama
+  - chromadb
 ---
 
 ## ⬡ Multimodal RAG System
