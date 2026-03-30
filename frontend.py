@@ -535,7 +535,7 @@ def build_ui():
               )
               with gr.Column():
                 with gr.Row():
-                    read_btn      = gr.Button("🔊 Read",      elem_classes="secondary-btn")
+                    read_btn      = gr.Button("🔊 Read",      elem_classes="secondary-btn", elem_id="read-btn")
                     copy_btn      = gr.Button("📋 Copy Chat", elem_classes="secondary-btn")
                     clear_chat_btn = gr.Button("🗑 Clear Chat", elem_classes="danger-btn")
                 token_stats_text = gr.Markdown(
@@ -579,8 +579,9 @@ def build_ui():
             status_msg,
             gr.update(interactive=has_docs),
           )
-        tts_state  = gr.State("")
-        copy_state = gr.State("")
+        tts_state   = gr.State("")
+        copy_state  = gr.State("")
+        read_state  = gr.State(False)
 
         demo.load(
             fn=on_load,
@@ -657,14 +658,33 @@ def build_ui():
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
 
+        def prepare_read(history, currently_speaking):
+            if currently_speaking:
+                return "", False, gr.update(value="🔊 Read")
+            text = get_last_answer(history)
+            if not text:
+                return "", False, gr.update(value="🔊 Read")
+            return text, True, gr.update(value="⏹ Stop")
+
         read_btn.click(
-          fn=get_last_answer,
-          inputs=[chatbot],
-          outputs=[tts_state],
+          fn=prepare_read,
+          inputs=[chatbot, read_state],
+          outputs=[tts_state, read_state, read_btn],
+          js="(history, _) => [history, window.speechSynthesis.speaking]",
         ).then(
           fn=None,
           inputs=[tts_state],
-          js="(text) => { if(text && 'speechSynthesis' in window){ window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } }",
+          js="""(text) => {
+            window.speechSynthesis.cancel();
+            if (text) {
+                const utt = new SpeechSynthesisUtterance(text);
+                utt.onend = () => {
+                    const btn = document.querySelector('#read-btn button');
+                    if (btn) btn.textContent = '🔊 Read';
+                };
+                window.speechSynthesis.speak(utt);
+            }
+          }""",
         )
         copy_btn.click(
           fn=format_chat_history,
