@@ -48,22 +48,22 @@ ENV OLLAMA_MODELS=/app/.ollama
 ENV OLLAMA_MODEL=llama3.2
 ENV OLLAMA_NUM_CTX=8192
 
-# ─── Pre-pull model at build time so restarts don't re-download ──────────────
-RUN ollama serve & OLLAMA_PID=$! && \
-    sleep 5 && \
-    until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
-    ollama pull ${OLLAMA_MODEL} && \
-    kill $OLLAMA_PID 2>/dev/null || true
-
 # ─── HuggingFace Spaces requires port 7860 ───────────────────────────────────
 EXPOSE 7860
 
-# ─── Startup: launch Ollama (model already cached) then start the app ────────
+# ─── Startup ─────────────────────────────────────────────────────────────────
+# If GROQ_API_KEY is set (HF Space): skip Ollama entirely, start app directly.
+# Otherwise (local / no Groq): start Ollama, wait for it, then start app.
 CMD ["/bin/bash", "-c", "\
-ollama serve & \
-echo '⏳ Waiting for Ollama to be ready...' && \
-until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
-echo '✅ Ollama ready (model pre-cached).' && \
-exec python app.py\
+if [ -n \"$GROQ_API_KEY\" ]; then \
+  echo '✅ Groq mode — skipping Ollama.' && \
+  exec python app.py; \
+else \
+  ollama serve & \
+  echo '⏳ Waiting for Ollama...' && \
+  until curl -sf http://localhost:11434/api/version > /dev/null 2>&1; do sleep 1; done && \
+  echo '✅ Ollama ready.' && \
+  exec python app.py; \
+fi\
 "]
 # backend.py = FastAPI REST API  |  frontend.py = Gradio UI  |  app.py = entrypoint

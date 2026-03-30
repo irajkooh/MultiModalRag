@@ -47,8 +47,8 @@ class ConversationMemory:
         return t
 
     def _maybe_compress(self):
-        """If over budget, summarize oldest half of messages."""
-        if self._total_tokens() <= self.max_tokens:
+        """Compress when over token budget or after every 3 exchanges (6 messages)."""
+        if self._total_tokens() <= self.max_tokens and len(self.messages) <= 6:
             return
 
         # Keep the last 4 messages always (current exchange)

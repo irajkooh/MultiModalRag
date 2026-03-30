@@ -200,6 +200,31 @@ def get_memory_stats():
     )
 
 
+def get_last_answer(history):
+    if not history:
+        return ""
+    last = history[-1]
+    if isinstance(last, dict):
+        return last.get("content", "") if last.get("role") == "assistant" else ""
+    return last[1] or ""
+
+
+def format_chat_history(history):
+    if not history:
+        return ""
+    lines = []
+    for msg in history:
+        if isinstance(msg, dict):
+            role = msg.get("role", "").capitalize()
+            content = msg.get("content", "")
+        else:
+            role = "User" if msg[0] else "Assistant"
+            content = msg[0] or msg[1] or ""
+        if content:
+            lines.append(f"{role}: {content}")
+    return "\n\n".join(lines)
+
+
 # ─── Sample Questions ─────────────────────────────────────────────────────────
 SAMPLE_QUESTIONS = [
     # General document understanding
@@ -509,7 +534,10 @@ def build_ui():
                 elem_id="temperature-slider",
               )
               with gr.Column():
-                clear_memory_btn = gr.Button("🧹 Clear Memory", elem_classes="secondary-btn")
+                with gr.Row():
+                    read_btn      = gr.Button("🔊 Read",      elem_classes="secondary-btn")
+                    copy_btn      = gr.Button("📋 Copy Chat", elem_classes="secondary-btn")
+                    clear_chat_btn = gr.Button("🗑 Clear Chat", elem_classes="danger-btn")
                 token_stats_text = gr.Markdown(
                   value="<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>",
                     elem_id="token-stats",
@@ -551,6 +579,9 @@ def build_ui():
             status_msg,
             gr.update(interactive=has_docs),
           )
+        tts_state  = gr.State("")
+        copy_state = gr.State("")
+
         demo.load(
             fn=on_load,
             outputs=[doc_list, status_text, submit_btn],
@@ -614,10 +645,9 @@ def build_ui():
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
           outputs=[chatbot, msg_input, token_stats_text],
         )
-        def on_clear_memory():
+        def on_clear_chat():
           status, history = clear_memory()
-          # Ensure history is a list of dicts for Gradio 6.x
-          if history and history and isinstance(history[0], tuple):
+          if history and isinstance(history[0], tuple):
             new_hist = []
             for user, bot in history:
               if user is not None:
@@ -626,8 +656,27 @@ def build_ui():
                 new_hist.append({"role": "assistant", "content": bot})
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
-        clear_memory_btn.click(
-          fn=on_clear_memory,
+
+        read_btn.click(
+          fn=get_last_answer,
+          inputs=[chatbot],
+          outputs=[tts_state],
+        ).then(
+          fn=None,
+          inputs=[tts_state],
+          js="(text) => { if(text && 'speechSynthesis' in window){ window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } }",
+        )
+        copy_btn.click(
+          fn=format_chat_history,
+          inputs=[chatbot],
+          outputs=[copy_state],
+        ).then(
+          fn=None,
+          inputs=[copy_state],
+          js="(text) => { if(text) navigator.clipboard.writeText(text).catch(()=>{}); }",
+        )
+        clear_chat_btn.click(
+          fn=on_clear_chat,
           outputs=[chatbot, memory_stats_text, token_stats_text],
         )
     demo.queue()
