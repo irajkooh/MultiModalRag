@@ -945,29 +945,44 @@ def build_ui():
           js="""(val) => {
             // Mobile touchstart already handled playback — skip
             if (window._mobileSpoke) { window._mobileSpoke = false; return; }
-            if (!window._ttsAudio) return;
+            const text = val.split('\\n').slice(1).join('\\n').trim();
             function getReadBtn() {
                 return [...document.querySelectorAll('button')]
                     .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
             }
-            const isStop = val.split('\\n').slice(1).join('\\n').trim() === '';
-            if (isStop) {
-                window._ttsAudio.pause();
-                window._ttsAudio.currentTime = 0;
-                const btn = getReadBtn();
-                if (btn && window._styleBlue) window._styleBlue(btn);
-            } else {
-                window._ttsAudio.currentTime = 0;
-                window._ttsAudio.play().catch(() => {});
-                window._ttsAudio.onended = () => {
+            if (window._ttsAudio) {
+                // gTTS path — pre-loaded MP3, works on mobile + desktop
+                if (!text) {
+                    window._ttsAudio.pause();
+                    window._ttsAudio.currentTime = 0;
                     const btn = getReadBtn();
                     if (btn && window._styleBlue) window._styleBlue(btn);
-                    if (window._signalEnded) window._signalEnded();
-                };
-                setTimeout(() => {
+                } else {
+                    window._ttsAudio.currentTime = 0;
+                    window._ttsAudio.play().catch(() => {});
+                    window._ttsAudio.onended = () => {
+                        const btn = getReadBtn();
+                        if (btn && window._styleBlue) window._styleBlue(btn);
+                        if (window._signalEnded) window._signalEnded();
+                    };
+                    setTimeout(() => { const btn = getReadBtn(); if (btn && window._styleOrange) window._styleOrange(btn); }, 80);
+                }
+            } else {
+                // speechSynthesis fallback — desktop when gTTS unavailable
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
                     const btn = getReadBtn();
-                    if (btn && window._styleOrange) window._styleOrange(btn);
-                }, 80);
+                    if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
+                } else if (text) {
+                    const utt = new SpeechSynthesisUtterance(text);
+                    setTimeout(() => { const btn = getReadBtn(); if (btn && window._styleOrange) window._styleOrange(btn); }, 80);
+                    utt.onend = () => {
+                        const btn = getReadBtn();
+                        if (btn && window._styleBlue) window._styleBlue(btn);
+                        if (window._signalEnded) window._signalEnded();
+                    };
+                    window.speechSynthesis.speak(utt);
+                }
             }
           }""",
         )
