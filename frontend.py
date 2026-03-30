@@ -78,7 +78,13 @@ def get_status():
   chunks = data.get("total_chunks", 0)
   model = data.get("model", "unknown")
   device = data.get("device", "CPU")
-  status_msg = f"✅ {len(docs)} document(s) indexed | {chunks} chunks"
+  status_msg = (
+      f'✅ <span style="color:#facc15;">'
+      f'<span style="color:#4ade80;font-weight:bold;">{len(docs)}</span>'
+      f' document(s) indexed | '
+      f'<span style="color:#4ade80;font-weight:bold;">{chunks}</span>'
+      f' chunks</span>'
+  )
   return docs, files, status_msg, model, device
 
 
@@ -201,13 +207,26 @@ def get_memory_stats():
     )
 
 
+import re as _re
+
+def _extract_text(content):
+    """Handle Gradio 6.x content: str or [{'text': '...', 'type': 'text'}, ...]"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            item["text"] if isinstance(item, dict) and "text" in item else str(item)
+            for item in content
+        )
+    return str(content) if content else ""
+
 def get_last_answer(history):
     if not history:
         return ""
     last = history[-1]
     if isinstance(last, dict):
-        return last.get("content", "") if last.get("role") == "assistant" else ""
-    return last[1] or ""
+        return _extract_text(last.get("content", "")) if last.get("role") == "assistant" else ""
+    return _extract_text(last[1]) if last[1] else ""
 
 
 def format_chat_history(history):
@@ -216,14 +235,45 @@ def format_chat_history(history):
     lines = []
     for msg in history:
         if isinstance(msg, dict):
-            role = msg.get("role", "").capitalize()
-            content = msg.get("content", "")
+            role = "User" if msg.get("role") == "user" else "Assistant"
+            content = _extract_text(msg.get("content", ""))
         else:
             role = "User" if msg[0] else "Assistant"
-            content = msg[0] or msg[1] or ""
+            content = _extract_text(msg[0] or msg[1] or "")
         if content:
             lines.append(f"{role}: {content}")
     return "\n\n".join(lines)
+
+
+_EMOJI_RE = _re.compile(
+    "[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U000024C2-\U0001F251]+",
+    flags=_re.UNICODE,
+)
+
+def _clean_for_tts(text: str) -> str:
+    text = _re.sub(r"\n\n📄 \*Sources:[^\n]*", "", text)   # remove sources line
+    text = _re.sub(r"\*+([^*]*)\*+", r"\1", text)          # remove bold/italic
+    text = _re.sub(r"`[^`]*`", "", text)                    # remove inline code
+    text = _re.sub(r"#+\s", "", text)                       # remove headers
+    text = _EMOJI_RE.sub("", text)                          # remove emojis
+    return text.strip()
+
+
+_tts_counter  = [0]
+_copy_counter = [0]
+
+def toggle_read(history, is_reading):
+    _tts_counter[0] += 1
+    if is_reading:
+        return f"{_tts_counter[0]}\n", False, gr.update(value="🔊 Read")
+    text = _clean_for_tts(get_last_answer(history))
+    if not text:
+        return f"{_tts_counter[0]}\n", False, gr.update(value="🔊 Read")
+    return f"{_tts_counter[0]}\n{text}", True, gr.update(value="⏹ Stop")
+
+def get_chat_for_copy(history):
+    _copy_counter[0] += 1
+    return f"{_copy_counter[0]}\n{format_chat_history(history)}"
 
 
 # ─── Sample Questions ─────────────────────────────────────────────────────────
@@ -486,19 +536,17 @@ button.secondary-btn:hover {
 """
 
 
-# ─── Build UI ──────────────────────────────────────────────────────────────────
-def build_ui():
-    with gr.Blocks(title="Multimodal RAG", theme=gr.themes.Soft(), css="""
+_UI_THEME = gr.themes.Soft()
+_UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
-    .gr-button.primary-btn {background: #4fffb0; color: #181c24; font-weight: bold;}
-    .gr-button.secondary-btn {background: #23263a; color: #4fffb0;}
-    .gr-button.danger-btn {background: #ff6b6b; color: #fff;}
-    .gr-chatbot .message.user {color: #ffe066; font-weight: bold;}
-    .gr-chatbot .message.bot {color: #fff;}
-    /* #token-stats color override removed to allow inline color */
-    """) as demo:
+"""
+
+
+# ─── Build UI ──────────────────────────────────────────────────────────────────
+def build_ui():
+    with gr.Blocks(title="Multimodal RAG") as demo:
         with gr.Row():
             with gr.Column(elem_classes="main-col"):
                 docs, files, status_msg, model, device = get_status()
@@ -522,7 +570,11 @@ def build_ui():
                 lines=1,
                 autofocus=True,
               )
-              submit_btn = gr.Button("Ask →", elem_classes="primary-btn", scale=1)
+              submit_btn = gr.Button("Ask →", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
+            with gr.Row():
+              read_btn       = gr.Button("🔊 Read",      elem_id="read-btn",       elem_classes=["btn-read"],  scale=1)
+              copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
+              clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
               n_results_slider = gr.Slider(
                 minimum=1, maximum=10, value=5, step=1,
@@ -534,16 +586,11 @@ def build_ui():
                 label="Temperature (0 = deterministic)",
                 elem_id="temperature-slider",
               )
-              with gr.Column():
-                with gr.Row():
-                    read_btn      = gr.Button("🔊 Read",      elem_classes="secondary-btn", elem_id="read-btn")
-                    copy_btn      = gr.Button("📋 Copy Chat", elem_classes="secondary-btn")
-                    clear_chat_btn = gr.Button("🗑 Clear Chat", elem_classes="danger-btn")
-                token_stats_text = gr.Markdown(
-                  value="<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>",
-                    elem_id="token-stats",
-                    visible=True,
-                )
+              token_stats_text = gr.Markdown(
+                value="<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>",
+                elem_id="token-stats",
+                visible=True,
+              )
             memory_stats_text = gr.Markdown(value="", elem_id="memory-stats")
           with gr.TabItem("📁 Documents"):
             status_text = gr.Markdown(value="⏳ Loading...", elem_classes="status-bar")
@@ -562,14 +609,14 @@ def build_ui():
               interactive=True,
             )
             with gr.Row():
-              delete_btn = gr.Button("🗑 Remove selected", elem_classes="danger-btn")
-              delete_all_btn = gr.Button("🗑 Remove ALL", elem_classes="danger-btn")
-              refresh_btn = gr.Button("↻ Refresh list", elem_classes="secondary-btn")
+              delete_btn     = gr.Button("🗑 Remove selected", elem_id="delete-btn")
+              delete_all_btn = gr.Button("🗑 Remove ALL",      elem_id="delete-all-btn")
+              refresh_btn    = gr.Button("↻ Refresh list",    elem_id="refresh-btn")
             # Confirmation row for Remove ALL
             with gr.Row(visible=False) as confirm_row:
               gr.Markdown('<span style="font-size:0.95em;color:#f87171;">⚠️ Remove ALL embeddings? This cannot be undone.</span>')
-              confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_classes="danger-btn")
-              confirm_no_btn = gr.Button("✖ Cancel", elem_classes="secondary-btn")
+              confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_id="confirm-yes-btn")
+              confirm_no_btn  = gr.Button("✖ Cancel",          elem_id="confirm-no-btn")
             delete_status = gr.Markdown(value="", elem_id="delete-status")
 
         def on_load():
@@ -580,13 +627,162 @@ def build_ui():
             status_msg,
             gr.update(interactive=has_docs),
           )
-        tts_state   = gr.State("")
-        copy_state  = gr.State("")
-        read_state  = gr.State(False)
+        tts_box    = gr.Textbox(value="", visible=False, elem_id="tts-box")
+        copy_box   = gr.Textbox(value="", visible=False, elem_id="copy-box")
+        ended_box  = gr.Textbox(value="0", visible=True,  elem_id="ended-box", label="", container=False)
+        read_state = gr.State(False)
 
         demo.load(
             fn=on_load,
             outputs=[doc_list, status_text, submit_btn],
+        )
+        demo.load(
+            fn=None,
+            js="""() => {
+                // 1. Hover CSS (inline styles handle base colors; CSS handles hover)
+                const s = document.createElement('style');
+                s.textContent = `
+                    #read-btn button:hover       { background:#2563eb!important; }
+                    #copy-btn button:hover       { background:#059669!important; }
+                    #clear-chat-btn button:hover { background:#dc2626!important; }
+                    #delete-btn button:hover     { background:#dc2626!important; }
+                    #delete-all-btn button:hover { background:#991b1b!important; }
+                    #refresh-btn button:hover    { background:#4f46e5!important; }
+                    button { transition: transform .08s ease, opacity .08s ease !important; }
+                    #ended-box { display:none!important; }
+                `;
+                document.head.appendChild(s);
+
+                // 2. Artistic gradient + glow styles per button
+                //    ⏹ Stop is NOT in STYLE_RULES — it's set imperatively on speech start
+                //    so applyColors never accidentally re-colors it orange after speech ends.
+                const STYLE_RULES = [
+                    {
+                        match: t => t === 'Ask →',
+                        bg:  'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)',
+                        sh:  '0 4px 18px rgba(124,92,252,0.55)',
+                    },
+                    {
+                        match: t => t.includes('Upload') && t.includes('Files'),
+                        bg:  'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)',
+                        sh:  '0 4px 18px rgba(14,165,233,0.55)',
+                    },
+                    {
+                        match: t => t === '🔊 Read',
+                        bg:  'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)',
+                        sh:  '0 4px 16px rgba(37,99,235,0.55)',
+                    },
+                    {
+                        match: t => t.includes('Copy Chat'),
+                        bg:  'linear-gradient(135deg,#059669 0%,#34d399 100%)',
+                        sh:  '0 4px 16px rgba(5,150,105,0.5)',
+                    },
+                    {
+                        match: t => t.includes('Clear Chat'),
+                        bg:  'linear-gradient(135deg,#dc2626 0%,#f87171 100%)',
+                        sh:  '0 4px 16px rgba(220,38,38,0.5)',
+                    },
+                    {
+                        match: t => t.includes('Remove') && t.includes('selected'),
+                        bg:  'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)',
+                        sh:  '0 4px 16px rgba(239,68,68,0.5)',
+                    },
+                    {
+                        match: t => t.includes('Remove ALL') || t.includes('Yes, remove all'),
+                        bg:  'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)',
+                        sh:  '0 4px 18px rgba(127,29,29,0.65)',
+                    },
+                    {
+                        match: t => t.includes('Refresh'),
+                        bg:  'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)',
+                        sh:  '0 4px 16px rgba(67,56,202,0.5)',
+                    },
+                    {
+                        match: t => t.includes('Cancel'),
+                        bg:  'linear-gradient(135deg,#374151 0%,#6b7280 100%)',
+                        sh:  '0 2px 10px rgba(107,114,128,0.4)',
+                    },
+                ];
+                function styleEl(el, rule) {
+                    el.style.setProperty('background',   rule.bg, 'important');
+                    el.style.setProperty('box-shadow',   rule.sh, 'important');
+                    el.style.setProperty('color',        '#fff',  'important');
+                    el.style.setProperty('border',       'none',  'important');
+                    el.style.setProperty('font-weight',  '700',   'important');
+                    el.style.setProperty('border-radius','8px',   'important');
+                    el.style.setProperty('letter-spacing','0.4px','important');
+                    el.style.setProperty('text-shadow',  '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                }
+                function applyColors() {
+                    document.querySelectorAll('button').forEach(el => {
+                        if (el.dataset.speaking === '1') return;  // don't stomp Stop while reading
+                        const text = el.textContent.trim();
+                        for (const rule of STYLE_RULES) {
+                            if (rule.match(text)) { styleEl(el, rule); break; }
+                        }
+                    });
+                    // UploadButton may render as <label> — handle by ID
+                    const upWrap = document.getElementById('file-upload');
+                    if (upWrap) {
+                        const upEl = (upWrap.tagName === 'BUTTON' || upWrap.tagName === 'LABEL')
+                            ? upWrap : upWrap.querySelector('button, label');
+                        if (upEl) styleEl(upEl, {
+                            bg: 'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)',
+                            sh: '0 4px 18px rgba(14,165,233,0.55)',
+                        });
+                    }
+                }
+                // Expose globally so tts handler can call it
+                window._applyColors = applyColors;
+                setTimeout(applyColors, 150);
+                setTimeout(applyColors, 700);
+                setInterval(applyColors, 2000);  // permanent safety net
+
+                // 3. MutationObserver: re-apply colors immediately after any Gradio re-render
+                let _t = null;
+                const obs = new MutationObserver(() => {
+                    if (_t) clearTimeout(_t);
+                    _t = setTimeout(applyColors, 50);
+                });
+                obs.observe(document.body, { childList: true, subtree: true });
+
+                // 4. Click feedback via mousedown/mouseup (CSS :active unreliable in Svelte)
+                document.addEventListener('mousedown', (e) => {
+                    const btn = e.target.closest('button');
+                    if (!btn) return;
+                    btn.style.setProperty('transform', 'scale(0.93)', 'important');
+                    btn.style.setProperty('opacity', '0.82', 'important');
+                    const reset = () => {
+                        btn.style.removeProperty('transform');
+                        btn.style.removeProperty('opacity');
+                        btn.removeEventListener('mouseup', reset);
+                        btn.removeEventListener('mouseleave', reset);
+                    };
+                    btn.addEventListener('mouseup', reset);
+                    btn.addEventListener('mouseleave', reset);
+                }, true);
+
+                // 5. Auto-scroll chatbot to bottom as tokens stream in
+                function attachChatScroller() {
+                    // Gradio renders the scrollable chatbot as a div with overflow-y:auto/scroll
+                    const chatWrap = document.querySelector('.chatbot-wrap .overflow-y-auto')
+                                  || document.querySelector('.chatbot-wrap [data-testid="bot"]')
+                                  || document.querySelector('.chatbot-wrap');
+                    if (!chatWrap) return false;
+                    const chatObs = new MutationObserver(() => {
+                        chatWrap.scrollTop = chatWrap.scrollHeight;
+                    });
+                    chatObs.observe(chatWrap, { childList: true, subtree: true, characterData: true });
+                    return true;
+                }
+                // Try immediately, then retry until the chatbot is rendered
+                if (!attachChatScroller()) {
+                    let tries = 0;
+                    const t = setInterval(() => {
+                        if (attachChatScroller() || ++tries > 20) clearInterval(t);
+                    }, 300);
+                }
+            }"""
         )
         def refresh_and_update():
           docs, files, status_msg, model, device = get_status()
@@ -659,42 +855,78 @@ def build_ui():
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
 
-        def prepare_read(history, currently_speaking):
-            if currently_speaking:
-                return "", False, gr.update(value="🔊 Read")
-            text = get_last_answer(history)
-            if not text:
-                return "", False, gr.update(value="🔊 Read")
-            return text, True, gr.update(value="⏹ Stop")
-
         read_btn.click(
-          fn=prepare_read,
+          fn=toggle_read,
           inputs=[chatbot, read_state],
-          outputs=[tts_state, read_state, read_btn],
-          js="(history, _) => [history, window.speechSynthesis.speaking]",
-        ).then(
+          outputs=[tts_box, read_state, read_btn],
+        )
+        tts_box.change(
           fn=None,
-          inputs=[tts_state],
-          js="""(text) => {
-            window.speechSynthesis.cancel();
-            if (text) {
+          inputs=[tts_box],
+          js="""(val) => {
+            const text = val.split('\\n').slice(1).join('\\n').trim();
+            // Find the read/stop button by current label
+            function getReadBtn() {
+                return [...document.querySelectorAll('button')]
+                    .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
+            }
+            function signalEnded() {
+                const endedWrap = document.getElementById('ended-box');
+                const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
+                if (endedEl) {
+                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                    setter.call(endedEl, String(Date.now()));
+                    endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
+                    endedEl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                const btn = getReadBtn();
+                if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
+            } else if (text) {
                 const utt = new SpeechSynthesisUtterance(text);
+                // Mark button as speaking so applyColors won't stomp the orange
+                setTimeout(() => {
+                    const btn = getReadBtn();
+                    if (btn) {
+                        btn.dataset.speaking = '1';
+                        btn.style.setProperty('background',   'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                        btn.style.setProperty('box-shadow',   '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                        btn.style.setProperty('color',        '#fff',  'important');
+                        btn.style.setProperty('border',       'none',  'important');
+                        btn.style.setProperty('font-weight',  '700',   'important');
+                        btn.style.setProperty('border-radius','8px',   'important');
+                        btn.style.setProperty('text-shadow',  '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                    }
+                }, 80);
                 utt.onend = () => {
-                    const btn = document.querySelector('#read-btn button');
-                    if (btn) btn.textContent = '🔊 Read';
+                    // Immediately reset to Read blue BEFORE signaling Python
+                    const btn = getReadBtn();
+                    if (btn) {
+                        delete btn.dataset.speaking;
+                        btn.style.setProperty('background',   'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                        btn.style.setProperty('box-shadow',   '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                    }
+                    signalEnded();
                 };
                 window.speechSynthesis.speak(utt);
             }
           }""",
         )
-        copy_btn.click(
-          fn=format_chat_history,
-          inputs=[chatbot],
-          outputs=[copy_state],
-        ).then(
+        copy_btn.click(fn=get_chat_for_copy, inputs=[chatbot], outputs=[copy_box])
+        copy_box.change(
           fn=None,
-          inputs=[copy_state],
-          js="(text) => { if(text) navigator.clipboard.writeText(text).catch(()=>{}); }",
+          inputs=[copy_box],
+          js="""(val) => {
+            const text = val.split('\\n').slice(1).join('\\n');
+            if (text.trim()) navigator.clipboard.writeText(text).catch(() => {});
+          }""",
+        )
+        ended_box.change(
+          fn=lambda _: (False, gr.update(value="🔊 Read")),
+          inputs=[ended_box],
+          outputs=[read_state, read_btn],
         )
         clear_chat_btn.click(
           fn=on_clear_chat,
@@ -708,4 +940,5 @@ if __name__ == "__main__":
         _space_url = "https://irajkoohi-multimodalrag.hf.space"
         start_keep_alive_scheduler(_space_url)
     ui = build_ui()
-    ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True)
+    ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True,
+              theme=_UI_THEME, css=_UI_CSS)

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from utils.document_processor import process_document_chunked, SUPPORTED_EXTENSIONS
 from utils.vector_store import VectorStoreManager
-from utils.rag_engine import RAGEngine
+from utils.rag_engine import RAGEngine, USE_GROQ
 from utils.memory import ConversationMemory, estimate_tokens
 from utils.device import device_info
 
@@ -112,7 +112,7 @@ async def get_status():
         total_chunks=vs.total_chunks(),
         data_dir_files=data_files,
         model=rag.model,
-        device=device_info()["label"],
+        device="Cloud — Groq LPU" if USE_GROQ else device_info()["label"],
     )
 
 
@@ -167,13 +167,36 @@ async def reindex_all():
     return {"message": "Reindexed all documents.", "total_chunks": vs.total_chunks()}
 
 
+_GREETINGS = {
+    "hi", "hello", "hey", "hiya", "howdy", "greetings", "sup", "yo",
+    "good morning", "good afternoon", "good evening", "good day",
+    "how are you", "how are you doing", "how do you do",
+    "what's up", "whats up", "what is up",
+    "thanks", "thank you", "thx", "ty",
+    "bye", "goodbye", "see you", "cya",
+    "ok", "okay", "cool", "great", "nice",
+}
+
+def _is_chitchat(text: str) -> bool:
+    """Return True if the query is conversational chitchat that shouldn't hit the vector store."""
+    normalized = text.strip().lower().rstrip("!?.,")
+    return normalized in _GREETINGS or len(normalized.split()) <= 1 and normalized in _GREETINGS
+
+
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(req: QueryRequest):
     """Query the RAG system."""
     import asyncio
     try:
+        # Short-circuit chitchat / greetings — don't pollute with RAG results
+        if _is_chitchat(req.question):
+            return QueryResponse(
+                answer="Hello! I'm your document assistant. Ask me anything about your uploaded documents.",
+                sources=[],
+            )
+
         if vs.total_chunks() == 0:
-            return QueryResponse(answer="I DON'T KNOW", sources=[])
+            return QueryResponse(answer="No documents are indexed yet. Please upload some documents first.", sources=[])
 
         # Run all blocking work (embedding + Ollama) in a thread executor
 

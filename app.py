@@ -147,7 +147,7 @@ if __name__ == "__main__":
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    from frontend import build_ui
+    from frontend import build_ui, _UI_THEME, _UI_CSS
     ui = build_ui()
 
     if not IS_HF:
@@ -165,4 +165,6 @@ if __name__ == "__main__":
         server_port=7860,
         show_error=True,
         share=False,
+        theme=_UI_THEME,
+        css=_UI_CSS,
     )

@@ -42,7 +42,7 @@ class RAGEngine:
     def __init__(self, vector_store: VectorStoreManager, model: str = None):
         self.vs = vector_store
         if USE_GROQ:
-            self.model  = model or os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
+            self.model  = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
             self._client = _make_groq_client()
             logger.info(f"LLM backend: Groq ({self.model})")
         else:
