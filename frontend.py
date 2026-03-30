@@ -627,8 +627,9 @@ def build_ui():
             status_msg,
             gr.update(interactive=has_docs),
           )
-        tts_box    = gr.Textbox(value="", visible=False, elem_id="tts-box")
-        copy_box   = gr.Textbox(value="", visible=False, elem_id="copy-box")
+        tts_box      = gr.Textbox(value="", visible=False, elem_id="tts-box")
+        tts_ready_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
+        copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
         ended_box  = gr.Textbox(value="0", visible=True,  elem_id="ended-box", label="", container=False)
         read_state = gr.State(False)
 
@@ -783,27 +784,52 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Mobile/iOS fix: unlock speechSynthesis in user-gesture context.
-                //    Mobile browsers block speechSynthesis.speak() called from async
-                //    callbacks (like tts_box.change after a Python round-trip).
-                //    Calling speak() once inside a direct click handler unlocks it
-                //    for the entire page session — even for subsequent async calls.
-                window._pendingRead = false;
-                function attachMobileTTSUnlock() {
+                // 6. Mobile/iOS fix: speak directly in the user-gesture click handler.
+                //    Mobile browsers block speechSynthesis.speak() from async callbacks
+                //    (like tts_box.change after a Python round-trip). The only reliable
+                //    fix is to call speak() synchronously within the tap/click event.
+                //    tts_ready_box is pre-populated with cleaned text after each response,
+                //    so the text is ready before the user taps Read.
+                window._ttsText   = '';
+                window._mobileSpoke = false;
+                function attachMobileTTS() {
                     const container = document.getElementById('read-btn');
-                    if (!container) { setTimeout(attachMobileTTSUnlock, 500); return; }
+                    if (!container) { setTimeout(attachMobileTTS, 500); return; }
                     const btn = container.querySelector('button');
-                    if (!btn) { setTimeout(attachMobileTTSUnlock, 500); return; }
+                    if (!btn) { setTimeout(attachMobileTTS, 500); return; }
                     btn.addEventListener('click', function() {
-                        if (btn.textContent.trim() === '🔊 Read') {
-                            window._pendingRead = true;
-                            const unlock = new SpeechSynthesisUtterance(' ');
-                            unlock.volume = 0;
-                            window.speechSynthesis.speak(unlock);
+                        const label = btn.textContent.trim();
+                        if (label === '🔊 Read' && window._ttsText) {
+                            window._mobileSpoke = true;
+                            const utt = new SpeechSynthesisUtterance(window._ttsText);
+                            setTimeout(() => {
+                                btn.dataset.speaking = '1';
+                                btn.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                                btn.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                                btn.style.setProperty('color',         '#fff',  'important');
+                                btn.style.setProperty('border',        'none',  'important');
+                                btn.style.setProperty('font-weight',   '700',   'important');
+                                btn.style.setProperty('border-radius', '8px',   'important');
+                                btn.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                            }, 80);
+                            utt.onend = () => {
+                                delete btn.dataset.speaking;
+                                btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                                btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                                const endedWrap = document.getElementById('ended-box');
+                                const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
+                                if (endedEl) {
+                                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                                    setter.call(endedEl, String(Date.now()));
+                                    endedEl.dispatchEvent(new Event('input',  { bubbles: true }));
+                                    endedEl.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            };
+                            window.speechSynthesis.speak(utt);
                         }
                     }, true);  // capture phase — fires before Gradio's handler
                 }
-                attachMobileTTSUnlock();
+                attachMobileTTS();
             }"""
         )
         def refresh_and_update():
@@ -853,17 +879,18 @@ def build_ui():
               tokens_user = _.get("tokens_user", 0)
               tokens_assistant = _.get("tokens_assistant", 0)
             last_resp = updated_history
-            yield updated_history, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
-          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
+            yield updated_history, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", gr.update()
+          tts_text = _clean_for_tts(get_last_answer(last_resp)) if last_resp else ""
+          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", tts_text
         submit_btn.click(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text],
+          outputs=[chatbot, msg_input, token_stats_text, tts_ready_box],
         )
         msg_input.submit(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text],
+          outputs=[chatbot, msg_input, token_stats_text, tts_ready_box],
         )
         def on_clear_chat():
           status, history = clear_memory()
@@ -882,10 +909,17 @@ def build_ui():
           inputs=[chatbot, read_state],
           outputs=[tts_box, read_state, read_btn],
         )
+        tts_ready_box.change(
+          fn=None,
+          inputs=[tts_ready_box],
+          js="(val) => { if (val) window._ttsText = val; }",
+        )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
+            // Mobile native handler already spoke — skip desktop path
+            if (window._mobileSpoke) { window._mobileSpoke = false; return; }
             const text = val.split('\\n').slice(1).join('\\n').trim();
             // Find the read/stop button by current label
             function getReadBtn() {
@@ -902,14 +936,11 @@ def build_ui():
                     endedEl.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
-            if (window.speechSynthesis.speaking && !window._pendingRead) {
+            if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
                 const btn = getReadBtn();
                 if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
             } else if (text) {
-                window._pendingRead = false;
-                // Cancel the silent unlock utterance (if still playing) before speaking real text
-                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
                 const utt = new SpeechSynthesisUtterance(text);
                 // Mark button as speaking so applyColors won't stomp the orange
                 setTimeout(() => {
