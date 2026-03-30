@@ -33,7 +33,8 @@ def start_keep_alive_scheduler(space_url: str):
     scheduler.start()
     return scheduler
 
-API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
+API_BASE     = os.environ.get("API_BASE", "http://localhost:8000")
+_LLM_BACKEND = "Groq" if os.environ.get("GROQ_API_KEY") else "Ollama"
 
 def api_get(path: str, timeout: int = 10):
   try:
@@ -504,7 +505,7 @@ def build_ui():
                 gr.Markdown(f"""
                 # 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>
                 <span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>
-                <br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span> <span style='color:#7c5cfc;font-weight:bold;'>Powered by Ollama + ChromaDB</span>
+                <br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span> <span style='color:#7c5cfc;font-weight:bold;'>Powered by {_LLM_BACKEND} + ChromaDB</span>
                 """, elem_id="header")
         with gr.Tabs(selected=0) as tabs:
           with gr.TabItem("💬 Chat"):

@@ -111,7 +111,7 @@ async def get_status():
         documents=vs.list_sources(),
         total_chunks=vs.total_chunks(),
         data_dir_files=data_files,
-        model=OLLAMA_MODEL,
+        model=rag.model,
         device=device_info()["label"],
     )
 
