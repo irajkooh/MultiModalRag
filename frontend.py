@@ -403,7 +403,6 @@ def build_ui():
                 // 1. Hover CSS (inline styles handle base colors; CSS handles hover)
                 const s = document.createElement('style');
                 s.textContent = `
-                    #tts-btn:hover               { background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%)!important; }
                     #copy-btn button:hover       { background:#059669!important; }
                     #clear-chat-btn button:hover { background:#dc2626!important; }
                     #delete-btn button:hover     { background:#dc2626!important; }
