@@ -299,7 +299,7 @@ _UI_CSS = """
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(title="Multimodal RAG") as demo:
+    with gr.Blocks(title="Multimodal RAG", theme=_UI_THEME, css=_UI_CSS) as demo:
         with gr.Row():
             with gr.Column(elem_classes="main-col"):
                 docs, files, status_msg, model, device = get_status()
@@ -698,5 +698,4 @@ if __name__ == "__main__":
         _space_url = "https://irajkoohi-multimodalrag.hf.space"
         start_keep_alive_scheduler(_space_url)
     ui = build_ui()
-    ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True,
-              theme=_UI_THEME, css=_UI_CSS)
+    ui.launch(server_name="0.0.0.0", server_port=7860, show_error=True)
