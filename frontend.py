@@ -275,8 +275,7 @@ _UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
-    #tts-btn-wrap { display: flex; align-items: stretch; }
-    #tts-btn-wrap > div { flex: 1; }
+
 """
 
 
@@ -309,12 +308,7 @@ def build_ui():
               )
               submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
-              read_btn_html  = gr.HTML(
-                value='<button id="tts-btn" onclick="window._ttsToggle&&window._ttsToggle()" '
-                      'style="width:100%;height:100%;padding:8px 12px;border:none;border-radius:8px;'
-                      'cursor:pointer;font-weight:700;font-size:14px;color:#fff;'
-                      'background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%);">🔊 Read</button>',
-                elem_id="tts-btn-wrap", scale=1)
+              read_btn       = gr.Button("🔊 Read",      elem_id="read-btn",       scale=1)
               copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
               clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
@@ -472,7 +466,7 @@ def build_ui():
                 }
                 function applyColors() {
                     document.querySelectorAll('button').forEach(el => {
-                        if (el.id === 'tts-btn') return; // fully managed by _ttsToggle
+                        if (el.closest('#read-btn')) return; // fully managed by _ttsToggle
                         const text = el.textContent.trim();
                         for (const rule of STYLE_RULES) {
                             if (rule.match(text)) { styleEl(el, rule); break; }
@@ -542,7 +536,7 @@ def build_ui():
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 function _ttsSetBtn(playing) {
-                    const b = document.getElementById('tts-btn');
+                    const b = document.getElementById('read-btn')?.querySelector('button');
                     if (!b) return;
                     b.textContent = playing ? '⏹ Stop' : '🔊 Read';
                     b.style.background = playing
@@ -654,6 +648,7 @@ def build_ui():
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
 
+        read_btn.click(fn=None, js="() => { if(window._ttsToggle) window._ttsToggle(); }")
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
