@@ -707,12 +707,21 @@ def build_ui():
                     #delete-all-btn button:hover { background:#991b1b!important; }
                     #refresh-btn button:hover    { background:#4f46e5!important; }
                     button { transition: transform .08s ease, opacity .08s ease !important; }
+                    /* Read button caption via ::before so Svelte textContent resets don't matter */
+                    #read-btn button { position: relative !important; }
+                    #read-btn button > * { opacity: 0 !important; }
+                    #read-btn button::before {
+                        content: '🔊 Read';
+                        position: absolute; left: 0; right: 0; top: 50%;
+                        transform: translateY(-50%);
+                        text-align: center; font-weight: 700;
+                        opacity: 1; pointer-events: none;
+                    }
+                    #read-btn button[data-speaking="1"]::before { content: '⏹ Stop'; }
                 `;
                 document.head.appendChild(s);
 
                 // 2. Artistic gradient + glow styles per button
-                //    ⏹ Stop is NOT in STYLE_RULES — it's set imperatively on speech start
-                //    so applyColors never accidentally re-colors it orange after speech ends.
                 const STYLE_RULES = [
                     {
                         match: t => t === 'Ask →',
@@ -728,11 +737,6 @@ def build_ui():
                         match: t => t === '🔊 Read',
                         bg:  'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)',
                         sh:  '0 4px 16px rgba(37,99,235,0.55)',
-                    },
-                    {
-                        match: t => t === '⏹ Stop',
-                        bg:  'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)',
-                        sh:  '0 4px 18px rgba(234,88,12,0.6)',
                     },
                     {
                         match: t => t.includes('Copy Chat'),
@@ -782,7 +786,6 @@ def build_ui():
                 }
                 function applyColors() {
                     document.querySelectorAll('button').forEach(el => {
-                        if (el.dataset.speaking === '1') return;  // don't stomp Stop while reading
                         const text = el.textContent.trim();
                         for (const rule of STYLE_RULES) {
                             if (rule.match(text)) { styleEl(el, rule); break; }
@@ -952,22 +955,20 @@ def build_ui():
             if (!window.speechSynthesis) return;
             const btn = document.getElementById('read-btn')?.querySelector('button');
             if (window._ttsPlaying) {
-                // STOP immediately
+                // STOP — set blue immediately
                 window.speechSynthesis.cancel();
                 window._ttsPlaying = false;
                 if (btn) {
                     delete btn.dataset.speaking;
-                    btn.textContent = '🔊 Read';
                     btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                     btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                 }
             } else if (window._ttsText) {
-                // START immediately
+                // START — set orange immediately
                 window.speechSynthesis.cancel();
                 const utt = new SpeechSynthesisUtterance(window._ttsText);
                 window._ttsPlaying = true;
                 if (btn) {
-                    btn.textContent = '⏹ Stop';
                     btn.dataset.speaking = '1';
                     btn.style.setProperty('background', 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
                     btn.style.setProperty('box-shadow',  '0 4px 18px rgba(234,88,12,0.6)', 'important');
@@ -977,7 +978,6 @@ def build_ui():
                     const eb = document.getElementById('read-btn')?.querySelector('button');
                     if (eb) {
                         delete eb.dataset.speaking;
-                        eb.textContent = '🔊 Read';
                         eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                         eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                     }
@@ -998,7 +998,6 @@ def build_ui():
             const rb = document.getElementById('read-btn')?.querySelector('button');
             if (rb) {
                 delete rb.dataset.speaking;
-                rb.textContent = '🔊 Read';
                 rb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                 rb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
             }
