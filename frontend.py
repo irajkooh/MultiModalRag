@@ -302,21 +302,21 @@ def build_ui():
               msg_input = gr.Textbox(
                 placeholder="Ask a question about your documents...",
                 show_label=False,
-                scale=8,
+                scale=5,
                 lines=1,
                 max_lines=1,
                 autofocus=True,
               )
-              submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
+              submit_btn = gr.Button("Ask →", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
               read_btn_html  = gr.HTML(
                 value='<button id="tts-btn" onclick="window._ttsToggle&&window._ttsToggle()" '
                       'style="width:100%;height:100%;padding:8px 12px;border:none;border-radius:8px;'
                       'cursor:pointer;font-weight:700;font-size:14px;color:#fff;'
                       'background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%);">🔊 Read</button>',
-                elem_id="tts-btn-wrap", scale=3)
-              copy_btn       = gr.Button("📋 Copy", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
-              clear_chat_btn = gr.Button("🗑 Clear", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
+                elem_id="tts-btn-wrap", scale=1)
+              copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
+              clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
               n_results_slider = gr.Slider(
                 minimum=1, maximum=10, value=5, step=1,
