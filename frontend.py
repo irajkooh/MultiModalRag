@@ -311,11 +311,11 @@ _copy_counter = [0]
 def toggle_read(history, is_reading):
     _tts_counter[0] += 1
     if is_reading:
-        return f"{_tts_counter[0]}\n", False, gr.update(value="🔊 Read")
+        return f"{_tts_counter[0]}\n", False
     text = _clean_for_tts(get_last_answer(history))
     if not text:
-        return f"{_tts_counter[0]}\n", False, gr.update(value="🔊 Read")
-    return f"{_tts_counter[0]}\n{text}", True, gr.update(value="⏹ Stop")
+        return f"{_tts_counter[0]}\n", False
+    return f"{_tts_counter[0]}\n{text}", True
 
 def get_chat_for_copy(history):
     _copy_counter[0] += 1
@@ -880,9 +880,10 @@ def build_ui():
                 //
                 // Desktop: click goes straight to Gradio → toggle_read → tts_box.change
                 //   → plays audio. No interception needed.
-                window._ttsB64     = null;   // base64 of latest answer MP3
-                window._ttsAudio   = null;   // Audio instance while playing
-                window._ttsPlaying = false;  // true while audio is playing
+                window._ttsB64       = null;   // base64 of latest answer MP3
+                window._ttsAudio     = null;   // Audio instance while playing
+                window._ttsPlaying   = false;  // true while audio is playing
+                window._touchHandled = false;  // true briefly after touchend to suppress click handler
                 function signalEnded() {
                     const endedWrap = document.getElementById('ended-box');
                     const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
@@ -900,29 +901,36 @@ def build_ui():
                 document.addEventListener('touchend', function(e) {
                     const container = document.getElementById('read-btn');
                     if (!container || !container.contains(e.target)) return;
-                    // Audio control only — label/color left to Gradio + applyColors.
                     if (window._ttsPlaying && window._ttsAudio) {
-                        // Stop — apply blue immediately, no waiting for Gradio roundtrip
+                        // Stop — set "🔊 Read"/blue immediately, no waiting for Gradio roundtrip
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
+                        window._touchHandled = true;
+                        setTimeout(() => { window._touchHandled = false; }, 600);
                         const _sb = document.getElementById('read-btn')?.querySelector('button');
                         if (_sb) {
                             delete _sb.dataset.speaking;
+                            _sb.textContent = '🔊 Read';
                             _sb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                             _sb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                         }
-                        // click still reaches Gradio → toggle_read → label resets to "🔊 Read"
                     } else if (window._ttsB64) {
                         // Play — create Audio inside the gesture (iOS requirement)
                         const b64 = window._ttsB64;
                         const audio = new Audio('data:audio/mpeg;base64,' + b64);
                         window._ttsAudio   = audio;
                         window._ttsPlaying = true;
-                        // Mark button so applyColors doesn't stomp the orange Stop style
+                        window._touchHandled = true;
+                        setTimeout(() => { window._touchHandled = false; }, 600);
                         const _pb = document.getElementById('read-btn')?.querySelector('button');
-                        if (_pb) _pb.dataset.speaking = '1';
+                        if (_pb) {
+                            _pb.textContent = '⏹ Stop';
+                            _pb.dataset.speaking = '1';
+                            _pb.style.setProperty('background', 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                            _pb.style.setProperty('box-shadow',  '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                        }
                         audio.onended = () => {
                             if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
@@ -930,21 +938,48 @@ def build_ui():
                             const _eb = document.getElementById('read-btn')?.querySelector('button');
                             if (_eb) {
                                 delete _eb.dataset.speaking;
+                                _eb.textContent = '🔊 Read';
                                 _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                                 _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                             }
-                            signalEnded(); // tell Gradio audio finished naturally
+                            signalEnded();
                         };
                         audio.play().catch(() => {
                             if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
                             const _eb = document.getElementById('read-btn')?.querySelector('button');
-                            if (_eb) delete _eb.dataset.speaking;
+                            if (_eb) {
+                                delete _eb.dataset.speaking;
+                                _eb.textContent = '🔊 Read';
+                                _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                                _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                            }
                         });
                     }
-                    // No preventDefault, no stopPropagation — click reaches Gradio
+                    // No preventDefault, no stopPropagation — click still reaches Gradio
                 }, { passive: true });
+                // 7. Desktop Read button: instant label+color before Gradio roundtrip.
+                //    capture=true runs before Gradio's own click listener.
+                //    _touchHandled suppresses this on mobile (touchend already acted).
+                document.addEventListener('click', function(e) {
+                    const container = document.getElementById('read-btn');
+                    if (!container || !container.contains(e.target)) return;
+                    if (window._touchHandled) return;
+                    const btn = container.querySelector('button');
+                    if (!btn) return;
+                    if (window._ttsPlaying) {
+                        btn.textContent = '🔊 Read';
+                        delete btn.dataset.speaking;
+                        btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                        btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                    } else if (window._ttsB64) {
+                        btn.textContent = '⏹ Stop';
+                        btn.dataset.speaking = '1';
+                        btn.style.setProperty('background', 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                        btn.style.setProperty('box-shadow',  '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                    }
+                }, true);
             }"""
         )
         def refresh_and_update():
@@ -1042,13 +1077,13 @@ def build_ui():
         read_btn.click(
           fn=toggle_read,
           inputs=[chatbot, read_state],
-          outputs=[tts_box, read_state, read_btn],
+          outputs=[tts_box, read_state],
         )
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            // New answer arrived — stop any in-progress audio.
+            // New answer arrived — stop any in-progress audio and reset button.
             if (window._ttsAudio) {
                 window._ttsAudio.pause();
                 window._ttsAudio.onended = null;
@@ -1058,23 +1093,27 @@ def build_ui():
                 window.speechSynthesis.cancel();
             window._ttsPlaying = false;
             window._ttsB64 = val || null;
-            // Clear the speaking marker so applyColors can re-color the button
+            // Reset button to "🔊 Read" / blue
             const _rb = document.getElementById('read-btn')?.querySelector('button');
-            if (_rb) delete _rb.dataset.speaking;
+            if (_rb) {
+                delete _rb.dataset.speaking;
+                _rb.textContent = '🔊 Read';
+                _rb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                _rb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+            }
           }""",
         )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
-            // Fires when Gradio's toggle_read changes tts_box (desktop + mobile after click).
-            // On mobile, touchend already started audio → _ttsPlaying=true → skip play.
-            // On desktop, this is the primary play/stop trigger.
+            // Fires when toggle_read updates tts_box (desktop primary; mobile after click).
+            // On mobile, touchend already started/stopped audio → _ttsPlaying reflects that.
             const text = val.split('\\n').slice(1).join('\\n').trim();
             if (window._ttsB64) {
                 // gTTS path
                 if (!text) {
-                    // Stop signal — apply blue immediately
+                    // Stop signal
                     if (window._ttsAudio) {
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
@@ -1084,6 +1123,7 @@ def build_ui():
                     const _sb = document.getElementById('read-btn')?.querySelector('button');
                     if (_sb) {
                         delete _sb.dataset.speaking;
+                        _sb.textContent = '🔊 Read';
                         _sb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                         _sb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                     }
@@ -1094,7 +1134,12 @@ def build_ui():
                     window._ttsAudio   = audio;
                     window._ttsPlaying = true;
                     const _pb = document.getElementById('read-btn')?.querySelector('button');
-                    if (_pb) _pb.dataset.speaking = '1';
+                    if (_pb) {
+                        _pb.textContent = '⏹ Stop';
+                        _pb.dataset.speaking = '1';
+                        _pb.style.setProperty('background', 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                        _pb.style.setProperty('box-shadow',  '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                    }
                     audio.onended = () => {
                         if (window._ttsAudio !== audio) return;
                         window._ttsAudio   = null;
@@ -1102,6 +1147,7 @@ def build_ui():
                         const _eb = document.getElementById('read-btn')?.querySelector('button');
                         if (_eb) {
                             delete _eb.dataset.speaking;
+                            _eb.textContent = '🔊 Read';
                             _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
                             _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
                         }
@@ -1112,16 +1158,44 @@ def build_ui():
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
                         const _eb = document.getElementById('read-btn')?.querySelector('button');
-                        if (_eb) delete _eb.dataset.speaking;
+                        if (_eb) {
+                            delete _eb.dataset.speaking;
+                            _eb.textContent = '🔊 Read';
+                            _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                            _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                        }
                     });
                 }
             } else if (window.speechSynthesis) {
                 // speechSynthesis fallback (gTTS unavailable)
                 if (!text) {
                     if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+                    const _sb2 = document.getElementById('read-btn')?.querySelector('button');
+                    if (_sb2) {
+                        delete _sb2.dataset.speaking;
+                        _sb2.textContent = '🔊 Read';
+                        _sb2.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                        _sb2.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                    }
                 } else if (text && !window.speechSynthesis.speaking) {
+                    const _pb2 = document.getElementById('read-btn')?.querySelector('button');
+                    if (_pb2) {
+                        _pb2.textContent = '⏹ Stop';
+                        _pb2.dataset.speaking = '1';
+                        _pb2.style.setProperty('background', 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
+                        _pb2.style.setProperty('box-shadow',  '0 4px 18px rgba(234,88,12,0.6)', 'important');
+                    }
                     const utt = new SpeechSynthesisUtterance(text);
-                    utt.onend = () => { if (window._signalEnded) window._signalEnded(); };
+                    utt.onend = () => {
+                        const _eb2 = document.getElementById('read-btn')?.querySelector('button');
+                        if (_eb2) {
+                            delete _eb2.dataset.speaking;
+                            _eb2.textContent = '🔊 Read';
+                            _eb2.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                            _eb2.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                        }
+                        if (window._signalEnded) window._signalEnded();
+                    };
                     window.speechSynthesis.speak(utt);
                 }
             }
@@ -1137,9 +1211,9 @@ def build_ui():
           }""",
         )
         ended_box.change(
-          fn=lambda _: (False, gr.update(value="🔊 Read")),
+          fn=lambda _: False,
           inputs=[ended_box],
-          outputs=[read_state, read_btn],
+          outputs=[read_state],
           js="(_) => { window._ttsAudio = null; window._ttsPlaying = false; return [_]; }",
         )
         clear_chat_btn.click(
