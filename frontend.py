@@ -302,12 +302,12 @@ def build_ui():
               msg_input = gr.Textbox(
                 placeholder="Ask a question about your documents...",
                 show_label=False,
-                scale=5,
+                scale=8,
                 lines=1,
                 max_lines=1,
                 autofocus=True,
               )
-              submit_btn = gr.Button("Ask →", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
+              submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
               read_btn_html  = gr.HTML(
                 value='<button id="tts-btn" onclick="window._ttsToggle&&window._ttsToggle()" '
