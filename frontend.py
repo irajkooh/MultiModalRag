@@ -902,13 +902,18 @@ def build_ui():
                     if (!container || !container.contains(e.target)) return;
                     // Audio control only — label/color left to Gradio + applyColors.
                     if (window._ttsPlaying && window._ttsAudio) {
-                        // Stop
+                        // Stop — apply blue immediately, no waiting for Gradio roundtrip
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
-                        // Don't call signalEnded() — the click will trigger toggle_read
-                        // which clears tts_box, which is the proper Gradio stop signal.
+                        const _sb = document.getElementById('read-btn')?.querySelector('button');
+                        if (_sb) {
+                            delete _sb.dataset.speaking;
+                            _sb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                            _sb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                        }
+                        // click still reaches Gradio → toggle_read → label resets to "🔊 Read"
                     } else if (window._ttsB64) {
                         // Play — create Audio inside the gesture (iOS requirement)
                         const b64 = window._ttsB64;
@@ -923,7 +928,11 @@ def build_ui():
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
                             const _eb = document.getElementById('read-btn')?.querySelector('button');
-                            if (_eb) delete _eb.dataset.speaking;
+                            if (_eb) {
+                                delete _eb.dataset.speaking;
+                                _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                                _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                            }
                             signalEnded(); // tell Gradio audio finished naturally
                         };
                         audio.play().catch(() => {
@@ -1065,13 +1074,19 @@ def build_ui():
             if (window._ttsB64) {
                 // gTTS path
                 if (!text) {
-                    // Stop signal (is_reading was True → toggle_read cleared tts_box)
+                    // Stop signal — apply blue immediately
                     if (window._ttsAudio) {
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
                         window._ttsAudio = null;
                     }
                     window._ttsPlaying = false;
+                    const _sb = document.getElementById('read-btn')?.querySelector('button');
+                    if (_sb) {
+                        delete _sb.dataset.speaking;
+                        _sb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                        _sb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                    }
                 } else if (!window._ttsPlaying) {
                     // Play signal — only if mobile touchend didn't already start it
                     const b64 = window._ttsB64;
@@ -1085,7 +1100,11 @@ def build_ui():
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
                         const _eb = document.getElementById('read-btn')?.querySelector('button');
-                        if (_eb) delete _eb.dataset.speaking;
+                        if (_eb) {
+                            delete _eb.dataset.speaking;
+                            _eb.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                            _eb.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                        }
                         if (window._signalEnded) window._signalEnded();
                     };
                     audio.play().catch(() => {
