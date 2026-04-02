@@ -27,6 +27,15 @@ If the answer is not in the context, respond: "I DON'T KNOW"
 Be concise and factual. Cite source and page when available.
 """
 
+GENERAL_PROMPT = """You are a helpful AI assistant. Answer the user's question directly and concisely.
+If you don't know the answer, say so honestly.
+"""
+
+# Cosine distance threshold (0=identical, 2=opposite).
+# If ALL retrieved chunks score above this, the question is off-topic
+# and we fall back to a general (non-grounded) LLM response.
+RELEVANCE_THRESHOLD = 0.75
+
 
 def _make_groq_client():
     from groq import Groq
@@ -76,6 +85,19 @@ class RAGEngine:
             {"role": "user", "content": user_message},
         ]
 
+    def _is_off_topic(self, results: List[Dict[str, Any]]) -> bool:
+        """Return True if no retrieved chunk is relevant enough to ground the answer."""
+        if not results:
+            return True
+        return all(r.get("distance", 1.0) > RELEVANCE_THRESHOLD for r in results)
+
+    def _build_general_messages(self, question: str, memory: ConversationMemory):
+        return [
+            {"role": "system", "content": GENERAL_PROMPT},
+            *memory.get_history_for_prompt(),
+            {"role": "user", "content": question},
+        ]
+
     def query(
         self,
         question: str,
@@ -84,9 +106,15 @@ class RAGEngine:
         temperature: float = 0.0,
         stream: bool = False,
     ) -> Generator[str, None, None]:
-        results  = self.vs.query(question, n_results=n_results)
-        context  = self._build_context(results)
-        messages = self._build_messages(question, context, memory)
+        results = self.vs.query(question, n_results=n_results)
+
+        if self._is_off_topic(results):
+            # No relevant documents — answer as a general assistant
+            logger.info(f"Off-topic query (no relevant chunks): '{question[:60]}'")
+            messages = self._build_general_messages(question, memory)
+        else:
+            context  = self._build_context(results)
+            messages = self._build_messages(question, context, memory)
 
         try:
             if USE_GROQ:
