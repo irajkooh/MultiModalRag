@@ -856,12 +856,13 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Mobile/iOS fix: use pre-loaded Audio object played in touchstart.
-                //    iOS blocks speechSynthesis from async callbacks (Python round-trip).
-                //    Audio.play() within a touchstart IS allowed. tts_audio_box pre-loads
-                //    a base64 MP3 after each response, stored in window._ttsAudio.
+                // 6. Mobile/iOS fix: use pre-loaded Audio object played in a touchend handler.
+                //    iOS blocks Audio.play() from async callbacks (Python round-trip), but
+                //    touchend IS a direct user gesture so play() is always allowed.
+                //    _ttsPlaying tracks actual playback state; e.preventDefault() in touchend
+                //    blocks the synthetic click so Gradio's toggle_read never races with JS.
                 window._ttsAudio   = null;
-                window._mobileSpoke = false;
+                window._ttsPlaying = false;
                 function signalEnded() {
                     const endedWrap = document.getElementById('ended-box');
                     const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
@@ -893,29 +894,39 @@ def build_ui():
                 function attachMobileTTS() {
                     const container = document.getElementById('read-btn');
                     if (!container) { setTimeout(attachMobileTTS, 500); return; }
-                    container.addEventListener('touchstart', function() {
+                    // touchend: fires after finger lifts, still counts as user gesture on iOS.
+                    // e.preventDefault() stops the browser from synthesising a click event,
+                    // which would otherwise trigger Gradio's read_btn.click → toggle_read —
+                    // racing with JS state and causing double-play / reads-prev-answer bugs.
+                    container.addEventListener('touchend', function(e) {
+                        e.preventDefault();
                         if (!window._ttsAudio) return;
                         const btn = container.querySelector('button');
                         if (!btn) return;
-                        const label = btn.textContent.trim();
-                        if (label === '⏹ Stop') {
+                        if (window._ttsPlaying) {
+                            // Stop immediately
                             window._ttsAudio.pause();
                             window._ttsAudio.currentTime = 0;
+                            window._ttsAudio.onended = null;
+                            window._ttsPlaying = false;
                             styleBlue(btn);
-                            // Do NOT call signalEnded() here — it races with the
-                            // subsequent click event and sets read_state=False before
-                            // toggle_read runs, causing toggle_read(False) to re-start
-                            // playback. The click → toggle_read(is_reading=True) already
-                            // clears tts_box and resets state correctly by itself.
-                            return;
+                            signalEnded();
+                        } else {
+                            // Start playback
+                            window._ttsPlaying = true;
+                            window._ttsAudio.currentTime = 0;
+                            window._ttsAudio.onended = () => {
+                                window._ttsPlaying = false;
+                                styleBlue(container.querySelector('button') || btn);
+                                signalEnded();
+                            };
+                            window._ttsAudio.play().catch(() => {
+                                window._ttsPlaying = false;
+                                styleBlue(btn);
+                            });
+                            setTimeout(() => styleOrange(container.querySelector('button') || btn), 80);
                         }
-                        if (label !== '🔊 Read') return;
-                        window._mobileSpoke = true;
-                        window._ttsAudio.currentTime = 0;
-                        window._ttsAudio.play().catch(() => {});
-                        window._ttsAudio.onended = () => { styleBlue(btn); signalEnded(); };
-                        setTimeout(() => styleOrange(container.querySelector('button') || btn), 80);
-                    }, { passive: true });
+                    });
                 }
                 attachMobileTTS();
             }"""
@@ -1010,30 +1021,53 @@ def build_ui():
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
-          js="(val) => { if (val) { if (window._ttsAudio) { window._ttsAudio.pause(); window._ttsAudio.currentTime = 0; } window._ttsAudio = new Audio('data:audio/mpeg;base64,' + val); window._ttsAudio.load(); } }",
+          js="""(val) => {
+            if (!val) return;
+            // Stop and fully detach any currently-playing audio before loading new one.
+            // This prevents old audio continuing in background when a new response arrives.
+            if (window._ttsAudio) {
+                window._ttsAudio.pause();
+                window._ttsAudio.currentTime = 0;
+                window._ttsAudio.onended = null;
+            }
+            window._ttsPlaying = false;
+            // Reset button colour to blue so it doesn't show orange for the new answer
+            const _rb = [...document.querySelectorAll('button')]
+                .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
+            if (_rb && window._styleBlue) window._styleBlue(_rb);
+            window._ttsAudio = new Audio('data:audio/mpeg;base64,' + val);
+            window._ttsAudio.load();
+          }""",
         )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
-            // Mobile touchstart already handled playback — skip
-            if (window._mobileSpoke) { window._mobileSpoke = false; return; }
+            // On mobile, touchend + e.preventDefault() blocks the click that would reach
+            // Gradio, so toggle_read never runs and tts_box never changes — this handler
+            // is desktop-only in practice. The _ttsPlaying guard below is a safety net
+            // for hybrid devices (touch + mouse) to prevent double-play.
             const text = val.split('\\n').slice(1).join('\\n').trim();
             function getReadBtn() {
                 return [...document.querySelectorAll('button')]
                     .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
             }
             if (window._ttsAudio) {
-                // gTTS path — pre-loaded MP3, works on mobile + desktop
+                // gTTS path — pre-loaded MP3
                 if (!text) {
+                    // Stop signal
                     window._ttsAudio.pause();
                     window._ttsAudio.currentTime = 0;
+                    window._ttsPlaying = false;
                     const btn = getReadBtn();
                     if (btn && window._styleBlue) window._styleBlue(btn);
-                } else {
+                } else if (!window._ttsPlaying) {
+                    // Play signal — skip if touchend already started playback
+                    window._ttsPlaying = true;
                     window._ttsAudio.currentTime = 0;
-                    window._ttsAudio.play().catch(() => {});
+                    window._ttsAudio.play().catch(() => { window._ttsPlaying = false; });
                     window._ttsAudio.onended = () => {
+                        window._ttsPlaying = false;
                         const btn = getReadBtn();
                         if (btn && window._styleBlue) window._styleBlue(btn);
                         if (window._signalEnded) window._signalEnded();
