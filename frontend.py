@@ -902,7 +902,11 @@ def build_ui():
                             window._ttsAudio.pause();
                             window._ttsAudio.currentTime = 0;
                             styleBlue(btn);
-                            signalEnded();
+                            // Do NOT call signalEnded() here — it races with the
+                            // subsequent click event and sets read_state=False before
+                            // toggle_read runs, causing toggle_read(False) to re-start
+                            // playback. The click → toggle_read(is_reading=True) already
+                            // clears tts_box and resets state correctly by itself.
                             return;
                         }
                         if (label !== '🔊 Read') return;
@@ -930,14 +934,14 @@ def build_ui():
             outputs=[upload_status, doc_list, status_text, submit_btn],
         )
         add_url_btn.click(
-            fn=lambda url: (add_url(url), *refresh_and_update()),
+            fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
             inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn],
+            outputs=[upload_status, doc_list, status_text, submit_btn, url_input],
         )
         url_input.submit(
-            fn=lambda url: (add_url(url), *refresh_and_update()),
+            fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
             inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn],
+            outputs=[upload_status, doc_list, status_text, submit_btn, url_input],
         )
         delete_btn.click(
           fn=lambda doc: (delete_document(doc)[0], *refresh_and_update()),
@@ -1006,7 +1010,7 @@ def build_ui():
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
-          js="(val) => { if (val) { window._ttsAudio = new Audio('data:audio/mpeg;base64,' + val); window._ttsAudio.load(); } }",
+          js="(val) => { if (val) { if (window._ttsAudio) { window._ttsAudio.pause(); window._ttsAudio.currentTime = 0; } window._ttsAudio = new Audio('data:audio/mpeg;base64,' + val); window._ttsAudio.load(); } }",
         )
         tts_box.change(
           fn=None,
