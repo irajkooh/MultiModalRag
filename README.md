@@ -6,7 +6,7 @@ colorTo: purple
 sdk: docker
 pinned: true
 license: mit
-short_description: Multimodal RAG — PDFs, scans, tables, charts.
+short_description: Multimodal RAG — PDFs, scans, tables, charts, URLs.
 sleep_time: -1
 tags:
   - rag
@@ -25,13 +25,14 @@ A fully local, deployable **Multimodal Retrieval-Augmented Generation** system t
 | Feature | Details |
 | --- | --- |
 | 📄 **Document types** | PDF (text + embedded images), scanned images (OCR), XLSX, DOCX, CSV, TXT |
-| 🌐 **URL indexing** | Paste any URL — crawls the page and all linked pages up to 2 levels deep; linked PDFs are downloaded and indexed automatically |
+| 🌐 **URL indexing** | Paste any URL — crawls in the background up to 2 levels deep (same domain, max 50 pages); linked PDFs downloaded and indexed automatically; URL box clears after submit |
 | 🔍 **Multimodal** | Extracts text, tables, charts, and images from PDFs |
 | 🧠 **Strict grounding** | Answers ONLY from documents — responds "I DON'T KNOW" otherwise |
 | 💾 **Persistent vector store** | ChromaDB with cosine similarity (persists across restarts) |
 | 🦙 **Local LLM** | Powered by Ollama (`llama3.2` by default) |
 | 💬 **Conversation memory** | Remembers context; auto-summarizes when context window fills up |
 | 📁 **Document management** | Add/remove documents and URLs via UI; index updates instantly |
+| 🔊 **Text-to-Speech** | Read aloud any answer; works on desktop and mobile (iOS/Android); tap again to stop immediately |
 | ⚡ **Streaming** | Token-by-token response streaming in chat |
 
 ## Setup
@@ -82,8 +83,9 @@ multimodal-rag/
 ├── vectorstore/             # ChromaDB persistent storage
 └── utils/
     ├── document_processor.py  # PDF/image/DOCX/XLSX extraction
+    ├── url_processor.py       # Web crawler + linked PDF downloader
     ├── vector_store.py        # ChromaDB manager
-    ├── rag_engine.py          # RAG + Ollama integration
+    ├── rag_engine.py          # RAG + Ollama/Groq integration
     └── memory.py              # Conversation memory manager
 ```
 
@@ -93,7 +95,8 @@ multimodal-rag/
 | --- | --- | --- |
 | GET | `/status` | System status, indexed docs, chunk count |
 | POST | `/documents/upload` | Upload and index a document |
-| POST | `/documents/url` | Crawl a URL (2 levels deep) and index all pages + PDFs |
+| POST | `/documents/url` | Start background crawl of a URL (returns immediately) |
+| GET | `/documents/url/status?url=` | Poll crawl job status (`crawling` / `done` / `error`) |
 | DELETE | `/documents/{filename}` | Remove a document or URL from the index |
 | POST | `/query` | Query the RAG system |
 | POST | `/memory/clear` | Clear conversation memory |

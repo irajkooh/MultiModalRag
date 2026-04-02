@@ -240,7 +240,7 @@ http://localhost:8000/docs
 | Action | How |
 | --- | --- |
 | **Upload documents** | Click **⬆ Upload & Index Files**, select one or more files |
-| **Index a URL** | Paste a URL into the text box and click **🌐 Add URL** (or press Enter) — crawls the page and all links up to 2 levels deep on the same domain; linked PDFs are also downloaded and indexed |
+| **Index a URL** | Paste a URL into the text box and click **🌐 Add URL** (or press Enter) — crawl starts in the background immediately; the UI polls every 5 s and shows `✅ Indexed N pages` when done; the URL box clears automatically; same-domain links only, max 50 pages, linked PDFs included |
 | **Remove a document/URL** | Select from the list, click **🗑 Remove selected** |
 | **Refresh the list** | Click **↻ Refresh list** |
 
@@ -253,6 +253,16 @@ The **Ask →** button and all sample question buttons are **automatically disab
 - Responses are streamed character-by-character
 - Sources are cited at the end of each answer
 - If the answer is not in the documents, the system responds: **I DON'T KNOW**
+
+### Text-to-Speech
+
+| Action | How |
+| --- | --- |
+| **Read answer aloud** | Click **🔊 Read** after an answer appears |
+| **Stop immediately** | Tap **⏹ Stop** — stops on first tap, no overlap |
+| **Mobile (iOS/Android)** | Uses pre-loaded MP3 audio; works in Safari and Chrome on mobile |
+
+Each new response pre-loads its audio so Read is instant. Stopping while audio plays cancels playback immediately.
 
 ### Memory Controls
 
@@ -461,9 +471,11 @@ The FastAPI backend is self-documented at `http://localhost:8000/docs`.
 | --- | --- | --- |
 | `GET` | `/status` | System status: indexed docs, chunk count, model |
 | `POST` | `/documents/upload` | Upload + index a file (multipart/form-data) |
-| `DELETE` | `/documents/{filename}` | Remove a document from index and disk |
+| `POST` | `/documents/url` | Start background URL crawl — returns immediately with `status: crawling` |
+| `GET` | `/documents/url/status?url=` | Poll crawl job — returns `crawling`, `done` (with page/chunk counts), or `error` |
+| `DELETE` | `/documents/{filename}` | Remove a document or URL from the index |
 | `POST` | `/documents/reindex` | Force re-index all files in DATA_DIR |
-| `POST` | `/query` | RAG query: `{"question": "...", "n_results": 5}` |
+| `POST` | `/query` | RAG query: `{"question": "...", "n_results": 5, "temperature": 0.0}` |
 | `POST` | `/memory/clear` | Clear conversation memory |
 | `GET` | `/memory/stats` | Token count, message count, summary status |
 | `GET` | `/models` | List available Ollama models |
@@ -538,6 +550,14 @@ uvicorn backend:app --host 0.0.0.0 --port 8000
 
 Reduce `MAX_HISTORY_TOKENS` in `utils/memory.py` (default: 2000), or click **🧹 Clear Memory** regularly.
 
+### URL crawl never shows in document list
+
+The crawl runs in the background. Click **↻ Refresh list** after ~30 s. If nothing appears, check the backend logs for crawl errors — the site may block bots or return non-HTML content.
+
+### URL crawl shows "No content extracted"
+
+The target URL may require JavaScript to render content (single-page apps). The crawler fetches raw HTML only and cannot execute JavaScript. Try a different URL or index specific sub-pages directly.
+
 ---
 
 ## Project Structure
@@ -561,6 +581,7 @@ multimodal-rag/
 └── utils/
     ├── __init__.py
     ├── document_processor.py   # Multimodal extraction: PDF, images, DOCX, XLSX
+    ├── url_processor.py        # BFS web crawler + linked PDF downloader
     ├── vector_store.py         # ChromaDB manager + sentence-transformers embeddings
     ├── rag_engine.py           # RAG pipeline: retrieval → prompt → Groq (HF) or Ollama (local)
     └── memory.py               # Sliding-window conversation memory with auto-summary
