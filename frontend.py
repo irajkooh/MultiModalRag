@@ -131,16 +131,36 @@ def delete_all_embeddings():
 
 
 def add_url(url: str) -> str:
-    """POST a URL to the backend for crawling and indexing. Returns HTML status string."""
+    """
+    Start a background crawl, then poll until done (or error).
+    Returns an HTML status string.
+    """
     url = url.strip()
     if not url:
         return "<span style='color:#f87171'>Please enter a URL.</span>"
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
-    resp = api_post("/documents/url", json={"url": url}, timeout=300)
+
+    # Kick off the background crawl
+    resp = api_post("/documents/url", json={"url": url}, timeout=30)
     if "error" in resp:
         return f"<span style='color:#ff4d4f'>❌ {resp['error']}</span>"
-    return f"<span style='color:#4ade80'>✅ {resp['message']}</span>"
+
+    # Poll until the crawl finishes (max 10 min)
+    import urllib.parse
+    encoded = urllib.parse.quote(url, safe="")
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        time.sleep(5)
+        status = api_get(f"/documents/url/status?url={encoded}", timeout=10)
+        if "error" in status:
+            break
+        if status.get("status") == "done":
+            return f"<span style='color:#4ade80'>✅ {status['message']}</span>"
+        if status.get("status") == "error":
+            return f"<span style='color:#ff4d4f'>❌ {status.get('message', 'Crawl failed.')}</span>"
+
+    return "<span style='color:#f87171'>⚠️ Crawl is taking longer than expected — refresh the document list in a moment.</span>"
 
 
 def refresh_ui():

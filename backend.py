@@ -8,7 +8,8 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+import threading
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -161,42 +162,65 @@ async def delete_all_documents():
     return {"message": f"Removed all {removed} indexed chunks. Files kept on disk.", "chunks_removed": removed}
 
 
-@app.post("/documents/url")
-async def index_url(req: URLIndexRequest):
-    """Crawl a URL up to 2 levels deep and index all pages + linked PDFs."""
-    from utils.url_processor import crawl_url
-    import asyncio
+# ─── URL crawl job tracker ────────────────────────────────────────────────────
+_crawl_jobs: dict = {}   # url → {"status": "crawling"|"done"|"error", ...}
+_crawl_lock = threading.Lock()
 
+
+def _crawl_background(url: str, max_depth: int, max_pages: int):
+    """Runs in a background thread: crawl + index, then update job status."""
+    from utils.url_processor import crawl_url
+    try:
+        vs.remove_document(url)
+        chunks, crawled_urls = crawl_url(url, max_depth=max_depth, max_pages=max_pages)
+        if not chunks:
+            with _crawl_lock:
+                _crawl_jobs[url] = {"status": "error", "message": "No content extracted."}
+            return
+        n_chunks = vs.add_documents(chunks, url)
+        with _crawl_lock:
+            _crawl_jobs[url] = {
+                "status": "done",
+                "message": (
+                    f"Indexed {len(crawled_urls)} page(s) and file(s) "
+                    f"({n_chunks} chunks) from {url}"
+                ),
+                "pages": len(crawled_urls),
+                "chunks": n_chunks,
+            }
+        logger.info(f"Crawl done: {url} — {len(crawled_urls)} pages, {n_chunks} chunks")
+    except Exception as e:
+        logger.error(f"Crawl failed for {url}: {e}", exc_info=True)
+        with _crawl_lock:
+            _crawl_jobs[url] = {"status": "error", "message": str(e)}
+
+
+@app.post("/documents/url")
+async def index_url(req: URLIndexRequest, background_tasks: BackgroundTasks):
+    """Start a background crawl of a URL (2 levels deep). Returns immediately."""
     url = req.url.strip()
     if not url.startswith(("http://", "https://")):
         raise HTTPException(400, "URL must start with http:// or https://")
 
-    # Remove any previous index for this start URL
-    vs.remove_document(url)
+    with _crawl_lock:
+        _crawl_jobs[url] = {"status": "crawling"}
 
-    try:
-        loop = asyncio.get_running_loop()
-        chunks, crawled_urls = await loop.run_in_executor(
-            None,
-            lambda: crawl_url(url, max_depth=req.max_depth, max_pages=req.max_pages),
-        )
-    except Exception as e:
-        logger.error(f"Crawl failed for {url}: {e}", exc_info=True)
-        raise HTTPException(500, f"Crawl failed: {str(e)}")
-
-    if not chunks:
-        raise HTTPException(422, f"No content could be extracted from {url}")
-
-    n_chunks = vs.add_documents(chunks, url)
+    background_tasks.add_task(_crawl_background, url, req.max_depth, req.max_pages)
     return {
-        "message": (
-            f"Indexed {len(crawled_urls)} page(s) and file(s) "
-            f"({n_chunks} chunks) from {url}"
-        ),
-        "pages": len(crawled_urls),
-        "chunks": n_chunks,
-        "crawled_urls": crawled_urls,
+        "message": f"⏳ Crawling started for {url} — refresh the document list in ~30 s.",
+        "status": "crawling",
+        "url": url,
     }
+
+
+@app.get("/documents/url/status")
+async def url_crawl_status(url: str):
+    """Poll the status of a background URL crawl."""
+    with _crawl_lock:
+        job = _crawl_jobs.get(url)
+    if job is None:
+        raise HTTPException(404, f"No crawl job found for {url}")
+    return job
 
 
 @app.post("/documents/reindex")
