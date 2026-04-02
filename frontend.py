@@ -130,6 +130,19 @@ def delete_all_embeddings():
     return f"🗑️ {resp['message']}", *refresh_ui()
 
 
+def add_url(url: str) -> str:
+    """POST a URL to the backend for crawling and indexing. Returns HTML status string."""
+    url = url.strip()
+    if not url:
+        return "<span style='color:#f87171'>Please enter a URL.</span>"
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    resp = api_post("/documents/url", json={"url": url}, timeout=300)
+    if "error" in resp:
+        return f"<span style='color:#ff4d4f'>❌ {resp['error']}</span>"
+    return f"<span style='color:#4ade80'>✅ {resp['message']}</span>"
+
+
 def refresh_ui():
     docs, files, status_msg, model, _ = get_status()
     has_docs = len(docs) > 0 if docs is not None else False
@@ -615,6 +628,14 @@ def build_ui():
               elem_id="file-upload",
             )
             upload_status = gr.HTML(value="", elem_id="upload-status")
+            with gr.Row():
+              url_input = gr.Textbox(
+                placeholder="https://example.com  —  crawls up to 2 levels deep + linked PDFs",
+                show_label=False,
+                scale=5,
+                elem_id="url-input",
+              )
+              add_url_btn = gr.Button("🌐 Add URL", scale=1, elem_id="add-url-btn")
             doc_list = gr.CheckboxGroup(
               choices=[],
               label="Indexed Documents",
@@ -723,6 +744,11 @@ def build_ui():
                         match: t => t.includes('Refresh'),
                         bg:  'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)',
                         sh:  '0 4px 16px rgba(67,56,202,0.5)',
+                    },
+                    {
+                        match: t => t.includes('Add URL'),
+                        bg:  'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)',
+                        sh:  '0 4px 16px rgba(13,148,136,0.5)',
                     },
                     {
                         match: t => t.includes('Cancel'),
@@ -881,6 +907,16 @@ def build_ui():
         file_upload.upload(
             fn=lambda files: (upload_files(files)[0], *refresh_and_update()),
             inputs=[file_upload],
+            outputs=[upload_status, doc_list, status_text, submit_btn],
+        )
+        add_url_btn.click(
+            fn=lambda url: (add_url(url), *refresh_and_update()),
+            inputs=[url_input],
+            outputs=[upload_status, doc_list, status_text, submit_btn],
+        )
+        url_input.submit(
+            fn=lambda url: (add_url(url), *refresh_and_update()),
+            inputs=[url_input],
             outputs=[upload_status, doc_list, status_text, submit_btn],
         )
         delete_btn.click(

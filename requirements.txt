@@ -13,6 +13,10 @@ aiofiles>=22.0
 chromadb==1.5.2
 ollama==0.6.1
 
+# ── Web crawling / URL indexing ───────────────────────────────────────────────
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
 # ── Document processing ───────────────────────────────────────────────────────
 pypdf==4.3.1
 pdf2image==1.17.0

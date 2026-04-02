@@ -1,6 +1,6 @@
 # 🧠 Multimodal RAG — Installation & Deployment Guide
 
-A grounded, document-only question-answering system supporting PDFs (text, tables, embedded images/charts), scanned images, DOCX, XLSX, CSV, and TXT files.
+A grounded, document-only question-answering system supporting PDFs (text, tables, embedded images/charts), scanned images, DOCX, XLSX, CSV, TXT files, and **web URLs** (crawls up to 2 levels deep including linked PDFs).
 
 ---
 
@@ -13,7 +13,7 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 5. [Using the UI](#using-the-ui)
 6. [Deploying to HuggingFace Spaces](#deploying-to-huggingface-spaces)
 7. [Configuration Reference](#configuration-reference)
-8. [Supported File Types](#supported-file-types)
+8. [Supported Input Types](#supported-input-types)
 9. [API Reference](#api-reference)
 10. [Troubleshooting](#troubleshooting)
 11. [Project Structure](#project-structure)
@@ -27,14 +27,14 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 ```text
 ┌─────────────────────────────────────────────────────┐
 │                   Gradio UI (port 7860)              │
-│  • Document upload/remove   • Sample question pills  │
+│  • Document upload/remove   • URL crawl & index      │
 │  • Chat interface           • Memory stats           │
 └───────────────────┬─────────────────────────────────┘
                     │ HTTP (REST)
 ┌───────────────────▼─────────────────────────────────┐
 │               FastAPI Backend (port 8000)            │
-│  /documents/upload   /documents/{name}  /query       │
-│  /memory/clear       /memory/stats      /status      │
+│  /documents/upload   /documents/url  /documents/{n}  │
+│  /memory/clear       /memory/stats   /status         │
 └──────┬────────────────────────┬────────────────────┘
        │                        │
 ┌──────▼──────┐        ┌────────▼──────────────────────────────────────┐
@@ -43,12 +43,14 @@ A grounded, document-only question-answering system supporting PDFs (text, table
 │  to disk)   │        │  • Ollama   — default for local dev            │
 └─────────────┘        └───────────────────────────────────────────────┘
        ▲
-┌──────┴──────────────────────────────┐
-│       Document Processor            │
-│  PDF → text + OCR images + tables   │
-│  Scanned images → Tesseract OCR     │
-│  DOCX/XLSX/CSV → structured text    │
-└─────────────────────────────────────┘
+┌──────┴──────────────────────────────────────────────┐
+│       Document & URL Processor                       │
+│  PDF → text + OCR images + tables                    │
+│  Scanned images → Tesseract OCR                      │
+│  DOCX/XLSX/CSV → structured text                     │
+│  URL → BFS crawl 2 levels deep (same domain)         │
+│        + linked PDFs downloaded and indexed          │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### Entry points
@@ -237,9 +239,10 @@ http://localhost:8000/docs
 
 | Action | How |
 | --- | --- |
-| **Upload documents** | Click the file picker, select one or more files, then click **⬆ Upload & Index** |
-| **Remove a document** | Select a document from the radio list, click **🗑 Remove** |
-| **Refresh the list** | Click **↻ Refresh** |
+| **Upload documents** | Click **⬆ Upload & Index Files**, select one or more files |
+| **Index a URL** | Paste a URL into the text box and click **🌐 Add URL** (or press Enter) — crawls the page and all links up to 2 levels deep on the same domain; linked PDFs are also downloaded and indexed |
+| **Remove a document/URL** | Select from the list, click **🗑 Remove selected** |
+| **Refresh the list** | Click **↻ Refresh list** |
 
 The **Ask →** button and all sample question buttons are **automatically disabled** when no documents are indexed.
 
@@ -436,9 +439,9 @@ Ollama's LLM inference runs independently through its own process and already us
 
 ---
 
-## Supported File Types
+## Supported Input Types
 
-| Extension | Content Extracted |
+| Type | Content Extracted |
 | --- | --- |
 | `.pdf` | Text per page, embedded images (OCR), table detection |
 | `.png` `.jpg` `.jpeg` `.tiff` `.bmp` | Full OCR via Tesseract |
@@ -446,6 +449,7 @@ Ollama's LLM inference runs independently through its own process and already us
 | `.xlsx` | All sheets as text tables |
 | `.csv` | Full table as text |
 | `.txt` | Raw text |
+| **URL** (`http://` / `https://`) | Visible page text, BFS-crawled up to 2 link levels deep on the same domain (max 50 pages); all `.pdf` links on crawled pages are downloaded and indexed with full PDF extraction |
 
 ---
 

@@ -70,6 +70,12 @@ class StatusResponse(BaseModel):
     device: str
 
 
+class URLIndexRequest(BaseModel):
+    url: str
+    max_depth: int = 2
+    max_pages: int = 50
+
+
 # ─── Helper ───────────────────────────────────────────────────────────────────
 def index_file(filepath: str) -> int:
     """Process and index a file into the vector store."""
@@ -153,6 +159,44 @@ async def delete_all_documents():
     """Remove ALL embeddings from the vector store. Files are kept on disk."""
     removed = vs.clear_all()
     return {"message": f"Removed all {removed} indexed chunks. Files kept on disk.", "chunks_removed": removed}
+
+
+@app.post("/documents/url")
+async def index_url(req: URLIndexRequest):
+    """Crawl a URL up to 2 levels deep and index all pages + linked PDFs."""
+    from utils.url_processor import crawl_url
+    import asyncio
+
+    url = req.url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(400, "URL must start with http:// or https://")
+
+    # Remove any previous index for this start URL
+    vs.remove_document(url)
+
+    try:
+        loop = asyncio.get_running_loop()
+        chunks, crawled_urls = await loop.run_in_executor(
+            None,
+            lambda: crawl_url(url, max_depth=req.max_depth, max_pages=req.max_pages),
+        )
+    except Exception as e:
+        logger.error(f"Crawl failed for {url}: {e}", exc_info=True)
+        raise HTTPException(500, f"Crawl failed: {str(e)}")
+
+    if not chunks:
+        raise HTTPException(422, f"No content could be extracted from {url}")
+
+    n_chunks = vs.add_documents(chunks, url)
+    return {
+        "message": (
+            f"Indexed {len(crawled_urls)} page(s) and file(s) "
+            f"({n_chunks} chunks) from {url}"
+        ),
+        "pages": len(crawled_urls),
+        "chunks": n_chunks,
+        "crawled_urls": crawled_urls,
+    }
 
 
 @app.post("/documents/reindex")

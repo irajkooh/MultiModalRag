@@ -25,12 +25,13 @@ A fully local, deployable **Multimodal Retrieval-Augmented Generation** system t
 | Feature | Details |
 | --- | --- |
 | 📄 **Document types** | PDF (text + embedded images), scanned images (OCR), XLSX, DOCX, CSV, TXT |
+| 🌐 **URL indexing** | Paste any URL — crawls the page and all linked pages up to 2 levels deep; linked PDFs are downloaded and indexed automatically |
 | 🔍 **Multimodal** | Extracts text, tables, charts, and images from PDFs |
 | 🧠 **Strict grounding** | Answers ONLY from documents — responds "I DON'T KNOW" otherwise |
 | 💾 **Persistent vector store** | ChromaDB with cosine similarity (persists across restarts) |
 | 🦙 **Local LLM** | Powered by Ollama (`llama3.2` by default) |
 | 💬 **Conversation memory** | Remembers context; auto-summarizes when context window fills up |
-| 📁 **Document management** | Add/remove documents via UI; index updates instantly |
+| 📁 **Document management** | Add/remove documents and URLs via UI; index updates instantly |
 | ⚡ **Streaming** | Token-by-token response streaming in chat |
 
 ## Setup
@@ -92,7 +93,8 @@ multimodal-rag/
 | --- | --- | --- |
 | GET | `/status` | System status, indexed docs, chunk count |
 | POST | `/documents/upload` | Upload and index a document |
-| DELETE | `/documents/{filename}` | Remove a document |
+| POST | `/documents/url` | Crawl a URL (2 levels deep) and index all pages + PDFs |
+| DELETE | `/documents/{filename}` | Remove a document or URL from the index |
 | POST | `/query` | Query the RAG system |
 | POST | `/memory/clear` | Clear conversation memory |
 | GET | `/memory/stats` | Memory usage stats |
