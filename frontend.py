@@ -275,25 +275,8 @@ _UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
-    /* Read button: font-size:0 hides Svelte-managed text; ::before shows our label */
-    #read-btn button {
-        position: relative !important;
-        font-size: 0 !important;
-        background: linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important;
-        box-shadow: 0 4px 16px rgba(37,99,235,0.55) !important;
-    }
-    #read-btn button::before {
-        content: '🔊 Read';
-        font-size: 14px; font-weight: 700; color: #fff;
-        position: absolute; left: 0; right: 0; top: 50%;
-        transform: translateY(-50%);
-        text-align: center; pointer-events: none;
-    }
-    #read-btn button[data-speaking="1"] {
-        background: linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important;
-        box-shadow: 0 4px 18px rgba(234,88,12,0.6) !important;
-    }
-    #read-btn button[data-speaking="1"]::before { content: '⏹ Stop'; }
+    #tts-btn-wrap { display: flex; align-items: stretch; }
+    #tts-btn-wrap > div { flex: 1; }
 """
 
 
@@ -326,7 +309,12 @@ def build_ui():
               )
               submit_btn = gr.Button("Ask →", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
-              read_btn       = gr.Button("🔊 Read",      elem_id="read-btn",       elem_classes=["btn-read"],  scale=1)
+              read_btn_html  = gr.HTML(
+                value='<button id="tts-btn" onclick="window._ttsToggle&&window._ttsToggle()" '
+                      'style="width:100%;height:100%;padding:8px 12px;border:none;border-radius:8px;'
+                      'cursor:pointer;font-weight:700;font-size:14px;color:#fff;'
+                      'background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%);">🔊 Read</button>',
+                elem_id="tts-btn-wrap", scale=1)
               copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
               clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
@@ -415,7 +403,7 @@ def build_ui():
                 // 1. Hover CSS (inline styles handle base colors; CSS handles hover)
                 const s = document.createElement('style');
                 s.textContent = `
-                    #read-btn button:hover       { background:#2563eb!important; }
+                    #tts-btn:hover               { background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%)!important; }
                     #copy-btn button:hover       { background:#059669!important; }
                     #clear-chat-btn button:hover { background:#dc2626!important; }
                     #delete-btn button:hover     { background:#dc2626!important; }
@@ -485,7 +473,7 @@ def build_ui():
                 }
                 function applyColors() {
                     document.querySelectorAll('button').forEach(el => {
-                        if (el.closest('#read-btn')) return; // fully managed by CSS + JS
+                        if (el.id === 'tts-btn') return; // fully managed by _ttsToggle
                         const text = el.textContent.trim();
                         for (const rule of STYLE_RULES) {
                             if (rule.match(text)) { styleEl(el, rule); break; }
@@ -551,9 +539,38 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. TTS state — used by read_btn pure-JS click handler (read_btn.click fn=None)
-                window._ttsText    = null;   // clean text of latest answer
-                window._ttsPlaying = false;  // true while speechSynthesis is speaking
+                // 6. TTS — fully JS-owned via gr.HTML button (no Gradio/Svelte involvement)
+                window._ttsText    = null;
+                window._ttsPlaying = false;
+                function _ttsSetBtn(playing) {
+                    const b = document.getElementById('tts-btn');
+                    if (!b) return;
+                    b.textContent = playing ? '⏹ Stop' : '🔊 Read';
+                    b.style.background = playing
+                        ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
+                        : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
+                    b.style.boxShadow = playing
+                        ? '0 4px 18px rgba(234,88,12,0.6)'
+                        : '0 4px 16px rgba(37,99,235,0.55)';
+                }
+                window._ttsToggle = function() {
+                    if (!window.speechSynthesis) return;
+                    if (window._ttsPlaying) {
+                        window.speechSynthesis.cancel();
+                        window._ttsPlaying = false;
+                        _ttsSetBtn(false);
+                    } else if (window._ttsText) {
+                        window.speechSynthesis.cancel();
+                        const utt = new SpeechSynthesisUtterance(window._ttsText);
+                        window._ttsPlaying = true;
+                        _ttsSetBtn(true);
+                        utt.onend = () => {
+                            window._ttsPlaying = false;
+                            _ttsSetBtn(false);
+                        };
+                        window.speechSynthesis.speak(utt);
+                    }
+                };
             }"""
         )
         file_upload.upload(
@@ -638,43 +655,15 @@ def build_ui():
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
 
-        # Pure JS read button — no Python roundtrip, instant response on click/tap.
-        # fn=None means Gradio calls the JS synchronously in the click event (user gesture),
-        # so speechSynthesis.speak/cancel work on iOS Safari without any unlock tricks.
-        _READ_BTN_JS = """() => {
-            if (!window.speechSynthesis) return;
-            const btn = document.getElementById('read-btn')?.querySelector('button');
-            if (window._ttsPlaying) {
-                // STOP — delete data-speaking → CSS switches back to blue "🔊 Read"
-                window.speechSynthesis.cancel();
-                window._ttsPlaying = false;
-                if (btn) delete btn.dataset.speaking;
-            } else if (window._ttsText) {
-                // START — set data-speaking="1" → CSS switches to orange "⏹ Stop"
-                window.speechSynthesis.cancel();
-                const utt = new SpeechSynthesisUtterance(window._ttsText);
-                window._ttsPlaying = true;
-                if (btn) btn.dataset.speaking = '1';
-                utt.onend = () => {
-                    window._ttsPlaying = false;
-                    const eb = document.getElementById('read-btn')?.querySelector('button');
-                    if (eb) delete eb.dataset.speaking;
-                };
-                window.speechSynthesis.speak(utt);
-            }
-        }"""
-        read_btn.click(fn=None, js=_READ_BTN_JS)
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            // New answer arrived — stop any reading, store text, reset to "🔊 Read".
             if (window.speechSynthesis && window.speechSynthesis.speaking)
                 window.speechSynthesis.cancel();
             window._ttsPlaying = false;
             window._ttsText = val || null;
-            const rb = document.getElementById('read-btn')?.querySelector('button');
-            if (rb) delete rb.dataset.speaking; // CSS handles blue color automatically
+            if (window._ttsSetBtn) window._ttsSetBtn(false);
           }""",
         )
         copy_btn.click(fn=get_chat_for_copy, inputs=[chatbot], outputs=[copy_box])
