@@ -856,22 +856,21 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Mobile TTS — document-level touchend delegation.
+                // 6. Unified TTS — all play/stop handled 100% in JS.
+                //    Button text + color update instantly with no Python roundtrip.
                 //
-                // WHY document-level: Gradio re-renders #read-btn's DOM after every streaming
-                // yield. A listener on the old element is silently lost, causing "must tap
-                // several times" on mobile. A document listener survives all re-renders.
-                //
-                // WHY _ttsB64 (not pre-loaded Audio): storing raw base64 and creating
-                // new Audio() at play-time guarantees we always play the LATEST answer.
-                // Pre-loading had a race: chatbot updates visually → user taps Read
-                // BEFORE tts_audio_box.change JS runs → _ttsAudio held the old answer.
-                //
-                // WHY touchend + e.preventDefault(): blocks the synthetic click the browser
-                // generates after touchend, so Gradio's read_btn.click / toggle_read
-                // never fires on mobile. All play/stop state is owned entirely by JS.
-                window._ttsB64     = null;   // latest answer's base64 MP3 (or null)
-                window._ttsAudio   = null;   // Audio instance while playing, else null
+                // _ttsB64: set to raw base64 when gTTS finishes, null otherwise.
+                //   Cleared to null on first streaming yield so user can never
+                //   accidentally read a previous answer while gTTS is generating.
+                // ttsAction(): single function for play/stop + label + color.
+                //   Called from both touchend (mobile) and click capture (desktop).
+                //   Returns true if it handled the event (gTTS path), false if not
+                //   (no audio yet → let click reach Gradio for speechSynthesis).
+                // e.stopImmediatePropagation() on desktop click: prevents Gradio's
+                //   toggle_read roundtrip so there is zero latency on button feedback.
+                // e.preventDefault() on mobile touchend: blocks synthetic click.
+                window._ttsB64     = null;
+                window._ttsAudio   = null;
                 window._ttsPlaying = false;
                 function signalEnded() {
                     const endedWrap = document.getElementById('ended-box');
@@ -901,45 +900,60 @@ def build_ui():
                 window._signalEnded = signalEnded;
                 window._styleOrange = styleOrange;
                 window._styleBlue   = styleBlue;
-                // Document-level delegation — survives Gradio DOM re-renders.
-                document.addEventListener('touchend', function(e) {
+                function ttsAction() {
                     const container = document.getElementById('read-btn');
-                    if (!container || !container.contains(e.target)) return;
-                    e.preventDefault(); // block synthetic click → Gradio never sees it
-                    const btn = container.querySelector('button');
+                    const btn = container ? container.querySelector('button') : null;
                     if (window._ttsPlaying && window._ttsAudio) {
-                        // — Stop —
+                        // ── STOP ──
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
-                        if (btn) styleBlue(btn);
+                        if (btn) { btn.textContent = '🔊 Read'; styleBlue(btn); }
                         signalEnded();
+                        return true;
                     } else if (window._ttsB64) {
-                        // — Play — new Audio() inside user gesture (required by iOS)
-                        const audio = new Audio('data:audio/mpeg;base64,' + window._ttsB64);
+                        // ── PLAY ── create Audio inside gesture (iOS requirement)
+                        const b64 = window._ttsB64;
+                        const audio = new Audio('data:audio/mpeg;base64,' + b64);
                         window._ttsAudio   = audio;
                         window._ttsPlaying = true;
+                        if (btn) { btn.textContent = '⏹ Stop'; styleOrange(btn); }
                         audio.onended = () => {
-                            if (window._ttsAudio !== audio) return; // superseded
+                            if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
                             const b = document.getElementById('read-btn')?.querySelector('button');
-                            if (b) styleBlue(b);
+                            if (b) { b.textContent = '🔊 Read'; styleBlue(b); }
                             signalEnded();
                         };
                         audio.play().catch(() => {
                             if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
-                            if (btn) styleBlue(btn);
+                            if (btn) { btn.textContent = '🔊 Read'; styleBlue(btn); }
                         });
-                        if (btn) setTimeout(() => {
-                            const b = document.getElementById('read-btn')?.querySelector('button');
-                            if (b) styleOrange(b);
-                        }, 80);
+                        return true;
                     }
+                    return false; // no audio available — fall through to Gradio
+                }
+                // Mobile: touchend delegation (survives DOM re-renders, prevents click)
+                document.addEventListener('touchend', function(e) {
+                    const container = document.getElementById('read-btn');
+                    if (!container || !container.contains(e.target)) return;
+                    e.preventDefault();
+                    ttsAction();
                 }, { passive: false });
+                // Desktop: capture-phase click interception (runs before Gradio's listeners)
+                document.addEventListener('click', function(e) {
+                    const container = document.getElementById('read-btn');
+                    if (!container || !container.contains(e.target)) return;
+                    if (ttsAction()) {
+                        e.stopImmediatePropagation(); // handled — Gradio doesn't need to know
+                    }
+                    // if ttsAction() returned false (no _ttsB64), click reaches Gradio
+                    // which runs toggle_read → tts_box.change → speechSynthesis fallback
+                }, true);
             }"""
         )
         def refresh_and_update():
@@ -994,14 +1008,24 @@ def build_ui():
           last_resp = None
           tokens_user = 0
           tokens_assistant = 0
+          first_yield = True
           for updated_history, _ in chat_fn(message, history, n, temp):
             if isinstance(_, dict):
               tokens_user = _.get("tokens_user", 0)
               tokens_assistant = _.get("tokens_assistant", 0)
             last_resp = updated_history
-            yield updated_history, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", gr.update()
+            tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
+            if first_yield:
+              first_yield = False
+              # Send "" immediately so _ttsB64 is cleared in the browser.
+              # This prevents the user from accidentally reading the previous
+              # answer while gTTS is still generating the new one.
+              yield updated_history, "", tok_html, ""
+            else:
+              yield updated_history, "", tok_html, gr.update()
           tts_b64 = _generate_tts_b64(_clean_for_tts(get_last_answer(last_resp))) if last_resp else ""
-          yield last_resp, "", f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>", tts_b64
+          tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
+          yield last_resp, "", tok_html, tts_b64
         submit_btn.click(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
@@ -1033,77 +1057,46 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            // Stop any in-progress audio and clear stale references.
+            // New answer arrived — stop any playing audio, store new b64 (or null).
             if (window._ttsAudio) {
                 window._ttsAudio.pause();
                 window._ttsAudio.onended = null;
                 window._ttsAudio = null;
             }
             window._ttsPlaying = false;
-            // Store raw b64 (or null if gTTS failed). Audio is created fresh at play-time
-            // so we always play the latest answer with no pre-load race.
             window._ttsB64 = val || null;
-            // Reset button to blue for the new answer
+            // Reset button text + colour for the new answer
             const _rb = [...document.querySelectorAll('button')]
                 .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
-            if (_rb && window._styleBlue) window._styleBlue(_rb);
+            if (_rb) { _rb.textContent = '🔊 Read'; if (window._styleBlue) window._styleBlue(_rb); }
           }""",
         )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
-            // Desktop-only handler (on mobile, touchend+preventDefault blocks the click
-            // reaching Gradio so toggle_read / tts_box never change on mobile).
+            // This handler only runs on desktop when _ttsB64 is null (speechSynthesis
+            // fallback). For the gTTS path, the capture-phase click listener calls
+            // ttsAction() + stopImmediatePropagation, so Gradio never fires toggle_read
+            // and tts_box never changes.
+            if (window._ttsB64) return; // gTTS — handled by JS click listener
             const text = val.split('\\n').slice(1).join('\\n').trim();
             function getReadBtn() {
                 return [...document.querySelectorAll('button')]
                     .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
             }
-            if (window._ttsB64) {
-                // gTTS path — create Audio fresh from latest b64 (never stale)
-                if (!text) {
-                    // Stop signal
-                    if (window._ttsAudio) {
-                        window._ttsAudio.pause();
-                        window._ttsAudio.onended = null;
-                        window._ttsAudio = null;
-                    }
-                    window._ttsPlaying = false;
-                    const btn = getReadBtn();
-                    if (btn && window._styleBlue) window._styleBlue(btn);
-                } else if (!window._ttsPlaying) {
-                    // Play signal
-                    const audio = new Audio('data:audio/mpeg;base64,' + window._ttsB64);
-                    window._ttsAudio   = audio;
-                    window._ttsPlaying = true;
-                    audio.onended = () => {
-                        if (window._ttsAudio !== audio) return;
-                        window._ttsAudio   = null;
-                        window._ttsPlaying = false;
-                        const btn = getReadBtn();
-                        if (btn && window._styleBlue) window._styleBlue(btn);
-                        if (window._signalEnded) window._signalEnded();
-                    };
-                    audio.play().catch(() => {
-                        if (window._ttsAudio !== audio) return;
-                        window._ttsAudio   = null;
-                        window._ttsPlaying = false;
-                    });
-                    setTimeout(() => { const btn = getReadBtn(); if (btn && window._styleOrange) window._styleOrange(btn); }, 80);
-                }
-            } else if (window.speechSynthesis) {
-                // speechSynthesis fallback — desktop when gTTS unavailable
+            if (window.speechSynthesis) {
                 if (window.speechSynthesis.speaking) {
                     window.speechSynthesis.cancel();
                     const btn = getReadBtn();
                     if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
                 } else if (text) {
                     const utt = new SpeechSynthesisUtterance(text);
-                    setTimeout(() => { const btn = getReadBtn(); if (btn && window._styleOrange) window._styleOrange(btn); }, 80);
+                    const btn = getReadBtn();
+                    if (btn && window._styleOrange) window._styleOrange(btn);
                     utt.onend = () => {
-                        const btn = getReadBtn();
-                        if (btn && window._styleBlue) window._styleBlue(btn);
+                        const b = getReadBtn();
+                        if (b && window._styleBlue) window._styleBlue(b);
                         if (window._signalEnded) window._signalEnded();
                     };
                     window.speechSynthesis.speak(utt);
