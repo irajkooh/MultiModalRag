@@ -650,6 +650,19 @@ def build_ui():
             fn=on_load,
             outputs=[doc_list, status_text, submit_btn],
         )
+        # Unlock Web Speech API for mobile (iOS Safari blocks speechSynthesis
+        # from async callbacks unless speak() is called once in a direct user gesture first)
+        _JS_UNLOCK_TTS = """() => {
+            function unlock() {
+                if (!window.speechSynthesis) return;
+                var u = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(u);
+                window.speechSynthesis.cancel();
+            }
+            document.addEventListener('click',    unlock, {once: true});
+            document.addEventListener('touchend', unlock, {once: true});
+        }"""
+        demo.load(fn=None, js=_JS_UNLOCK_TTS)
         demo.load(
             fn=None,
             js="""() => {
