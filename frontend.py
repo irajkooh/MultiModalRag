@@ -2,11 +2,8 @@
 Modern Gradio UI for Multimodal RAG system.
 Chat and document management with clean, responsive layout.
 """
-import io
-import base64 as _base64
 import os
 import time
-import requests as _requests
 import requests
 import gradio as gr
 from pathlib import Path
@@ -15,7 +12,7 @@ from pathlib import Path
 def _ping_self(url: str):
     """Lightweight GET to keep the HF Space from going to sleep."""
     try:
-        _requests.get(url, timeout=10)
+        requests.get(url, timeout=10)
     except Exception:
         pass
 
@@ -92,7 +89,7 @@ def get_status():
 
 def upload_files(files):
   if not files:
-    return "No files selected.", *refresh_ui()
+    return "No files selected."
   messages = []
   for file in files:
     path = Path(file.name)
@@ -106,13 +103,12 @@ def upload_files(files):
       messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
     else:
       messages.append(f"<span style='color:#fff'>✅ {path.name}: {resp['message']}</span>")
-  status_html = '<br>'.join(messages)
-  return status_html, *refresh_ui()
+  return '<br>'.join(messages)
 
 
 def delete_document(filenames):
     if not filenames:
-        return "Please select at least one document.", *refresh_ui()
+        return "Please select at least one document."
     messages = []
     for filename in filenames:
         resp = api_delete(f"/documents/{filename}")
@@ -120,14 +116,14 @@ def delete_document(filenames):
             messages.append(f"❌ {filename}: {resp['error']}")
         else:
             messages.append(f"🗑️ {resp['message']}")
-    return "\n".join(messages), *refresh_ui()
+    return "\n".join(messages)
 
 
 def delete_all_embeddings():
     resp = api_delete("/documents")
     if "error" in resp:
-        return f"❌ {resp['error']}", *refresh_ui()
-    return f"🗑️ {resp['message']}", *refresh_ui()
+        return f"❌ {resp['error']}"
+    return f"🗑️ {resp['message']}"
 
 
 def add_url(url: str) -> str:
@@ -214,34 +210,6 @@ def clear_memory():
     return msg, []
 
 
-def _status_html(text: str) -> str:
-    """Wrap a status string in a styled HTML block with white text."""
-    import html
-    lines = html.escape(str(text)).replace("\n", "<br>")
-    return (
-        '<div style="background:#1c2030;color:#ffffff;padding:10px 14px;'
-        'border:1px solid #2a2f40;border-radius:6px;'
-        'font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem;'
-        'line-height:1.6;min-height:2.5em;">'
-        + lines + "</div>"
-    )
-
-
-def get_memory_stats():
-    stats = api_get("/memory/stats")
-    if "error" in stats:
-        return f"⚠️ {stats['error']}"
-    msgs = stats.get('message_count', 0)
-    used = stats.get('total_tokens', 0)
-    max_tok = stats.get('max_tokens', 2000)
-    pct = int(used / max_tok * 100) if max_tok else 0
-    bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
-    return (
-      f"💬 **{msgs}** messages · "
-      f"🔢 **{used}** / {max_tok} tokens used ({pct}%)  `{bar}`"
-    )
-
-
 import re as _re
 
 def _extract_text(content):
@@ -295,283 +263,11 @@ def _clean_for_tts(text: str) -> str:
 
 
 
-_tts_counter  = [0]
 _copy_counter = [0]
-
-def toggle_read(history, is_reading):
-    _tts_counter[0] += 1
-    if is_reading:
-        return f"{_tts_counter[0]}\n", False
-    text = _clean_for_tts(get_last_answer(history))
-    if not text:
-        return f"{_tts_counter[0]}\n", False
-    return f"{_tts_counter[0]}\n{text}", True
-
-# _tts_counter kept for copy_btn only now
 
 def get_chat_for_copy(history):
     _copy_counter[0] += 1
     return f"{_copy_counter[0]}\n{format_chat_history(history)}"
-
-
-# ─── Sample Questions ─────────────────────────────────────────────────────────
-SAMPLE_QUESTIONS = [
-    # General document understanding
-    ("📋 Summarize", "What is the main topic or purpose of the uploaded documents?"),
-    ("📊 Tables", "What data or figures are presented in any tables within the documents?"),
-    ("🖼 Images", "Describe any charts or images found in the documents."),
-    # Content extraction
-    ("🔑 Key points", "What are the key findings or conclusions mentioned in the documents?"),
-    ("📅 Dates", "Are there any important dates or timelines referenced in the documents?"),
-    ("👤 Entities", "What people, organizations, or places are mentioned in the documents?"),
-    # Analytical
-    ("💡 Recommendations", "What recommendations or action items are stated in the documents?"),
-    ("⚠️ Risks", "Are there any risks, warnings, or caveats mentioned in the documents?"),
-    ("💰 Numbers", "What numerical values, statistics, or metrics appear in the documents?"),
-]
-
-
-# ─── Custom CSS ───────────────────────────────────────────────────────────────
-CUSTOM_CSS = """
-/* Ensure chat and documents tab panels have the same height */
-.panel-box, #chat > div, #chat .panel-box {
-  min-height: 480px !important;
-  max-height: 600px !important;
-  box-sizing: border-box !important;
-}
-/* Ensure chat and documents tab panels have the same height */
-.panel-box, #chat > div, #chat .panel-box {
-  min-height: 340px !important;
-  max-height: 420px !important;
-  box-sizing: border-box !important;
-}
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-
-:root {
-  --bg: #0d0f14;
-  --surface: #141720;
-  --surface2: #1c2030;
-  --border: #2a2f40;
-  --accent: #4fffb0;
-  --accent2: #7c5cfc;
-  --accent3: #ff6b6b;
-  --text: #e8eaf0;
-  --text-muted: #8890a4;
-  --radius: 10px;
-  --font-head: 'Syne', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
-}
-
-html, body, .gradio-container {
-  min-height: unset !important;
-  height: auto !important;
-}
-
-* { box-sizing: border-box; }
-
-html, body {
-  background: var(--bg) !important;
-  color: var(--text) !important;
-  font-family: var(--font-mono) !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow-x: hidden !important;
-}
-
-body, .gradio-container {
-  background: var(--bg) !important;
-  color: var(--text) !important;
-  font-family: var(--font-mono) !important;
-}
-
-.gradio-container {
-  max-width: 1100px !important;
-  margin: 0 auto !important;
-  padding: 0 8px 0 8px !important;
-  box-sizing: border-box !important;
-  zoom: 0.82;
-  transform-origin: top center;
-}
-
-/* Undo zoom effect on html/body so the scaled container is centered */
-html, body {
-  overflow-x: hidden !important;
-}
-
-/* Row/form gaps */
-.gap { gap: 6px !important; padding: 0 !important; }
-.form { gap: 4px !important; }
-.block { overflow: visible !important; }
-
-/* Tab bar */
-.tab-nav {
-  border-bottom: 2px solid var(--border) !important;
-  margin-bottom: 4px !important;
-}
-.tab-nav button {
-  font-family: var(--font-head) !important;
-  font-weight: 700 !important;
-  font-size: 0.85rem !important;
-  letter-spacing: 1.5px !important;
-  text-transform: uppercase !important;
-  color: #ffffff !important;
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 3px solid transparent !important;
-  padding: 8px 22px !important;
-  margin-bottom: -2px !important;
-  transition: all 0.2s !important;
-}
-.tab-nav button.selected {
-  color: var(--accent) !important;
-  border-bottom-color: var(--accent) !important;
-}
-.tab-nav button:hover:not(.selected) {
-  color: var(--accent) !important;
-}
-
-
-
-/* Header */
-  background: linear-gradient(135deg, #141720 0%, #1c2030 100%);
-  border: 1px solid var(--border);
-  border-bottom: 2px solid var(--accent);
-  border-radius: var(--radius);
-  padding: 6px 14px !important;
-  margin-bottom: 6px !important;
-  display: flex;
-  align-items: baseline;
-  gap: 8px !important;
-  flex-wrap: wrap;
-  max-width: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.app-header h1, .app-header p {
-  max-width: 100%;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  white-space: normal;
-  box-sizing: border-box;
-}
-
-.app-header h1 {
-  font-family: var(--font-head) !important;
-  font-size: 1.2rem !important;
-  font-weight: 800 !important;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0 !important;
-  letter-spacing: -0.5px;
-  white-space: nowrap;
-}
-
-.app-header p {
-  color: var(--text-muted) !important;
-  margin: 0 !important;
-  font-size: 0.78rem !important;
-}
-
-/* Panels */
-.panel-box {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  padding: 10px !important;
-  overflow-y: auto !important;
-  max-height: 42vh !important;
-  min-height: 40px !important;
-  height: 40px !important;
-}
-
-.panel-label {
-  font-family: var(--font-head) !important;
-  font-size: 0.72rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase !important;
-  color: var(--accent) !important;
-  margin-bottom: 6px !important;
-  margin-top: 0 !important;
-}
-
-/* Buttons */
-button.primary-btn {
-  background: var(--accent) !important;
-  color: #0d0f14 !important;
-  border: none !important;
-  font-family: var(--font-head) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.5px !important;
-  border-radius: 6px !important;
-  transition: all 0.2s !important;
-}
-
-button.primary-btn:hover:not(:disabled) {
-  background: #2dffa0 !important;
-  transform: translateY(-1px) !important;
-}
-
-button.primary-btn:disabled {
-  opacity: 0.35 !important;
-  cursor: not-allowed !important;
-}
-
-button.danger-btn {
-  background: transparent !important;
-  color: var(--accent3) !important;
-  border: 1px solid var(--accent3) !important;
-  font-family: var(--font-head) !important;
-  font-weight: 700 !important;
-  border-radius: 6px !important;
-  transition: all 0.2s !important;
-}
-
-button.danger-btn:hover:not(:disabled) {
-  background: var(--accent3) !important;
-  color: #0d0f14 !important;
-}
-
-button.secondary-btn {
-  background: transparent !important;
-  color: var(--accent2) !important;
-  border: 1px solid var(--accent2) !important;
-  font-family: var(--font-head) !important;
-  font-weight: 700 !important;
-  border-radius: 6px !important;
-  transition: all 0.2s !important;
-}
-
-button.secondary-btn:hover {
-  background: var(--accent2) !important;
-  color: white !important;
-}
-
-
-/* File upload widget */
-.gr-file, [data-testid="file"],
-[data-testid="file"] > div, [data-testid="file"] .wrap,
-.file-preview, .file-preview-title,
-.file-preview span, label.svelte-1b53jlb,
-.upload-container, .upload-container span, .upload-container p,
-.dndzone, .dndzone span, .dndzone p, .dndzone label,
-.dndzone > div, [data-testid="file"] span,
-[data-testid="file"] p,
-/* uploaded file list items */
-[data-testid="file"] .file-preview li,
-[data-testid="file"] .file-preview a,
-[data-testid="file"] .file-preview .file-name,
-[data-testid="file"] ul li,
-[data-testid="file"] ul li span,
-[data-testid="file"] .upload-container *,
-.file-preview *, [data-testid="file"] * {
-  color: #ffffff !important;
-}
-
-/* ...existing code... */
-"""
 
 
 _UI_THEME = gr.themes.Soft()
@@ -579,6 +275,25 @@ _UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
+    /* Read button: font-size:0 hides Svelte-managed text; ::before shows our label */
+    #read-btn button {
+        position: relative !important;
+        font-size: 0 !important;
+        background: linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important;
+        box-shadow: 0 4px 16px rgba(37,99,235,0.55) !important;
+    }
+    #read-btn button::before {
+        content: '🔊 Read';
+        font-size: 14px; font-weight: 700; color: #fff;
+        position: absolute; left: 0; right: 0; top: 50%;
+        transform: translateY(-50%);
+        text-align: center; pointer-events: none;
+    }
+    #read-btn button[data-speaking="1"] {
+        background: linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important;
+        box-shadow: 0 4px 18px rgba(234,88,12,0.6) !important;
+    }
+    #read-btn button[data-speaking="1"]::before { content: '⏹ Stop'; }
 """
 
 
@@ -666,19 +381,11 @@ def build_ui():
               confirm_no_btn  = gr.Button("✖ Cancel",          elem_id="confirm-no-btn")
             delete_status = gr.Markdown(value="", elem_id="delete-status")
 
-        def on_load():
-          docs, files, status_msg, model, device = get_status()
-          has_docs = len(docs) > 0 if docs is not None else False
-          return (
-            gr.update(choices=docs or [], value=None),
-            status_msg,
-            gr.update(interactive=True),
-          )
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
 
         demo.load(
-            fn=on_load,
+            fn=refresh_and_update,
             outputs=[doc_list, status_text, submit_btn],
         )
         # Unlock Web Speech API for mobile (iOS Safari blocks speechSynthesis
@@ -707,27 +414,6 @@ def build_ui():
                     #delete-all-btn button:hover { background:#991b1b!important; }
                     #refresh-btn button:hover    { background:#4f46e5!important; }
                     button { transition: transform .08s ease, opacity .08s ease !important; }
-                    /* Read button: hide Svelte-owned text node via font-size:0,
-                       show label via ::before driven by data-speaking attribute.
-                       applyColors skips this button so it never overrides our colors. */
-                    #read-btn button {
-                        position: relative !important;
-                        font-size: 0 !important;
-                        background: linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important;
-                        box-shadow: 0 4px 16px rgba(37,99,235,0.55) !important;
-                    }
-                    #read-btn button::before {
-                        content: '🔊 Read';
-                        font-size: 14px; font-weight: 700; color: #fff;
-                        position: absolute; left: 0; right: 0; top: 50%;
-                        transform: translateY(-50%);
-                        text-align: center; pointer-events: none;
-                    }
-                    #read-btn button[data-speaking="1"] {
-                        background: linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important;
-                        box-shadow: 0 4px 18px rgba(234,88,12,0.6) !important;
-                    }
-                    #read-btn button[data-speaking="1"]::before { content: '⏹ Stop'; }
                 `;
                 document.head.appendChild(s);
 
@@ -742,11 +428,6 @@ def build_ui():
                         match: t => t.includes('Upload') && t.includes('Files'),
                         bg:  'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)',
                         sh:  '0 4px 18px rgba(14,165,233,0.55)',
-                    },
-                    {
-                        match: t => t === '🔊 Read',
-                        bg:  'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)',
-                        sh:  '0 4px 16px rgba(37,99,235,0.55)',
                     },
                     {
                         match: t => t.includes('Copy Chat'),
@@ -813,8 +494,6 @@ def build_ui():
                         });
                     }
                 }
-                // Expose globally so tts handler can call it
-                window._applyColors = applyColors;
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
                 setInterval(applyColors, 2000);  // permanent safety net
@@ -878,7 +557,7 @@ def build_ui():
             gr.update(interactive=True),
           )
         file_upload.upload(
-            fn=lambda files: (upload_files(files)[0], *refresh_and_update()),
+            fn=lambda files: (upload_files(files), *refresh_and_update()),
             inputs=[file_upload],
             outputs=[upload_status, doc_list, status_text, submit_btn],
         )
@@ -893,7 +572,7 @@ def build_ui():
             outputs=[upload_status, doc_list, status_text, submit_btn, url_input],
         )
         delete_btn.click(
-          fn=lambda doc: (delete_document(doc)[0], *refresh_and_update()),
+          fn=lambda doc: (delete_document(doc), *refresh_and_update()),
           inputs=[doc_list],
           outputs=[delete_status, doc_list, status_text, submit_btn],
         )
@@ -904,7 +583,7 @@ def build_ui():
         )
         # Confirm: execute delete, hide confirmation row
         confirm_yes_btn.click(
-          fn=lambda: (gr.update(visible=False), delete_all_embeddings()[0], *refresh_and_update()),
+          fn=lambda: (gr.update(visible=False), delete_all_embeddings(), *refresh_and_update()),
           outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn],
         )
         # Cancel: just hide the confirmation row
