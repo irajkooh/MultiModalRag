@@ -384,6 +384,14 @@ def build_ui():
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
 
+        def refresh_and_update():
+          docs, files, status_msg, model, device = get_status()
+          return (
+            gr.update(choices=docs or [], value=None),
+            status_msg,
+            gr.update(interactive=True),
+          )
+
         demo.load(
             fn=refresh_and_update,
             outputs=[doc_list, status_text, submit_btn],
@@ -548,14 +556,6 @@ def build_ui():
                 window._ttsPlaying = false;  // true while speechSynthesis is speaking
             }"""
         )
-        def refresh_and_update():
-          docs, files, status_msg, model, device = get_status()
-          has_docs = len(docs) > 0 if docs is not None else False
-          return (
-            gr.update(choices=docs or [], value=None),
-            status_msg,
-            gr.update(interactive=True),
-          )
         file_upload.upload(
             fn=lambda files: (upload_files(files), *refresh_and_update()),
             inputs=[file_upload],
