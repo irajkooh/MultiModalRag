@@ -614,6 +614,7 @@ def build_ui():
                 show_label=False,
                 scale=5,
                 lines=1,
+                max_lines=1,
                 autofocus=True,
               )
               submit_btn = gr.Button("Ask →", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
@@ -741,6 +742,11 @@ def build_ui():
                         sh:  '0 4px 16px rgba(37,99,235,0.55)',
                     },
                     {
+                        match: t => t === '⏹ Stop',
+                        bg:  'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)',
+                        sh:  '0 4px 18px rgba(234,88,12,0.6)',
+                    },
+                    {
                         match: t => t.includes('Copy Chat'),
                         bg:  'linear-gradient(135deg,#059669 0%,#34d399 100%)',
                         sh:  '0 4px 16px rgba(5,150,105,0.5)',
@@ -856,22 +862,27 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. Unified TTS — all play/stop handled 100% in JS.
-                //    Button text + color update instantly with no Python roundtrip.
+                // 6. Mobile TTS — audio handled in JS, label/state handled by Gradio.
                 //
-                // _ttsB64: set to raw base64 when gTTS finishes, null otherwise.
-                //   Cleared to null on first streaming yield so user can never
-                //   accidentally read a previous answer while gTTS is generating.
-                // ttsAction(): single function for play/stop + label + color.
-                //   Called from both touchend (mobile) and click capture (desktop).
-                //   Returns true if it handled the event (gTTS path), false if not
-                //   (no audio yet → let click reach Gradio for speechSynthesis).
-                // e.stopImmediatePropagation() on desktop click: prevents Gradio's
-                //   toggle_read roundtrip so there is zero latency on button feedback.
-                // e.preventDefault() on mobile touchend: blocks synthetic click.
-                window._ttsB64     = null;
-                window._ttsAudio   = null;
-                window._ttsPlaying = false;
+                // KEY INSIGHT: Gradio's Svelte reconciler owns the button DOM. Setting
+                // btn.textContent in JS gets overwritten whenever Gradio updates any
+                // component. The fix: let Gradio run toggle_read normally (for label/state),
+                // and handle ONLY audio in JS.
+                //
+                // applyColors already runs via MutationObserver + setInterval.
+                // Adding "⏹ Stop" to STYLE_RULES means applyColors automatically makes
+                // the button orange when Gradio sets its text to "⏹ Stop". No JS needed.
+                //
+                // Mobile: touchend plays audio immediately (iOS user-gesture requirement).
+                //   No e.preventDefault() → click still fires → Gradio toggle_read →
+                //   button label/state updated by Gradio. _ttsPlaying guards double-play
+                //   in tts_box.change.
+                //
+                // Desktop: click goes straight to Gradio → toggle_read → tts_box.change
+                //   → plays audio. No interception needed.
+                window._ttsB64     = null;   // base64 of latest answer MP3
+                window._ttsAudio   = null;   // Audio instance while playing
+                window._ttsPlaying = false;  // true while audio is playing
                 function signalEnded() {
                     const endedWrap = document.getElementById('ended-box');
                     const endedEl = endedWrap ? endedWrap.querySelector('textarea') : null;
@@ -882,78 +893,49 @@ def build_ui():
                         endedEl.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
-                function styleOrange(btn) {
-                    btn.dataset.speaking = '1';
-                    btn.style.setProperty('background',    'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', 'important');
-                    btn.style.setProperty('box-shadow',    '0 4px 18px rgba(234,88,12,0.6)', 'important');
-                    btn.style.setProperty('color',         '#fff',  'important');
-                    btn.style.setProperty('border',        'none',  'important');
-                    btn.style.setProperty('font-weight',   '700',   'important');
-                    btn.style.setProperty('border-radius', '8px',   'important');
-                    btn.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
-                }
-                function styleBlue(btn) {
-                    delete btn.dataset.speaking;
-                    btn.style.setProperty('background', 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
-                    btn.style.setProperty('box-shadow',  '0 4px 16px rgba(37,99,235,0.55)', 'important');
-                }
                 window._signalEnded = signalEnded;
-                window._styleOrange = styleOrange;
-                window._styleBlue   = styleBlue;
-                function ttsAction() {
+                // Mobile: touchend fires before the synthetic click, IS a user gesture
+                // on iOS, so Audio.play() is allowed here. passive:true because we do
+                // NOT call preventDefault — the click must reach Gradio for label update.
+                document.addEventListener('touchend', function(e) {
                     const container = document.getElementById('read-btn');
-                    const btn = container ? container.querySelector('button') : null;
+                    if (!container || !container.contains(e.target)) return;
+                    // Audio control only — label/color left to Gradio + applyColors.
                     if (window._ttsPlaying && window._ttsAudio) {
-                        // ── STOP ──
+                        // Stop
                         window._ttsAudio.pause();
                         window._ttsAudio.onended = null;
                         window._ttsAudio   = null;
                         window._ttsPlaying = false;
-                        if (btn) { btn.textContent = '🔊 Read'; styleBlue(btn); }
-                        signalEnded();
-                        return true;
+                        // Don't call signalEnded() — the click will trigger toggle_read
+                        // which clears tts_box, which is the proper Gradio stop signal.
                     } else if (window._ttsB64) {
-                        // ── PLAY ── create Audio inside gesture (iOS requirement)
+                        // Play — create Audio inside the gesture (iOS requirement)
                         const b64 = window._ttsB64;
                         const audio = new Audio('data:audio/mpeg;base64,' + b64);
                         window._ttsAudio   = audio;
                         window._ttsPlaying = true;
-                        if (btn) { btn.textContent = '⏹ Stop'; styleOrange(btn); }
+                        // Mark button so applyColors doesn't stomp the orange Stop style
+                        const _pb = document.getElementById('read-btn')?.querySelector('button');
+                        if (_pb) _pb.dataset.speaking = '1';
                         audio.onended = () => {
                             if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
-                            const b = document.getElementById('read-btn')?.querySelector('button');
-                            if (b) { b.textContent = '🔊 Read'; styleBlue(b); }
-                            signalEnded();
+                            const _eb = document.getElementById('read-btn')?.querySelector('button');
+                            if (_eb) delete _eb.dataset.speaking;
+                            signalEnded(); // tell Gradio audio finished naturally
                         };
                         audio.play().catch(() => {
                             if (window._ttsAudio !== audio) return;
                             window._ttsAudio   = null;
                             window._ttsPlaying = false;
-                            if (btn) { btn.textContent = '🔊 Read'; styleBlue(btn); }
+                            const _eb = document.getElementById('read-btn')?.querySelector('button');
+                            if (_eb) delete _eb.dataset.speaking;
                         });
-                        return true;
                     }
-                    return false; // no audio available — fall through to Gradio
-                }
-                // Mobile: touchend delegation (survives DOM re-renders, prevents click)
-                document.addEventListener('touchend', function(e) {
-                    const container = document.getElementById('read-btn');
-                    if (!container || !container.contains(e.target)) return;
-                    e.preventDefault();
-                    ttsAction();
-                }, { passive: false });
-                // Desktop: capture-phase click interception (runs before Gradio's listeners)
-                document.addEventListener('click', function(e) {
-                    const container = document.getElementById('read-btn');
-                    if (!container || !container.contains(e.target)) return;
-                    if (ttsAction()) {
-                        e.stopImmediatePropagation(); // handled — Gradio doesn't need to know
-                    }
-                    // if ttsAction() returned false (no _ttsB64), click reaches Gradio
-                    // which runs toggle_read → tts_box.change → speechSynthesis fallback
-                }, true);
+                    // No preventDefault, no stopPropagation — click reaches Gradio
+                }, { passive: true });
             }"""
         )
         def refresh_and_update():
@@ -1057,48 +1039,70 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            // New answer arrived — stop any playing audio, store new b64 (or null).
+            // New answer arrived — stop any in-progress audio.
             if (window._ttsAudio) {
                 window._ttsAudio.pause();
                 window._ttsAudio.onended = null;
                 window._ttsAudio = null;
             }
+            if (window.speechSynthesis && window.speechSynthesis.speaking)
+                window.speechSynthesis.cancel();
             window._ttsPlaying = false;
             window._ttsB64 = val || null;
-            // Reset button text + colour for the new answer
-            const _rb = [...document.querySelectorAll('button')]
-                .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
-            if (_rb) { _rb.textContent = '🔊 Read'; if (window._styleBlue) window._styleBlue(_rb); }
+            // Clear the speaking marker so applyColors can re-color the button
+            const _rb = document.getElementById('read-btn')?.querySelector('button');
+            if (_rb) delete _rb.dataset.speaking;
           }""",
         )
         tts_box.change(
           fn=None,
           inputs=[tts_box],
           js="""(val) => {
-            // This handler only runs on desktop when _ttsB64 is null (speechSynthesis
-            // fallback). For the gTTS path, the capture-phase click listener calls
-            // ttsAction() + stopImmediatePropagation, so Gradio never fires toggle_read
-            // and tts_box never changes.
-            if (window._ttsB64) return; // gTTS — handled by JS click listener
+            // Fires when Gradio's toggle_read changes tts_box (desktop + mobile after click).
+            // On mobile, touchend already started audio → _ttsPlaying=true → skip play.
+            // On desktop, this is the primary play/stop trigger.
             const text = val.split('\\n').slice(1).join('\\n').trim();
-            function getReadBtn() {
-                return [...document.querySelectorAll('button')]
-                    .find(b => b.textContent.trim() === '🔊 Read' || b.textContent.trim() === '⏹ Stop');
-            }
-            if (window.speechSynthesis) {
-                if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.cancel();
-                    const btn = getReadBtn();
-                    if (btn) { delete btn.dataset.speaking; if (window._applyColors) window._applyColors(); }
-                } else if (text) {
-                    const utt = new SpeechSynthesisUtterance(text);
-                    const btn = getReadBtn();
-                    if (btn && window._styleOrange) window._styleOrange(btn);
-                    utt.onend = () => {
-                        const b = getReadBtn();
-                        if (b && window._styleBlue) window._styleBlue(b);
+            if (window._ttsB64) {
+                // gTTS path
+                if (!text) {
+                    // Stop signal (is_reading was True → toggle_read cleared tts_box)
+                    if (window._ttsAudio) {
+                        window._ttsAudio.pause();
+                        window._ttsAudio.onended = null;
+                        window._ttsAudio = null;
+                    }
+                    window._ttsPlaying = false;
+                } else if (!window._ttsPlaying) {
+                    // Play signal — only if mobile touchend didn't already start it
+                    const b64 = window._ttsB64;
+                    const audio = new Audio('data:audio/mpeg;base64,' + b64);
+                    window._ttsAudio   = audio;
+                    window._ttsPlaying = true;
+                    const _pb = document.getElementById('read-btn')?.querySelector('button');
+                    if (_pb) _pb.dataset.speaking = '1';
+                    audio.onended = () => {
+                        if (window._ttsAudio !== audio) return;
+                        window._ttsAudio   = null;
+                        window._ttsPlaying = false;
+                        const _eb = document.getElementById('read-btn')?.querySelector('button');
+                        if (_eb) delete _eb.dataset.speaking;
                         if (window._signalEnded) window._signalEnded();
                     };
+                    audio.play().catch(() => {
+                        if (window._ttsAudio !== audio) return;
+                        window._ttsAudio   = null;
+                        window._ttsPlaying = false;
+                        const _eb = document.getElementById('read-btn')?.querySelector('button');
+                        if (_eb) delete _eb.dataset.speaking;
+                    });
+                }
+            } else if (window.speechSynthesis) {
+                // speechSynthesis fallback (gTTS unavailable)
+                if (!text) {
+                    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+                } else if (text && !window.speechSynthesis.speaking) {
+                    const utt = new SpeechSynthesisUtterance(text);
+                    utt.onend = () => { if (window._signalEnded) window._signalEnded(); };
                     window.speechSynthesis.speak(utt);
                 }
             }
@@ -1117,6 +1121,7 @@ def build_ui():
           fn=lambda _: (False, gr.update(value="🔊 Read")),
           inputs=[ended_box],
           outputs=[read_state, read_btn],
+          js="(_) => { window._ttsAudio = null; window._ttsPlaying = false; return [_]; }",
         )
         clear_chat_btn.click(
           fn=on_clear_chat,
