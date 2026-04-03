@@ -394,22 +394,9 @@ def build_ui():
         demo.load(
             fn=None,
             js="""() => {
-                // ── 0. Inject CSS for read button + user bubbles ──
+                // ── 0. Inject CSS for user bubbles ──
                 var _css = document.createElement('style');
                 _css.textContent = ''
-                    + '#read-btn button { font-size:0!important; position:relative!important;'
-                    + ' background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)!important;'
-                    + ' box-shadow:0 4px 16px rgba(37,99,235,0.55)!important;'
-                    + ' color:#fff!important; border:none!important; font-weight:700!important;'
-                    + ' border-radius:8px!important; letter-spacing:0.4px!important;'
-                    + ' text-shadow:0 1px 3px rgba(0,0,0,0.35)!important; }'
-                    + '#read-btn button > * { visibility:hidden!important; position:absolute!important; }'
-                    + '#read-btn button::before { content:"Read"; font-size:14px; font-weight:700;'
-                    + ' color:#fff; position:absolute; inset:0; display:flex;'
-                    + ' align-items:center; justify-content:center; pointer-events:none; }'
-                    + '#read-btn.playing button { background:linear-gradient(135deg,#ea580c 0%,#fb923c 100%)!important;'
-                    + ' box-shadow:0 4px 18px rgba(234,88,12,0.6)!important; }'
-                    + '#read-btn.playing button::before { content:"Stop"; }'
                     + '.chatbot-wrap .message-row:not(.bot-row) .message-bubble,'
                     + '.chatbot-wrap .message-row:not(.bot-row) .bubble-wrap > *,'
                     + '.chatbot-wrap [data-testid="user"] > div,'
@@ -427,7 +414,9 @@ def build_ui():
                     + ' { color:#000!important; }';
                 document.head.appendChild(_css);
 
-                // ── 1. Button gradient colors (all except read-btn) ──
+                // ── 1. Button gradient colors ──
+                var READ_BLUE  = {bg:'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', sh:'0 4px 16px rgba(37,99,235,0.55)'};
+                var READ_ORANGE = {bg:'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)', sh:'0 4px 18px rgba(234,88,12,0.6)'};
                 var STYLE_RULES = [
                     { id:'ask-btn',       bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
                     { id:'file-upload',   bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
@@ -439,6 +428,7 @@ def build_ui():
                     { id:'confirm-no-btn',bg:'linear-gradient(135deg,#374151 0%,#6b7280 100%)', sh:'0 2px 10px rgba(107,114,128,0.4)' },
                     { id:'refresh-btn',   bg:'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)', sh:'0 4px 16px rgba(67,56,202,0.5)' },
                     { id:'add-url-btn',   bg:'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)', sh:'0 4px 16px rgba(13,148,136,0.5)' },
+                    { id:'read-btn',      bg:READ_BLUE.bg, sh:READ_BLUE.sh },
                 ];
                 function styleEl(el, bg, sh) {
                     el.style.setProperty('background',    bg,  'important');
@@ -450,13 +440,25 @@ def build_ui():
                     el.style.setProperty('letter-spacing','0.4px','important');
                     el.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
                 }
+                var _applyingColors = false;
                 function applyColors() {
+                    if (_applyingColors) return;
+                    _applyingColors = true;
                     for (var i = 0; i < STYLE_RULES.length; i++) {
-                        var wrap = document.getElementById(STYLE_RULES[i].id);
+                        var rule = STYLE_RULES[i];
+                        var wrap = document.getElementById(rule.id);
                         if (!wrap) continue;
                         var el = wrap.querySelector('button') || wrap.querySelector('label') || wrap;
-                        styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
+                        if (rule.id === 'read-btn') {
+                            var c = window._ttsPlaying ? READ_ORANGE : READ_BLUE;
+                            styleEl(el, c.bg, c.sh);
+                            var want = window._ttsPlaying ? 'Stop' : 'Read';
+                            if (el.textContent.trim() !== want) el.textContent = want;
+                        } else {
+                            styleEl(el, rule.bg, rule.sh);
+                        }
                     }
+                    _applyingColors = false;
                 }
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
@@ -523,14 +525,20 @@ def build_ui():
                     }, 300);
                 }
 
-                // ── 4. TTS ──
+                // ── 4. TTS — event delegation on document (immune to re-renders) ──
                 window._ttsText    = null;
                 window._ttsPlaying = false;
-                window._ttsSetBtn  = function(playing) {
+                function _getReadBtn() {
                     var wrap = document.getElementById('read-btn');
-                    if (!wrap) return;
-                    if (playing) wrap.classList.add('playing');
-                    else wrap.classList.remove('playing');
+                    if (!wrap) return null;
+                    return wrap.querySelector('button') || wrap;
+                }
+                window._ttsSetBtn = function(playing) {
+                    var btn = _getReadBtn();
+                    if (!btn) return;
+                    var c = playing ? READ_ORANGE : READ_BLUE;
+                    styleEl(btn, c.bg, c.sh);
+                    btn.textContent = playing ? 'Stop' : 'Read';
                 };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
@@ -550,24 +558,14 @@ def build_ui():
                         window.speechSynthesis.speak(utt);
                     }
                 };
-
-                // ── 5. Attach click handler directly to read button DOM ──
-                function attachReadClick() {
+                // Event delegation — click anywhere, check if it's the read button
+                document.addEventListener('click', function(e) {
                     var wrap = document.getElementById('read-btn');
-                    if (!wrap) return false;
-                    var btn = wrap.querySelector('button') || wrap;
-                    if (btn._ttsReady) return true;
-                    btn._ttsReady = true;
-                    btn.addEventListener('click', function(e) {
+                    if (!wrap) return;
+                    if (wrap.contains(e.target)) {
                         if (window._ttsToggle) window._ttsToggle();
-                    });
-                    return true;
-                }
-                if (!attachReadClick()) {
-                    var rc = setInterval(function() {
-                        if (attachReadClick()) clearInterval(rc);
-                    }, 200);
-                }
+                    }
+                }, true);
             }"""
         )
         file_upload.upload(
@@ -652,7 +650,6 @@ def build_ui():
             history = new_hist
           return history, status, "<span style='color:#3b82f6; font-weight:600;'>Tokens sent: 0 &nbsp;&nbsp; Tokens received: 0</span>"
 
-        # Read button click is handled via DOM addEventListener in demo.load JS
         tts_audio_box.change(
           fn=None,
           inputs=[tts_audio_box],
