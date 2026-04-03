@@ -275,12 +275,14 @@ _UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
-    #ask-btn { min-width: 48px !important; }
-    #read-btn { min-width: 80px !important; }
-    #copy-btn, #clear-chat-btn { min-width: 48px !important; }
-    @media (max-width: 600px) {
-        #msg-input-wrap { min-width: 0 !important; flex: 1 1 0 !important; }
+    /* Read button label via CSS ::before — Svelte cannot reset CSS content */
+    #read-btn button { font-size: 0 !important; position: relative !important; }
+    #read-btn button::before {
+        content: '🔊 Read'; font-size: 14px; font-weight: 700; color: #fff;
+        position: absolute; inset: 0; display: flex;
+        align-items: center; justify-content: center; pointer-events: none;
     }
+    #read-btn button[data-tts="1"]::before { content: '⏹ Stop'; }
 """
 
 
@@ -547,7 +549,9 @@ def build_ui():
                 function _ttsSetBtn(playing) {
                     const b = document.getElementById('read-btn')?.querySelector('button');
                     if (!b) return;
-                    b.textContent = playing ? '⏹ Stop' : '🔊 Read';
+                    // Label via dataset.tts → CSS ::before (no textContent → no MutationObserver loop)
+                    if (playing) b.dataset.tts = '1'; else delete b.dataset.tts;
+                    // Color via inline style
                     b.style.background = playing
                         ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
                         : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
@@ -555,9 +559,6 @@ def build_ui():
                         ? '0 4px 18px rgba(234,88,12,0.6)'
                         : '0 4px 16px rgba(37,99,235,0.55)';
                 }
-                // Apply initial blue color once button is in DOM
-                setTimeout(() => _ttsSetBtn(false), 300);
-                setTimeout(() => _ttsSetBtn(false), 900);
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
                     if (window._ttsPlaying) {
