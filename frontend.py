@@ -395,6 +395,10 @@ def build_ui():
             fn=None,
             js="""() => {
                 // ── 1. Button gradient colors ──
+                var READ_BLUE_BG   = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
+                var READ_BLUE_SH   = '0 4px 16px rgba(37,99,235,0.55)';
+                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
+                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
                 var STYLE_RULES = [
                     { id:'ask-btn',       bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
                     { id:'file-upload',   bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
@@ -424,7 +428,15 @@ def build_ui():
                         var el = wrap.querySelector('button') || wrap.querySelector('label') || wrap;
                         styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
                     }
-                    if (window._ttsSetBtn) window._ttsSetBtn(!!window._ttsPlaying);
+                    var rb = document.getElementById('read-btn');
+                    if (rb) {
+                        var rBtn = rb.querySelector('button');
+                        if (rBtn) {
+                            var p = !!window._ttsPlaying;
+                            styleEl(rBtn, p ? READ_ORANGE_BG : READ_BLUE_BG,
+                                         p ? READ_ORANGE_SH : READ_BLUE_SH);
+                        }
+                    }
                 }
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
@@ -451,18 +463,25 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // ── 3. Auto-scroll: only on new child messages, not on text changes ──
+                // ── 3. Auto-scroll chat ──
+                // Scrolls to bottom when new answer arrives.
+                // User can scroll up freely; auto-scroll resumes when a
+                // new message element is added (childList mutation on direct
+                // message container) or user scrolls back near bottom.
                 function attachChatScroller() {
                     var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return false;
                     var scrollEl = null;
                     var userScrolledUp = false;
+                    var scrollListenerAdded = false;
+                    var prevMsgCount = 0;
                     function findScrollable() {
                         var divs = chatEl.querySelectorAll('div');
                         for (var i = 0; i < divs.length; i++) {
                             if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
                         }
-                        if (scrollEl) {
+                        if (scrollEl && !scrollListenerAdded) {
+                            scrollListenerAdded = true;
                             scrollEl.addEventListener('scroll', function() {
                                 var gap = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
                                 userScrolledUp = gap > 80;
@@ -470,11 +489,15 @@ def build_ui():
                         }
                     }
                     findScrollable();
-                    new MutationObserver(function(mutations) {
+                    new MutationObserver(function() {
                         if (!scrollEl) { findScrollable(); return; }
-                        if (userScrolledUp) return;
-                        scrollEl.scrollTop = scrollEl.scrollHeight;
-                    }).observe(chatEl, { childList: true, subtree: true });
+                        var msgCount = chatEl.querySelectorAll('[class*="message"], [class*="row"]').length;
+                        if (msgCount !== prevMsgCount) {
+                            prevMsgCount = msgCount;
+                            userScrolledUp = false;
+                        }
+                        if (!userScrolledUp) scrollEl.scrollTop = scrollEl.scrollHeight;
+                    }).observe(chatEl, { childList: true, subtree: true, characterData: true });
                     return true;
                 }
                 if (!attachChatScroller()) {
@@ -485,17 +508,14 @@ def build_ui():
                 }
 
                 // ── 4. TTS toggle: Read (blue) / Stop (orange) — instant ──
-                var READ_BLUE_BG  = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
-                var READ_BLUE_SH  = '0 4px 16px rgba(37,99,235,0.55)';
-                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
-                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 window._ttsSetBtn  = function(playing) {
                     var b = document.getElementById('read-btn');
                     if (b) b = b.querySelector('button');
                     if (!b) return;
-                    b.textContent = playing ? 'Stop' : 'Read';
+                    var want = playing ? 'Stop' : 'Read';
+                    if (b.textContent.trim() !== want) b.textContent = want;
                     styleEl(b, playing ? READ_ORANGE_BG : READ_BLUE_BG,
                                playing ? READ_ORANGE_SH : READ_BLUE_SH);
                 };
