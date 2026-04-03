@@ -275,32 +275,13 @@ _UI_CSS = """
     .main-col  { max-width: 900px; margin: 0 auto; }
     .chatbot-wrap { background: #181c24; border-radius: 12px; }
     .gradio-container { background: #10131a; }
-
-    /* ── All button base styles via ID — permanent, Svelte cannot remove CSS rules ── */
-    button { color:#fff !important; border:none !important; font-weight:700 !important;
-             border-radius:8px !important; letter-spacing:0.4px !important;
-             text-shadow:0 1px 3px rgba(0,0,0,0.35) !important;
-             transition: transform .08s ease, opacity .08s ease !important; }
-
-    #ask-btn       button { background:linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%) !important; box-shadow:0 4px 18px rgba(124,92,252,0.55) !important; }
-    #read-btn      button { background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important; box-shadow:0 4px 16px rgba(37,99,235,0.55) !important; font-size:0 !important; position:relative !important; }
-    #copy-btn      button { background:linear-gradient(135deg,#059669 0%,#34d399 100%) !important; box-shadow:0 4px 16px rgba(5,150,105,0.5) !important; }
-    #clear-chat-btn button { background:linear-gradient(135deg,#dc2626 0%,#f87171 100%) !important; box-shadow:0 4px 16px rgba(220,38,38,0.5) !important; }
-    #delete-btn    button { background:linear-gradient(135deg,#ef4444 0%,#fca5a5 100%) !important; box-shadow:0 4px 16px rgba(239,68,68,0.5) !important; }
-    #delete-all-btn button { background:linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%) !important; box-shadow:0 4px 18px rgba(127,29,29,0.65) !important; }
-    #refresh-btn   button { background:linear-gradient(135deg,#4338ca 0%,#818cf8 100%) !important; box-shadow:0 4px 16px rgba(67,56,202,0.5) !important; }
-    #add-url-btn   button { background:linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%) !important; box-shadow:0 4px 16px rgba(13,148,136,0.5) !important; }
-    #confirm-yes-btn button { background:linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%) !important; box-shadow:0 4px 18px rgba(127,29,29,0.65) !important; }
-    #confirm-no-btn  button { background:linear-gradient(135deg,#374151 0%,#6b7280 100%) !important; box-shadow:0 2px 10px rgba(107,114,128,0.4) !important; }
-    #file-upload label, #file-upload button { background:linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%) !important; box-shadow:0 4px 18px rgba(14,165,233,0.55) !important; color:#fff !important; font-weight:700 !important; border-radius:8px !important; }
-
-    /* Read button label via ::before — toggled by data-tts attribute set by JS */
+    /* Read button: font-size:0 hides Svelte text; ::before + data-tts drives label+color */
+    #read-btn button { font-size:0 !important; position:relative !important; }
     #read-btn button::before {
         content:'🔊 Read'; font-size:14px; font-weight:700; color:#fff;
         position:absolute; inset:0; display:flex;
         align-items:center; justify-content:center; pointer-events:none;
     }
-    #read-btn button[data-tts="1"] { background:linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important; box-shadow:0 4px 18px rgba(234,88,12,0.6) !important; }
     #read-btn button[data-tts="1"]::before { content:'⏹ Stop'; }
 """
 
@@ -420,7 +401,64 @@ def build_ui():
         demo.load(
             fn=None,
             js="""() => {
-                // 1. Click press feedback
+                // 1. Button colors via JS (inline styles win over Gradio's theme styles)
+                const STYLE_RULES = [
+                    { match: t => t === 'Ask →' || t === 'Ask',
+                      bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
+                    { match: t => t.includes('Upload') && t.includes('Files'),
+                      bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
+                    { match: t => t.includes('Copy'),
+                      bg:'linear-gradient(135deg,#059669 0%,#34d399 100%)', sh:'0 4px 16px rgba(5,150,105,0.5)' },
+                    { match: t => t.includes('Clear'),
+                      bg:'linear-gradient(135deg,#dc2626 0%,#f87171 100%)', sh:'0 4px 16px rgba(220,38,38,0.5)' },
+                    { match: t => t.includes('Remove selected') || t.includes('Remove\nselected'),
+                      bg:'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)', sh:'0 4px 16px rgba(239,68,68,0.5)' },
+                    { match: t => t.includes('Remove ALL') || t.includes('Yes, remove all'),
+                      bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)', sh:'0 4px 18px rgba(127,29,29,0.65)' },
+                    { match: t => t.includes('Refresh'),
+                      bg:'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)', sh:'0 4px 16px rgba(67,56,202,0.5)' },
+                    { match: t => t.includes('Add URL'),
+                      bg:'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)', sh:'0 4px 16px rgba(13,148,136,0.5)' },
+                    { match: t => t.includes('Cancel'),
+                      bg:'linear-gradient(135deg,#374151 0%,#6b7280 100%)', sh:'0 2px 10px rgba(107,114,128,0.4)' },
+                ];
+                function styleEl(el, bg, sh) {
+                    el.style.setProperty('background',    bg,  'important');
+                    el.style.setProperty('box-shadow',    sh,  'important');
+                    el.style.setProperty('color',         '#fff', 'important');
+                    el.style.setProperty('border',        'none', 'important');
+                    el.style.setProperty('font-weight',   '700',  'important');
+                    el.style.setProperty('border-radius', '8px',  'important');
+                    el.style.setProperty('letter-spacing','0.4px','important');
+                    el.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                }
+                function applyColors() {
+                    document.querySelectorAll('button').forEach(el => {
+                        if (el.closest('#read-btn')) {
+                            if (window._ttsSetBtn && !window._ttsPlaying) window._ttsSetBtn(false);
+                            return;
+                        }
+                        const text = el.textContent.trim();
+                        for (const r of STYLE_RULES) {
+                            if (r.match(text)) { styleEl(el, r.bg, r.sh); break; }
+                        }
+                    });
+                    const upWrap = document.getElementById('file-upload');
+                    if (upWrap) {
+                        const upEl = upWrap.querySelector('button, label') || upWrap;
+                        styleEl(upEl, 'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', '0 4px 18px rgba(14,165,233,0.55)');
+                    }
+                }
+                setTimeout(applyColors, 150);
+                setTimeout(applyColors, 700);
+                setInterval(applyColors, 2000);
+                let _mt = null;
+                new MutationObserver(() => {
+                    if (_mt) clearTimeout(_mt);
+                    _mt = setTimeout(applyColors, 50);
+                }).observe(document.body, { childList: true, subtree: true });
+
+                // 2. Click press feedback
                 document.addEventListener('mousedown', (e) => {
                     const btn = e.target.closest('button');
                     if (!btn) return;
@@ -459,6 +497,17 @@ def build_ui():
                     const b = document.getElementById('read-btn')?.querySelector('button');
                     if (!b) return;
                     if (playing) b.dataset.tts = '1'; else delete b.dataset.tts;
+                    // Inline style as backup in case CSS specificity is beaten by Gradio theme
+                    b.style.setProperty('background', playing
+                        ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
+                        : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
+                    b.style.setProperty('box-shadow', playing
+                        ? '0 4px 18px rgba(234,88,12,0.6)'
+                        : '0 4px 16px rgba(37,99,235,0.55)', 'important');
+                    b.style.setProperty('color', '#fff', 'important');
+                    b.style.setProperty('border', 'none', 'important');
+                    b.style.setProperty('font-weight', '700', 'important');
+                    b.style.setProperty('border-radius', '8px', 'important');
                 };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
