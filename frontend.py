@@ -276,13 +276,6 @@ _UI_CSS = """
     .main-col  { max-width: 900px; margin: 0 auto; }
     .chatbot-wrap { background: #181c24; border-radius: 12px; }
     .gradio-container { background: #10131a; }
-    /* User (question) messages — distinct blue */
-    .chatbot-wrap .user-row .prose,
-    .chatbot-wrap .user .prose,
-    .chatbot-wrap .user-row p,
-    .chatbot-wrap .user p,
-    .chatbot-wrap [data-role="user"] p,
-    .chatbot-wrap [data-role="user"] .prose { color: #60a5fa !important; }
 """
 
 
@@ -315,7 +308,7 @@ def build_ui():
               )
               submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
-              read_btn       = gr.Button("🔊 Read", elem_id="read-btn",       scale=2)
+              read_btn       = gr.Button("Read", elem_id="read-btn",       scale=2)
               copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
               clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
@@ -402,29 +395,17 @@ def build_ui():
             fn=None,
             js="""() => {
                 // ── 1. Button gradient colors ──
-                var READ_BLUE_BG = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
-                var READ_BLUE_SH = '0 4px 16px rgba(37,99,235,0.55)';
-                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
-                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
                 var STYLE_RULES = [
-                    { match: function(t){return t==='Ask'||t==='Ask \u2192';},
-                      bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
-                    { match: function(t){return t.indexOf('Upload')>=0 && t.indexOf('Files')>=0;},
-                      bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
-                    { match: function(t){return t.indexOf('Copy')>=0;},
-                      bg:'linear-gradient(135deg,#059669 0%,#34d399 100%)', sh:'0 4px 16px rgba(5,150,105,0.5)' },
-                    { match: function(t){return t.indexOf('Clear')>=0;},
-                      bg:'linear-gradient(135deg,#dc2626 0%,#f87171 100%)', sh:'0 4px 16px rgba(220,38,38,0.5)' },
-                    { match: function(t){return t.indexOf('Remove selected')>=0;},
-                      bg:'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)', sh:'0 4px 16px rgba(239,68,68,0.5)' },
-                    { match: function(t){return t.indexOf('Remove ALL')>=0||t.indexOf('Yes, remove all')>=0;},
-                      bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)', sh:'0 4px 18px rgba(127,29,29,0.65)' },
-                    { match: function(t){return t.indexOf('Refresh')>=0;},
-                      bg:'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)', sh:'0 4px 16px rgba(67,56,202,0.5)' },
-                    { match: function(t){return t.indexOf('Add URL')>=0;},
-                      bg:'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)', sh:'0 4px 16px rgba(13,148,136,0.5)' },
-                    { match: function(t){return t.indexOf('Cancel')>=0;},
-                      bg:'linear-gradient(135deg,#374151 0%,#6b7280 100%)', sh:'0 2px 10px rgba(107,114,128,0.4)' },
+                    { id:'ask-btn',       bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
+                    { id:'file-upload',   bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
+                    { id:'copy-btn',      bg:'linear-gradient(135deg,#059669 0%,#34d399 100%)', sh:'0 4px 16px rgba(5,150,105,0.5)' },
+                    { id:'clear-chat-btn',bg:'linear-gradient(135deg,#dc2626 0%,#f87171 100%)', sh:'0 4px 16px rgba(220,38,38,0.5)' },
+                    { id:'delete-btn',    bg:'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)', sh:'0 4px 16px rgba(239,68,68,0.5)' },
+                    { id:'delete-all-btn',bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)', sh:'0 4px 18px rgba(127,29,29,0.65)' },
+                    { id:'confirm-yes-btn',bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)',sh:'0 4px 18px rgba(127,29,29,0.65)' },
+                    { id:'confirm-no-btn',bg:'linear-gradient(135deg,#374151 0%,#6b7280 100%)', sh:'0 2px 10px rgba(107,114,128,0.4)' },
+                    { id:'refresh-btn',   bg:'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)', sh:'0 4px 16px rgba(67,56,202,0.5)' },
+                    { id:'add-url-btn',   bg:'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)', sh:'0 4px 16px rgba(13,148,136,0.5)' },
                 ];
                 function styleEl(el, bg, sh) {
                     el.style.setProperty('background',    bg,  'important');
@@ -437,26 +418,13 @@ def build_ui():
                     el.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
                 }
                 function applyColors() {
-                    document.querySelectorAll('button').forEach(function(el) {
-                        if (el.closest('#read-btn')) {
-                            var p = !!window._ttsPlaying;
-                            styleEl(el, p ? READ_ORANGE_BG : READ_BLUE_BG,
-                                        p ? READ_ORANGE_SH : READ_BLUE_SH);
-                            return;
-                        }
-                        var text = el.textContent.trim();
-                        for (var i = 0; i < STYLE_RULES.length; i++) {
-                            if (STYLE_RULES[i].match(text)) {
-                                styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
-                                break;
-                            }
-                        }
-                    });
-                    var upWrap = document.getElementById('file-upload');
-                    if (upWrap) {
-                        var upEl = upWrap.querySelector('button, label') || upWrap;
-                        styleEl(upEl, 'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', '0 4px 18px rgba(14,165,233,0.55)');
+                    for (var i = 0; i < STYLE_RULES.length; i++) {
+                        var wrap = document.getElementById(STYLE_RULES[i].id);
+                        if (!wrap) continue;
+                        var el = wrap.querySelector('button') || wrap.querySelector('label') || wrap;
+                        styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
                     }
+                    if (window._ttsSetBtn) window._ttsSetBtn(!!window._ttsPlaying);
                 }
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
@@ -464,7 +432,7 @@ def build_ui():
                 var _mt = null;
                 new MutationObserver(function() {
                     if (_mt) clearTimeout(_mt);
-                    _mt = setTimeout(applyColors, 50);
+                    _mt = setTimeout(applyColors, 80);
                 }).observe(document.body, { childList: true, subtree: true });
 
                 // ── 2. Click press feedback ──
@@ -483,28 +451,30 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // ── 3. Smart auto-scroll (only if user is near bottom) ──
+                // ── 3. Auto-scroll: only on new child messages, not on text changes ──
                 function attachChatScroller() {
                     var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return false;
                     var scrollEl = null;
+                    var userScrolledUp = false;
                     function findScrollable() {
                         var divs = chatEl.querySelectorAll('div');
                         for (var i = 0; i < divs.length; i++) {
-                            if (divs[i].scrollHeight > divs[i].clientHeight + 10) {
-                                scrollEl = divs[i];
-                            }
+                            if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
+                        }
+                        if (scrollEl) {
+                            scrollEl.addEventListener('scroll', function() {
+                                var gap = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+                                userScrolledUp = gap > 80;
+                            });
                         }
                     }
-                    function maybeScroll() {
-                        if (!scrollEl || scrollEl.scrollHeight <= scrollEl.clientHeight) findScrollable();
-                        if (!scrollEl) return;
-                        var gap = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-                        if (gap < 150) scrollEl.scrollTop = scrollEl.scrollHeight;
-                    }
-                    new MutationObserver(maybeScroll).observe(chatEl, {
-                        childList: true, subtree: true, characterData: true
-                    });
+                    findScrollable();
+                    new MutationObserver(function(mutations) {
+                        if (!scrollEl) { findScrollable(); return; }
+                        if (userScrolledUp) return;
+                        scrollEl.scrollTop = scrollEl.scrollHeight;
+                    }).observe(chatEl, { childList: true, subtree: true });
                     return true;
                 }
                 if (!attachChatScroller()) {
@@ -514,15 +484,18 @@ def build_ui():
                     }, 300);
                 }
 
-                // ── 4. TTS toggle: Read (blue) / Stop (orange) ──
+                // ── 4. TTS toggle: Read (blue) / Stop (orange) — instant ──
+                var READ_BLUE_BG  = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
+                var READ_BLUE_SH  = '0 4px 16px rgba(37,99,235,0.55)';
+                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
+                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 window._ttsSetBtn  = function(playing) {
                     var b = document.getElementById('read-btn');
                     if (b) b = b.querySelector('button');
                     if (!b) return;
-                    var label = playing ? String.fromCodePoint(0x23f9)+' Stop' : String.fromCodePoint(0x1f50a)+' Read';
-                    if (b.textContent.trim() !== label) b.textContent = label;
+                    b.textContent = playing ? 'Stop' : 'Read';
                     styleEl(b, playing ? READ_ORANGE_BG : READ_BLUE_BG,
                                playing ? READ_ORANGE_SH : READ_BLUE_SH);
                 };
@@ -545,21 +518,30 @@ def build_ui():
                     }
                 };
 
-                // ── 5. User question bubbles: black text on blue bg ──
-                function styleUserBubbles() {
-                    var msgs = document.querySelectorAll('.chatbot-wrap .message-row.user-row, .chatbot-wrap [data-role="user"], .chatbot-wrap .user');
-                    msgs.forEach(function(el) {
-                        var bubble = el.querySelector('.prose') || el;
-                        bubble.style.setProperty('background', '#3b82f6', 'important');
-                        bubble.style.setProperty('color', '#000', 'important');
-                        bubble.style.setProperty('border-radius', '12px', 'important');
-                        bubble.style.setProperty('padding', '8px 14px', 'important');
-                        var ps = bubble.querySelectorAll('p, span');
-                        ps.forEach(function(p) { p.style.setProperty('color', '#000', 'important'); });
-                    });
-                }
-                setInterval(styleUserBubbles, 1500);
-                setTimeout(styleUserBubbles, 300);
+                // ── 5. User question bubbles: black text on blue background ──
+                var _userStyle = document.createElement('style');
+                _userStyle.textContent = [
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .bubble-wrap > *,',
+                    '.chatbot-wrap [data-testid="user"] > div,',
+                    '.chatbot-wrap .role-user .message,',
+                    '.chatbot-wrap .user-row .message-bubble {',
+                    '  background: #3b82f6 !important;',
+                    '  color: #000 !important;',
+                    '  border-radius: 12px !important;',
+                    '}',
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble p,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble span,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .prose,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .prose p,',
+                    '.chatbot-wrap [data-testid="user"] p,',
+                    '.chatbot-wrap .role-user p,',
+                    '.chatbot-wrap .user-row p,',
+                    '.chatbot-wrap .user-row span {',
+                    '  color: #000 !important;',
+                    '}'
+                ].join('\\n');
+                document.head.appendChild(_userStyle);
             }"""
         )
         file_upload.upload(
