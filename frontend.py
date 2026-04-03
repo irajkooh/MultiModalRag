@@ -401,25 +401,29 @@ def build_ui():
         demo.load(
             fn=None,
             js="""() => {
-                // 1. Button colors via JS (inline styles win over Gradio's theme styles)
-                const STYLE_RULES = [
-                    { match: t => t === 'Ask →' || t === 'Ask',
+                // ── 1. Button gradient colors ──
+                var READ_BLUE_BG = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
+                var READ_BLUE_SH = '0 4px 16px rgba(37,99,235,0.55)';
+                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
+                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
+                var STYLE_RULES = [
+                    { match: function(t){return t==='Ask'||t==='Ask \u2192';},
                       bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
-                    { match: t => t.includes('Upload') && t.includes('Files'),
+                    { match: function(t){return t.indexOf('Upload')>=0 && t.indexOf('Files')>=0;},
                       bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
-                    { match: t => t.includes('Copy'),
+                    { match: function(t){return t.indexOf('Copy')>=0;},
                       bg:'linear-gradient(135deg,#059669 0%,#34d399 100%)', sh:'0 4px 16px rgba(5,150,105,0.5)' },
-                    { match: t => t.includes('Clear'),
+                    { match: function(t){return t.indexOf('Clear')>=0;},
                       bg:'linear-gradient(135deg,#dc2626 0%,#f87171 100%)', sh:'0 4px 16px rgba(220,38,38,0.5)' },
-                    { match: t => t.includes('Remove selected'),
+                    { match: function(t){return t.indexOf('Remove selected')>=0;},
                       bg:'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)', sh:'0 4px 16px rgba(239,68,68,0.5)' },
-                    { match: t => t.includes('Remove ALL') || t.includes('Yes, remove all'),
+                    { match: function(t){return t.indexOf('Remove ALL')>=0||t.indexOf('Yes, remove all')>=0;},
                       bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)', sh:'0 4px 18px rgba(127,29,29,0.65)' },
-                    { match: t => t.includes('Refresh'),
+                    { match: function(t){return t.indexOf('Refresh')>=0;},
                       bg:'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)', sh:'0 4px 16px rgba(67,56,202,0.5)' },
-                    { match: t => t.includes('Add URL'),
+                    { match: function(t){return t.indexOf('Add URL')>=0;},
                       bg:'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)', sh:'0 4px 16px rgba(13,148,136,0.5)' },
-                    { match: t => t.includes('Cancel'),
+                    { match: function(t){return t.indexOf('Cancel')>=0;},
                       bg:'linear-gradient(135deg,#374151 0%,#6b7280 100%)', sh:'0 2px 10px rgba(107,114,128,0.4)' },
                 ];
                 function styleEl(el, bg, sh) {
@@ -433,92 +437,94 @@ def build_ui():
                     el.style.setProperty('text-shadow',   '0 1px 3px rgba(0,0,0,0.35)', 'important');
                 }
                 function applyColors() {
-                    document.querySelectorAll('button').forEach(el => {
+                    document.querySelectorAll('button').forEach(function(el) {
                         if (el.closest('#read-btn')) {
-                            if (window._ttsSetBtn) window._ttsSetBtn(!!window._ttsPlaying);
+                            var p = !!window._ttsPlaying;
+                            styleEl(el, p ? READ_ORANGE_BG : READ_BLUE_BG,
+                                        p ? READ_ORANGE_SH : READ_BLUE_SH);
                             return;
                         }
-                        const text = el.textContent.trim();
-                        for (const r of STYLE_RULES) {
-                            if (r.match(text)) { styleEl(el, r.bg, r.sh); break; }
+                        var text = el.textContent.trim();
+                        for (var i = 0; i < STYLE_RULES.length; i++) {
+                            if (STYLE_RULES[i].match(text)) {
+                                styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
+                                break;
+                            }
                         }
                     });
-                    const upWrap = document.getElementById('file-upload');
+                    var upWrap = document.getElementById('file-upload');
                     if (upWrap) {
-                        const upEl = upWrap.querySelector('button, label') || upWrap;
+                        var upEl = upWrap.querySelector('button, label') || upWrap;
                         styleEl(upEl, 'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', '0 4px 18px rgba(14,165,233,0.55)');
                     }
                 }
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
                 setInterval(applyColors, 2000);
-                let _mt = null;
-                new MutationObserver(() => {
+                var _mt = null;
+                new MutationObserver(function() {
                     if (_mt) clearTimeout(_mt);
                     _mt = setTimeout(applyColors, 50);
                 }).observe(document.body, { childList: true, subtree: true });
 
-                // 2. Click press feedback
-                document.addEventListener('mousedown', (e) => {
-                    const btn = e.target.closest('button');
+                // ── 2. Click press feedback ──
+                document.addEventListener('mousedown', function(e) {
+                    var btn = e.target.closest('button');
                     if (!btn) return;
                     btn.style.setProperty('transform', 'scale(0.93)', 'important');
                     btn.style.setProperty('opacity', '0.82', 'important');
-                    const reset = () => {
+                    function reset() {
                         btn.style.removeProperty('transform');
                         btn.style.removeProperty('opacity');
                         btn.removeEventListener('mouseup', reset);
                         btn.removeEventListener('mouseleave', reset);
-                    };
+                    }
                     btn.addEventListener('mouseup', reset);
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // 2. Auto-scroll chatbot — find the actual scrollable div inside
+                // ── 3. Smart auto-scroll (only if user is near bottom) ──
                 function attachChatScroller() {
-                    const chatEl = document.querySelector('.chatbot-wrap');
+                    var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return false;
-                    let scrollEl = null;
-                    function doScroll() {
-                        if (!scrollEl || scrollEl.scrollHeight <= scrollEl.clientHeight) {
-                            chatEl.querySelectorAll('div').forEach(d => {
-                                if (d.scrollHeight > d.clientHeight + 10) scrollEl = d;
-                            });
+                    var scrollEl = null;
+                    function findScrollable() {
+                        var divs = chatEl.querySelectorAll('div');
+                        for (var i = 0; i < divs.length; i++) {
+                            if (divs[i].scrollHeight > divs[i].clientHeight + 10) {
+                                scrollEl = divs[i];
+                            }
                         }
-                        if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
                     }
-                    new MutationObserver(doScroll).observe(chatEl, {
+                    function maybeScroll() {
+                        if (!scrollEl || scrollEl.scrollHeight <= scrollEl.clientHeight) findScrollable();
+                        if (!scrollEl) return;
+                        var gap = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+                        if (gap < 150) scrollEl.scrollTop = scrollEl.scrollHeight;
+                    }
+                    new MutationObserver(maybeScroll).observe(chatEl, {
                         childList: true, subtree: true, characterData: true
                     });
                     return true;
                 }
                 if (!attachChatScroller()) {
-                    let tries = 0;
-                    const t = setInterval(() => {
-                        if (attachChatScroller() || ++tries > 20) clearInterval(t);
+                    var tries = 0;
+                    var ti = setInterval(function() {
+                        if (attachChatScroller() || ++tries > 20) clearInterval(ti);
                     }, 300);
                 }
 
-                // 3. TTS — textContent (with guard) + inline styles for label+color toggle
+                // ── 4. TTS toggle: Read (blue) / Stop (orange) ──
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 window._ttsSetBtn  = function(playing) {
-                    const b = document.getElementById('read-btn')?.querySelector('button');
+                    var b = document.getElementById('read-btn');
+                    if (b) b = b.querySelector('button');
                     if (!b) return;
-                    var label = playing ? '⏹ Stop' : '🔊 Read';
+                    var label = playing ? '\u23f9 Stop' : '\ud83d\udd0a Read';
                     if (b.textContent.trim() !== label) b.textContent = label;
-                    b.style.setProperty('background', playing
-                        ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
-                        : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
-                    b.style.setProperty('box-shadow', playing
-                        ? '0 4px 18px rgba(234,88,12,0.6)'
-                        : '0 4px 16px rgba(37,99,235,0.55)', 'important');
-                    b.style.setProperty('color', '#fff', 'important');
-                    b.style.setProperty('border', 'none', 'important');
-                    b.style.setProperty('font-weight', '700', 'important');
-                    b.style.setProperty('border-radius', '8px', 'important');
-                    b.style.setProperty('letter-spacing', '0.4px', 'important');
-                    b.style.setProperty('text-shadow', '0 1px 3px rgba(0,0,0,0.35)', 'important');
+                    styleEl(b, playing ? READ_ORANGE_BG : READ_BLUE_BG,
+                               playing ? READ_ORANGE_SH : READ_BLUE_SH);
                 };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
@@ -528,16 +534,32 @@ def build_ui():
                         window._ttsSetBtn(false);
                     } else if (window._ttsText) {
                         window.speechSynthesis.cancel();
-                        const utt = new SpeechSynthesisUtterance(window._ttsText);
+                        var utt = new SpeechSynthesisUtterance(window._ttsText);
                         window._ttsPlaying = true;
                         window._ttsSetBtn(true);
-                        utt.onend = () => {
+                        utt.onend = function() {
                             window._ttsPlaying = false;
                             window._ttsSetBtn(false);
                         };
                         window.speechSynthesis.speak(utt);
                     }
                 };
+
+                // ── 5. User question bubbles: black text on blue bg ──
+                function styleUserBubbles() {
+                    var msgs = document.querySelectorAll('.chatbot-wrap .message-row.user-row, .chatbot-wrap [data-role="user"], .chatbot-wrap .user');
+                    msgs.forEach(function(el) {
+                        var bubble = el.querySelector('.prose') || el;
+                        bubble.style.setProperty('background', '#3b82f6', 'important');
+                        bubble.style.setProperty('color', '#000', 'important');
+                        bubble.style.setProperty('border-radius', '12px', 'important');
+                        bubble.style.setProperty('padding', '8px 14px', 'important');
+                        var ps = bubble.querySelectorAll('p, span');
+                        ps.forEach(function(p) { p.style.setProperty('color', '#000', 'important'); });
+                    });
+                }
+                setInterval(styleUserBubbles, 1500);
+                setTimeout(styleUserBubbles, 300);
             }"""
         )
         file_upload.upload(

@@ -235,20 +235,64 @@ async def reindex_all():
     return {"message": "Reindexed all documents.", "total_chunks": vs.total_chunks()}
 
 
-_GREETINGS = {
-    "hi", "hello", "hey", "hiya", "howdy", "greetings", "sup", "yo",
-    "good morning", "good afternoon", "good evening", "good day",
-    "how are you", "how are you doing", "how do you do",
-    "what's up", "whats up", "what is up",
-    "thanks", "thank you", "thx", "ty",
-    "bye", "goodbye", "see you", "cya",
-    "ok", "okay", "cool", "great", "nice",
+_GREETING_RESPONSES = {
+    "hi": "Hi! Ask me anything about your uploaded documents.",
+    "hello": "Hello! Ask me anything about your uploaded documents.",
+    "hey": "Hey! Ask me anything about your uploaded documents.",
+    "hiya": "Hi there! Ask me anything about your uploaded documents.",
+    "howdy": "Howdy! Ask me anything about your uploaded documents.",
+    "greetings": "Greetings! Ask me anything about your uploaded documents.",
+    "sup": "Hey! Ask me anything about your uploaded documents.",
+    "yo": "Hey! Ask me anything about your uploaded documents.",
+    "good morning": "Good morning! Ask me anything about your uploaded documents.",
+    "good afternoon": "Good afternoon! Ask me anything about your uploaded documents.",
+    "good evening": "Good evening! Ask me anything about your uploaded documents.",
+    "good day": "Good day! Ask me anything about your uploaded documents.",
+    "how are you": "I'm doing well, thank you! Ask me anything about your uploaded documents.",
+    "how are you doing": "I'm doing well, thank you! Ask me anything about your uploaded documents.",
+    "how do you do": "I'm doing well, thank you! How can I help with your documents?",
+    "what's up": "Not much! Ready to answer questions about your documents.",
+    "whats up": "Not much! Ready to answer questions about your documents.",
+    "what is up": "Not much! Ready to answer questions about your documents.",
+    "thanks": "You're welcome! Let me know if you have more questions.",
+    "thank you": "You're welcome! Let me know if you have more questions.",
+    "thx": "You're welcome! Let me know if you have more questions.",
+    "ty": "You're welcome! Let me know if you have more questions.",
+    "bye": "Goodbye! Feel free to come back anytime.",
+    "goodbye": "Goodbye! Feel free to come back anytime.",
+    "see you": "See you! Feel free to come back anytime.",
+    "cya": "See you later! Feel free to come back anytime.",
+    "ok": "Let me know if you have any questions about your documents.",
+    "okay": "Let me know if you have any questions about your documents.",
+    "cool": "Glad to help! Let me know if you have more questions.",
+    "great": "Glad to help! Let me know if you have more questions.",
+    "nice": "Thanks! Let me know if you have more questions.",
 }
 
-def _is_chitchat(text: str) -> bool:
-    """Return True if the query is conversational chitchat that shouldn't hit the vector store."""
+_META_PATTERNS = [
+    "how can you help", "how you can help", "what can you do",
+    "what do you do", "who are you", "what are you",
+    "help me", "how does this work", "how do you work",
+]
+
+_META_ANSWER = (
+    "I'm your document assistant. Here's how I can help:\n\n"
+    "1. **Upload documents** (PDF, Word, Excel, CSV, TXT, images) or **add URLs** in the Documents tab\n"
+    "2. **Ask questions** about your uploaded documents and I'll answer based on their content\n"
+    "3. I can handle text, tables, charts, and scanned images\n"
+    "4. Use the **Read** button to hear answers aloud\n\n"
+    "Upload some documents and start asking questions!"
+)
+
+def _chitchat_response(text: str) -> str | None:
+    """Return a context-appropriate response for chitchat, or None if not chitchat."""
     normalized = text.strip().lower().rstrip("!?.,")
-    return normalized in _GREETINGS or len(normalized.split()) <= 1 and normalized in _GREETINGS
+    if normalized in _GREETING_RESPONSES:
+        return _GREETING_RESPONSES[normalized]
+    for pattern in _META_PATTERNS:
+        if pattern in normalized:
+            return _META_ANSWER
+    return None
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -257,11 +301,9 @@ async def query_documents(req: QueryRequest):
     import asyncio
     try:
         # Short-circuit chitchat / greetings — don't pollute with RAG results
-        if _is_chitchat(req.question):
-            return QueryResponse(
-                answer="Hello! I'm your document assistant. Ask me anything about your uploaded documents.",
-                sources=[],
-            )
+        chitchat_answer = _chitchat_response(req.question)
+        if chitchat_answer:
+            return QueryResponse(answer=chitchat_answer, sources=[])
 
         if vs.total_chunks() == 0:
             return QueryResponse(answer="No documents are indexed yet. Please upload some documents first.", sources=[])
