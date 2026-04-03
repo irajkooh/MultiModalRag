@@ -394,11 +394,63 @@ def build_ui():
         demo.load(
             fn=None,
             js="""() => {
-                // ── 1. Button gradient colors ──
-                var READ_BLUE_BG   = 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
-                var READ_BLUE_SH   = '0 4px 16px rgba(37,99,235,0.55)';
-                var READ_ORANGE_BG = 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)';
-                var READ_ORANGE_SH = '0 4px 18px rgba(234,88,12,0.6)';
+                // ── 0. Inject all CSS for read button + user bubbles ──
+                var _css = document.createElement('style');
+                _css.textContent = [
+                    '#read-btn button {',
+                    '  font-size: 0 !important;',
+                    '  position: relative !important;',
+                    '  background: linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important;',
+                    '  box-shadow: 0 4px 16px rgba(37,99,235,0.55) !important;',
+                    '  color: #fff !important;',
+                    '  border: none !important;',
+                    '  font-weight: 700 !important;',
+                    '  border-radius: 8px !important;',
+                    '  letter-spacing: 0.4px !important;',
+                    '  text-shadow: 0 1px 3px rgba(0,0,0,0.35) !important;',
+                    '}',
+                    '#read-btn button::before {',
+                    '  content: "Read";',
+                    '  font-size: 14px;',
+                    '  font-weight: 700;',
+                    '  color: #fff;',
+                    '  position: absolute;',
+                    '  inset: 0;',
+                    '  display: flex;',
+                    '  align-items: center;',
+                    '  justify-content: center;',
+                    '  pointer-events: none;',
+                    '}',
+                    '#read-btn.playing button {',
+                    '  background: linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important;',
+                    '  box-shadow: 0 4px 18px rgba(234,88,12,0.6) !important;',
+                    '}',
+                    '#read-btn.playing button::before {',
+                    '  content: "Stop";',
+                    '}',
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .bubble-wrap > *,',
+                    '.chatbot-wrap [data-testid="user"] > div,',
+                    '.chatbot-wrap .role-user .message,',
+                    '.chatbot-wrap .user-row .message-bubble {',
+                    '  background: #3b82f6 !important;',
+                    '  color: #000 !important;',
+                    '  border-radius: 12px !important;',
+                    '}',
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble p,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble span,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .prose,',
+                    '.chatbot-wrap .message-row:not(.bot-row) .prose p,',
+                    '.chatbot-wrap [data-testid="user"] p,',
+                    '.chatbot-wrap .role-user p,',
+                    '.chatbot-wrap .user-row p,',
+                    '.chatbot-wrap .user-row span {',
+                    '  color: #000 !important;',
+                    '}'
+                ].join('\\n');
+                document.head.appendChild(_css);
+
+                // ── 1. Button gradient colors (all except read-btn) ──
                 var STYLE_RULES = [
                     { id:'ask-btn',       bg:'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)', sh:'0 4px 18px rgba(124,92,252,0.55)' },
                     { id:'file-upload',   bg:'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)', sh:'0 4px 18px rgba(14,165,233,0.55)' },
@@ -428,15 +480,6 @@ def build_ui():
                         var el = wrap.querySelector('button') || wrap.querySelector('label') || wrap;
                         styleEl(el, STYLE_RULES[i].bg, STYLE_RULES[i].sh);
                     }
-                    var rb = document.getElementById('read-btn');
-                    if (rb) {
-                        var rBtn = rb.querySelector('button');
-                        if (rBtn) {
-                            var p = !!window._ttsPlaying;
-                            styleEl(rBtn, p ? READ_ORANGE_BG : READ_BLUE_BG,
-                                         p ? READ_ORANGE_SH : READ_BLUE_SH);
-                        }
-                    }
                 }
                 setTimeout(applyColors, 150);
                 setTimeout(applyColors, 700);
@@ -464,10 +507,6 @@ def build_ui():
                 }, true);
 
                 // ── 3. Auto-scroll chat ──
-                // Scrolls to bottom when new answer arrives.
-                // User can scroll up freely; auto-scroll resumes when a
-                // new message element is added (childList mutation on direct
-                // message container) or user scrolls back near bottom.
                 function attachChatScroller() {
                     var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return false;
@@ -507,17 +546,14 @@ def build_ui():
                     }, 300);
                 }
 
-                // ── 4. TTS toggle: Read (blue) / Stop (orange) — instant ──
+                // ── 4. TTS toggle via CSS class (no textContent, no inline styles) ──
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 window._ttsSetBtn  = function(playing) {
-                    var b = document.getElementById('read-btn');
-                    if (b) b = b.querySelector('button');
-                    if (!b) return;
-                    var want = playing ? 'Stop' : 'Read';
-                    if (b.textContent.trim() !== want) b.textContent = want;
-                    styleEl(b, playing ? READ_ORANGE_BG : READ_BLUE_BG,
-                               playing ? READ_ORANGE_SH : READ_BLUE_SH);
+                    var wrap = document.getElementById('read-btn');
+                    if (!wrap) return;
+                    if (playing) { wrap.classList.add('playing'); }
+                    else { wrap.classList.remove('playing'); }
                 };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
@@ -537,31 +573,6 @@ def build_ui():
                         window.speechSynthesis.speak(utt);
                     }
                 };
-
-                // ── 5. User question bubbles: black text on blue background ──
-                var _userStyle = document.createElement('style');
-                _userStyle.textContent = [
-                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble,',
-                    '.chatbot-wrap .message-row:not(.bot-row) .bubble-wrap > *,',
-                    '.chatbot-wrap [data-testid="user"] > div,',
-                    '.chatbot-wrap .role-user .message,',
-                    '.chatbot-wrap .user-row .message-bubble {',
-                    '  background: #3b82f6 !important;',
-                    '  color: #000 !important;',
-                    '  border-radius: 12px !important;',
-                    '}',
-                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble p,',
-                    '.chatbot-wrap .message-row:not(.bot-row) .message-bubble span,',
-                    '.chatbot-wrap .message-row:not(.bot-row) .prose,',
-                    '.chatbot-wrap .message-row:not(.bot-row) .prose p,',
-                    '.chatbot-wrap [data-testid="user"] p,',
-                    '.chatbot-wrap .role-user p,',
-                    '.chatbot-wrap .user-row p,',
-                    '.chatbot-wrap .user-row span {',
-                    '  color: #000 !important;',
-                    '}'
-                ].join('\\n');
-                document.head.appendChild(_userStyle);
             }"""
         )
         file_upload.upload(
