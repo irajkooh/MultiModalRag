@@ -275,7 +275,12 @@ _UI_CSS = """
     .main-col {max-width: 900px; margin: 0 auto;}
     .chatbot-wrap {background: #181c24; border-radius: 12px;}
     .gradio-container {background: #10131a;}
-
+    #ask-btn { min-width: 48px !important; }
+    #read-btn { min-width: 80px !important; }
+    #copy-btn, #clear-chat-btn { min-width: 48px !important; }
+    @media (max-width: 600px) {
+        #msg-input-wrap { min-width: 0 !important; flex: 1 1 0 !important; }
+    }
 """
 
 
@@ -308,9 +313,9 @@ def build_ui():
               )
               submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
-              read_btn       = gr.Button("🔊 Read",      elem_id="read-btn",       scale=1)
-              copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
-              clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
+              read_btn       = gr.Button("🔊 Read", elem_id="read-btn",       scale=2)
+              copy_btn       = gr.Button("📋 Copy", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
+              clear_chat_btn = gr.Button("🗑 Clear", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
               n_results_slider = gr.Slider(
                 minimum=1, maximum=10, value=5, step=1,
@@ -466,7 +471,11 @@ def build_ui():
                 }
                 function applyColors() {
                     document.querySelectorAll('button').forEach(el => {
-                        if (el.closest('#read-btn')) return; // fully managed by _ttsToggle
+                        if (el.closest('#read-btn')) {
+                            // Re-apply correct color after any Gradio re-render
+                            if (!window._ttsPlaying) _ttsSetBtn(false);
+                            return;
+                        }
                         const text = el.textContent.trim();
                         for (const rule of STYLE_RULES) {
                             if (rule.match(text)) { styleEl(el, rule); break; }
@@ -546,6 +555,9 @@ def build_ui():
                         ? '0 4px 18px rgba(234,88,12,0.6)'
                         : '0 4px 16px rgba(37,99,235,0.55)';
                 }
+                // Apply initial blue color once button is in DOM
+                setTimeout(() => _ttsSetBtn(false), 300);
+                setTimeout(() => _ttsSetBtn(false), 900);
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
                     if (window._ttsPlaying) {
