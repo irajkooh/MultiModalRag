@@ -411,7 +411,7 @@ def build_ui():
                       bg:'linear-gradient(135deg,#059669 0%,#34d399 100%)', sh:'0 4px 16px rgba(5,150,105,0.5)' },
                     { match: t => t.includes('Clear'),
                       bg:'linear-gradient(135deg,#dc2626 0%,#f87171 100%)', sh:'0 4px 16px rgba(220,38,38,0.5)' },
-                    { match: t => t.includes('Remove selected') || t.includes('Remove\nselected'),
+                    { match: t => t.includes('Remove selected'),
                       bg:'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)', sh:'0 4px 16px rgba(239,68,68,0.5)' },
                     { match: t => t.includes('Remove ALL') || t.includes('Yes, remove all'),
                       bg:'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)', sh:'0 4px 18px rgba(127,29,29,0.65)' },
