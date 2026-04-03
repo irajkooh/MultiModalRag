@@ -521,7 +521,7 @@ def build_ui():
                     var b = document.getElementById('read-btn');
                     if (b) b = b.querySelector('button');
                     if (!b) return;
-                    var label = playing ? '\u23f9 Stop' : '\ud83d\udd0a Read';
+                    var label = playing ? String.fromCodePoint(0x23f9)+' Stop' : String.fromCodePoint(0x1f50a)+' Read';
                     if (b.textContent.trim() !== label) b.textContent = label;
                     styleEl(b, playing ? READ_ORANGE_BG : READ_BLUE_BG,
                                playing ? READ_ORANGE_SH : READ_BLUE_SH);
