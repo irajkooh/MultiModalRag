@@ -272,17 +272,36 @@ def get_chat_for_copy(history):
 
 _UI_THEME = gr.themes.Soft()
 _UI_CSS = """
-    .main-col {max-width: 900px; margin: 0 auto;}
-    .chatbot-wrap {background: #181c24; border-radius: 12px;}
-    .gradio-container {background: #10131a;}
-    /* Read button label via CSS ::before — Svelte cannot reset CSS content */
-    #read-btn button { font-size: 0 !important; position: relative !important; }
+    .main-col  { max-width: 900px; margin: 0 auto; }
+    .chatbot-wrap { background: #181c24; border-radius: 12px; }
+    .gradio-container { background: #10131a; }
+
+    /* ── All button base styles via ID — permanent, Svelte cannot remove CSS rules ── */
+    button { color:#fff !important; border:none !important; font-weight:700 !important;
+             border-radius:8px !important; letter-spacing:0.4px !important;
+             text-shadow:0 1px 3px rgba(0,0,0,0.35) !important;
+             transition: transform .08s ease, opacity .08s ease !important; }
+
+    #ask-btn       button { background:linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%) !important; box-shadow:0 4px 18px rgba(124,92,252,0.55) !important; }
+    #read-btn      button { background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%) !important; box-shadow:0 4px 16px rgba(37,99,235,0.55) !important; font-size:0 !important; position:relative !important; }
+    #copy-btn      button { background:linear-gradient(135deg,#059669 0%,#34d399 100%) !important; box-shadow:0 4px 16px rgba(5,150,105,0.5) !important; }
+    #clear-chat-btn button { background:linear-gradient(135deg,#dc2626 0%,#f87171 100%) !important; box-shadow:0 4px 16px rgba(220,38,38,0.5) !important; }
+    #delete-btn    button { background:linear-gradient(135deg,#ef4444 0%,#fca5a5 100%) !important; box-shadow:0 4px 16px rgba(239,68,68,0.5) !important; }
+    #delete-all-btn button { background:linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%) !important; box-shadow:0 4px 18px rgba(127,29,29,0.65) !important; }
+    #refresh-btn   button { background:linear-gradient(135deg,#4338ca 0%,#818cf8 100%) !important; box-shadow:0 4px 16px rgba(67,56,202,0.5) !important; }
+    #add-url-btn   button { background:linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%) !important; box-shadow:0 4px 16px rgba(13,148,136,0.5) !important; }
+    #confirm-yes-btn button { background:linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%) !important; box-shadow:0 4px 18px rgba(127,29,29,0.65) !important; }
+    #confirm-no-btn  button { background:linear-gradient(135deg,#374151 0%,#6b7280 100%) !important; box-shadow:0 2px 10px rgba(107,114,128,0.4) !important; }
+    #file-upload label, #file-upload button { background:linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%) !important; box-shadow:0 4px 18px rgba(14,165,233,0.55) !important; color:#fff !important; font-weight:700 !important; border-radius:8px !important; }
+
+    /* Read button label via ::before — toggled by data-tts attribute set by JS */
     #read-btn button::before {
-        content: '🔊 Read'; font-size: 14px; font-weight: 700; color: #fff;
-        position: absolute; inset: 0; display: flex;
-        align-items: center; justify-content: center; pointer-events: none;
+        content:'🔊 Read'; font-size:14px; font-weight:700; color:#fff;
+        position:absolute; inset:0; display:flex;
+        align-items:center; justify-content:center; pointer-events:none;
     }
-    #read-btn button[data-tts="1"]::before { content: '⏹ Stop'; }
+    #read-btn button[data-tts="1"] { background:linear-gradient(135deg,#ea580c 0%,#fb923c 100%) !important; box-shadow:0 4px 18px rgba(234,88,12,0.6) !important; }
+    #read-btn button[data-tts="1"]::before { content:'⏹ Stop'; }
 """
 
 
@@ -401,112 +420,7 @@ def build_ui():
         demo.load(
             fn=None,
             js="""() => {
-                // 1. Hover CSS (inline styles handle base colors; CSS handles hover)
-                const s = document.createElement('style');
-                s.textContent = `
-                    #copy-btn button:hover       { background:#059669!important; }
-                    #clear-chat-btn button:hover { background:#dc2626!important; }
-                    #delete-btn button:hover     { background:#dc2626!important; }
-                    #delete-all-btn button:hover { background:#991b1b!important; }
-                    #refresh-btn button:hover    { background:#4f46e5!important; }
-                    button { transition: transform .08s ease, opacity .08s ease !important; }
-                `;
-                document.head.appendChild(s);
-
-                // 2. Artistic gradient + glow styles per button
-                const STYLE_RULES = [
-                    {
-                        match: t => t === 'Ask →',
-                        bg:  'linear-gradient(135deg,#7c5cfc 0%,#a78bfa 100%)',
-                        sh:  '0 4px 18px rgba(124,92,252,0.55)',
-                    },
-                    {
-                        match: t => t.includes('Upload') && t.includes('Files'),
-                        bg:  'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)',
-                        sh:  '0 4px 18px rgba(14,165,233,0.55)',
-                    },
-                    {
-                        match: t => t.includes('Copy Chat'),
-                        bg:  'linear-gradient(135deg,#059669 0%,#34d399 100%)',
-                        sh:  '0 4px 16px rgba(5,150,105,0.5)',
-                    },
-                    {
-                        match: t => t.includes('Clear Chat'),
-                        bg:  'linear-gradient(135deg,#dc2626 0%,#f87171 100%)',
-                        sh:  '0 4px 16px rgba(220,38,38,0.5)',
-                    },
-                    {
-                        match: t => t.includes('Remove') && t.includes('selected'),
-                        bg:  'linear-gradient(135deg,#ef4444 0%,#fca5a5 100%)',
-                        sh:  '0 4px 16px rgba(239,68,68,0.5)',
-                    },
-                    {
-                        match: t => t.includes('Remove ALL') || t.includes('Yes, remove all'),
-                        bg:  'linear-gradient(135deg,#7f1d1d 0%,#b91c1c 100%)',
-                        sh:  '0 4px 18px rgba(127,29,29,0.65)',
-                    },
-                    {
-                        match: t => t.includes('Refresh'),
-                        bg:  'linear-gradient(135deg,#4338ca 0%,#818cf8 100%)',
-                        sh:  '0 4px 16px rgba(67,56,202,0.5)',
-                    },
-                    {
-                        match: t => t.includes('Add URL'),
-                        bg:  'linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%)',
-                        sh:  '0 4px 16px rgba(13,148,136,0.5)',
-                    },
-                    {
-                        match: t => t.includes('Cancel'),
-                        bg:  'linear-gradient(135deg,#374151 0%,#6b7280 100%)',
-                        sh:  '0 2px 10px rgba(107,114,128,0.4)',
-                    },
-                ];
-                function styleEl(el, rule) {
-                    el.style.setProperty('background',   rule.bg, 'important');
-                    el.style.setProperty('box-shadow',   rule.sh, 'important');
-                    el.style.setProperty('color',        '#fff',  'important');
-                    el.style.setProperty('border',       'none',  'important');
-                    el.style.setProperty('font-weight',  '700',   'important');
-                    el.style.setProperty('border-radius','8px',   'important');
-                    el.style.setProperty('letter-spacing','0.4px','important');
-                    el.style.setProperty('text-shadow',  '0 1px 3px rgba(0,0,0,0.35)', 'important');
-                }
-                function applyColors() {
-                    document.querySelectorAll('button').forEach(el => {
-                        if (el.closest('#read-btn')) {
-                            // Re-apply correct color after any Gradio re-render
-                            if (!window._ttsPlaying) _ttsSetBtn(false);
-                            return;
-                        }
-                        const text = el.textContent.trim();
-                        for (const rule of STYLE_RULES) {
-                            if (rule.match(text)) { styleEl(el, rule); break; }
-                        }
-                    });
-                    // UploadButton may render as <label> — handle by ID
-                    const upWrap = document.getElementById('file-upload');
-                    if (upWrap) {
-                        const upEl = (upWrap.tagName === 'BUTTON' || upWrap.tagName === 'LABEL')
-                            ? upWrap : upWrap.querySelector('button, label');
-                        if (upEl) styleEl(upEl, {
-                            bg: 'linear-gradient(135deg,#0ea5e9 0%,#38bdf8 100%)',
-                            sh: '0 4px 18px rgba(14,165,233,0.55)',
-                        });
-                    }
-                }
-                setTimeout(applyColors, 150);
-                setTimeout(applyColors, 700);
-                setInterval(applyColors, 2000);  // permanent safety net
-
-                // 3. MutationObserver: re-apply colors immediately after any Gradio re-render
-                let _t = null;
-                const obs = new MutationObserver(() => {
-                    if (_t) clearTimeout(_t);
-                    _t = setTimeout(applyColors, 50);
-                });
-                obs.observe(document.body, { childList: true, subtree: true });
-
-                // 4. Click feedback via mousedown/mouseup (CSS :active unreliable in Svelte)
+                // 1. Click press feedback
                 document.addEventListener('mousedown', (e) => {
                     const btn = e.target.closest('button');
                     if (!btn) return;
@@ -522,20 +436,15 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // 5. Auto-scroll chatbot to bottom as tokens stream in
+                // 2. Auto-scroll chatbot
                 function attachChatScroller() {
-                    // Gradio renders the scrollable chatbot as a div with overflow-y:auto/scroll
                     const chatWrap = document.querySelector('.chatbot-wrap .overflow-y-auto')
-                                  || document.querySelector('.chatbot-wrap [data-testid="bot"]')
                                   || document.querySelector('.chatbot-wrap');
                     if (!chatWrap) return false;
-                    const chatObs = new MutationObserver(() => {
-                        chatWrap.scrollTop = chatWrap.scrollHeight;
-                    });
-                    chatObs.observe(chatWrap, { childList: true, subtree: true, characterData: true });
+                    new MutationObserver(() => { chatWrap.scrollTop = chatWrap.scrollHeight; })
+                        .observe(chatWrap, { childList: true, subtree: true, characterData: true });
                     return true;
                 }
-                // Try immediately, then retry until the chatbot is rendered
                 if (!attachChatScroller()) {
                     let tries = 0;
                     const t = setInterval(() => {
@@ -543,36 +452,28 @@ def build_ui():
                     }, 300);
                 }
 
-                // 6. TTS — fully JS-owned via gr.HTML button (no Gradio/Svelte involvement)
+                // 3. TTS — data-tts attribute drives CSS color+label (no textContent changes)
                 window._ttsText    = null;
                 window._ttsPlaying = false;
-                function _ttsSetBtn(playing) {
+                window._ttsSetBtn  = function(playing) {
                     const b = document.getElementById('read-btn')?.querySelector('button');
                     if (!b) return;
-                    // Label via dataset.tts → CSS ::before (no textContent → no MutationObserver loop)
                     if (playing) b.dataset.tts = '1'; else delete b.dataset.tts;
-                    // Color via inline style
-                    b.style.background = playing
-                        ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
-                        : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)';
-                    b.style.boxShadow = playing
-                        ? '0 4px 18px rgba(234,88,12,0.6)'
-                        : '0 4px 16px rgba(37,99,235,0.55)';
-                }
+                };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
                     if (window._ttsPlaying) {
                         window.speechSynthesis.cancel();
                         window._ttsPlaying = false;
-                        _ttsSetBtn(false);
+                        window._ttsSetBtn(false);
                     } else if (window._ttsText) {
                         window.speechSynthesis.cancel();
                         const utt = new SpeechSynthesisUtterance(window._ttsText);
                         window._ttsPlaying = true;
-                        _ttsSetBtn(true);
+                        window._ttsSetBtn(true);
                         utt.onend = () => {
                             window._ttsPlaying = false;
-                            _ttsSetBtn(false);
+                            window._ttsSetBtn(false);
                         };
                         window.speechSynthesis.speak(utt);
                     }
