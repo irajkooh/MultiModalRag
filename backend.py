@@ -145,7 +145,7 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(500, f"Indexing failed: {str(e)}")
 
 
-@app.delete("/documents/{filename}")
+@app.delete("/documents/{filename:path}")
 async def delete_document(filename: str):
     """Remove a document's embeddings from the vector store only (file kept on disk)."""
     removed_chunks = vs.remove_document(filename)

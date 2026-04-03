@@ -107,11 +107,12 @@ def upload_files(files):
 
 
 def delete_document(filenames):
+    import urllib.parse
     if not filenames:
         return "Please select at least one document."
     messages = []
     for filename in filenames:
-        resp = api_delete(f"/documents/{filename}")
+        resp = api_delete(f"/documents/{urllib.parse.quote(filename, safe='')}")
         if "error" in resp:
             messages.append(f"❌ {filename}: {resp['error']}")
         else:
@@ -275,14 +276,13 @@ _UI_CSS = """
     .main-col  { max-width: 900px; margin: 0 auto; }
     .chatbot-wrap { background: #181c24; border-radius: 12px; }
     .gradio-container { background: #10131a; }
-    /* Read button: font-size:0 hides Svelte text; ::before + data-tts drives label+color */
-    #read-btn button { font-size:0 !important; position:relative !important; }
-    #read-btn button::before {
-        content:'🔊 Read'; font-size:14px; font-weight:700; color:#fff;
-        position:absolute; inset:0; display:flex;
-        align-items:center; justify-content:center; pointer-events:none;
-    }
-    #read-btn button[data-tts="1"]::before { content:'⏹ Stop'; }
+    /* User (question) messages — distinct blue */
+    .chatbot-wrap .user-row .prose,
+    .chatbot-wrap .user .prose,
+    .chatbot-wrap .user-row p,
+    .chatbot-wrap .user p,
+    .chatbot-wrap [data-role="user"] p,
+    .chatbot-wrap [data-role="user"] .prose { color: #60a5fa !important; }
 """
 
 
@@ -316,8 +316,8 @@ def build_ui():
               submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
             with gr.Row():
               read_btn       = gr.Button("🔊 Read", elem_id="read-btn",       scale=2)
-              copy_btn       = gr.Button("📋 Copy", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
-              clear_chat_btn = gr.Button("🗑 Clear", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
+              copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
+              clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
               n_results_slider = gr.Slider(
                 minimum=1, maximum=10, value=5, step=1,
@@ -435,7 +435,7 @@ def build_ui():
                 function applyColors() {
                     document.querySelectorAll('button').forEach(el => {
                         if (el.closest('#read-btn')) {
-                            if (window._ttsSetBtn && !window._ttsPlaying) window._ttsSetBtn(false);
+                            if (window._ttsSetBtn) window._ttsSetBtn(!!window._ttsPlaying);
                             return;
                         }
                         const text = el.textContent.trim();
@@ -474,13 +474,22 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // 2. Auto-scroll chatbot
+                // 2. Auto-scroll chatbot — find the actual scrollable div inside
                 function attachChatScroller() {
-                    const chatWrap = document.querySelector('.chatbot-wrap .overflow-y-auto')
-                                  || document.querySelector('.chatbot-wrap');
-                    if (!chatWrap) return false;
-                    new MutationObserver(() => { chatWrap.scrollTop = chatWrap.scrollHeight; })
-                        .observe(chatWrap, { childList: true, subtree: true, characterData: true });
+                    const chatEl = document.querySelector('.chatbot-wrap');
+                    if (!chatEl) return false;
+                    let scrollEl = null;
+                    function doScroll() {
+                        if (!scrollEl || scrollEl.scrollHeight <= scrollEl.clientHeight) {
+                            chatEl.querySelectorAll('div').forEach(d => {
+                                if (d.scrollHeight > d.clientHeight + 10) scrollEl = d;
+                            });
+                        }
+                        if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+                    }
+                    new MutationObserver(doScroll).observe(chatEl, {
+                        childList: true, subtree: true, characterData: true
+                    });
                     return true;
                 }
                 if (!attachChatScroller()) {
@@ -490,14 +499,14 @@ def build_ui():
                     }, 300);
                 }
 
-                // 3. TTS — data-tts attribute drives CSS color+label (no textContent changes)
+                // 3. TTS — textContent (with guard) + inline styles for label+color toggle
                 window._ttsText    = null;
                 window._ttsPlaying = false;
                 window._ttsSetBtn  = function(playing) {
                     const b = document.getElementById('read-btn')?.querySelector('button');
                     if (!b) return;
-                    if (playing) b.dataset.tts = '1'; else delete b.dataset.tts;
-                    // Inline style as backup in case CSS specificity is beaten by Gradio theme
+                    var label = playing ? '⏹ Stop' : '🔊 Read';
+                    if (b.textContent.trim() !== label) b.textContent = label;
                     b.style.setProperty('background', playing
                         ? 'linear-gradient(135deg,#ea580c 0%,#fb923c 100%)'
                         : 'linear-gradient(135deg,#2563eb 0%,#60a5fa 100%)', 'important');
@@ -508,6 +517,8 @@ def build_ui():
                     b.style.setProperty('border', 'none', 'important');
                     b.style.setProperty('font-weight', '700', 'important');
                     b.style.setProperty('border-radius', '8px', 'important');
+                    b.style.setProperty('letter-spacing', '0.4px', 'important');
+                    b.style.setProperty('text-shadow', '0 1px 3px rgba(0,0,0,0.35)', 'important');
                 };
                 window._ttsToggle = function() {
                     if (!window.speechSynthesis) return;
