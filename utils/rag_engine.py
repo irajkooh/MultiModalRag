@@ -2,8 +2,10 @@
 RAG engine: retrieves relevant context from vector store,
 builds a strict prompt, and queries the LLM.
 
-- If GROQ_API_KEY env var is set → uses Groq API (fast cloud LPU)
-- Otherwise → uses Ollama (local)
+Backend priority:
+1. HF_TOKEN set → HuggingFace Inference API (free, no daily token limit)
+2. GROQ_API_KEY set → Groq API (fast but 100K tokens/day free limit)
+3. Otherwise → Ollama (local)
 """
 import os
 import logging
@@ -16,11 +18,20 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_OLLAMA_MODEL = "llama3.2"
 DEFAULT_GROQ_MODEL   = "llama-3.3-70b-versatile"
+DEFAULT_HF_MODEL     = "meta-llama/Llama-3.1-8B-Instruct"
 
+HF_TOKEN     = os.environ.get("HF_TOKEN")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-USE_GROQ     = bool(GROQ_API_KEY)
 
-OLLAMA_HOST  = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+# Pick backend: HF first (free unlimited), then Groq, then Ollama
+if HF_TOKEN:
+    BACKEND = "hf"
+elif GROQ_API_KEY:
+    BACKEND = "groq"
+else:
+    BACKEND = "ollama"
+
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 SYSTEM_PROMPT = """You are a document assistant. Answer questions using ONLY the [CONTEXT] provided.
 Rules:
@@ -36,9 +47,12 @@ If you don't know the answer, say so honestly.
 """
 
 # Cosine distance threshold (0=identical, 2=opposite).
-# If ALL retrieved chunks score above this, the question is off-topic
-# and we fall back to a general (non-grounded) LLM response.
 RELEVANCE_THRESHOLD = 1.2
+
+
+def _make_hf_client():
+    from huggingface_hub import InferenceClient
+    return InferenceClient(token=HF_TOKEN)
 
 
 def _make_groq_client():
@@ -54,12 +68,16 @@ def _make_ollama_client():
 class RAGEngine:
     def __init__(self, vector_store: VectorStoreManager, model: str = None):
         self.vs = vector_store
-        if USE_GROQ:
-            self.model  = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
+        if BACKEND == "hf":
+            self.model = os.environ.get("HF_MODEL", DEFAULT_HF_MODEL)
+            self._client = _make_hf_client()
+            logger.info(f"LLM backend: HuggingFace Inference ({self.model})")
+        elif BACKEND == "groq":
+            self.model = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
             self._client = _make_groq_client()
             logger.info(f"LLM backend: Groq ({self.model})")
         else:
-            self.model  = model or os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
+            self.model = model or os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
             self._client = _make_ollama_client()
             logger.info(f"LLM backend: Ollama ({self.model})")
 
@@ -90,7 +108,6 @@ class RAGEngine:
         ]
 
     def _is_off_topic(self, results: List[Dict[str, Any]]) -> bool:
-        """Return True if no retrieved chunk is relevant enough to ground the answer."""
         if not results:
             return True
         return all(r.get("distance", 1.0) > RELEVANCE_THRESHOLD for r in results)
@@ -113,7 +130,6 @@ class RAGEngine:
         results = self.vs.query(question, n_results=n_results)
 
         if self._is_off_topic(results):
-            # No relevant documents — answer as a general assistant
             logger.info(f"Off-topic query (no relevant chunks): '{question[:60]}'")
             messages = self._build_general_messages(question, memory)
         else:
@@ -121,14 +137,29 @@ class RAGEngine:
             messages = self._build_messages(question, context, memory)
 
         try:
-            if USE_GROQ:
+            if BACKEND == "hf":
+                yield from self._query_hf(messages, memory, question, temperature, stream)
+            elif BACKEND == "groq":
                 yield from self._query_groq(messages, memory, question, temperature, stream)
             else:
                 yield from self._query_ollama(messages, memory, question, temperature, stream)
         except Exception as e:
-            error_msg = f"⚠️ Error: {str(e)}"
+            error_msg = f"Error: {str(e)}"
             logger.error(error_msg, exc_info=True)
             yield error_msg
+
+    def _query_hf(self, messages, memory, question, temperature, stream):
+        # HuggingFace Inference API — OpenAI-compatible chat completions
+        resp = self._client.chat_completion(
+            model=self.model,
+            messages=messages,
+            temperature=max(temperature, 0.01),
+            max_tokens=2048,
+        )
+        answer = resp.choices[0].message.content
+        memory.add("user", question)
+        memory.add("assistant", answer)
+        yield answer
 
     def _query_groq(self, messages, memory, question, temperature, stream):
         if stream:
@@ -146,7 +177,7 @@ class RAGEngine:
             memory.add("user", question)
             memory.add("assistant", response_text)
         else:
-            resp   = self._client.chat.completions.create(
+            resp = self._client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
@@ -157,7 +188,6 @@ class RAGEngine:
             yield answer
 
     def _query_ollama(self, messages, memory, question, temperature, stream):
-        import ollama as _ollama
         if stream:
             response_text = ""
             stream_resp = self._client.chat(
@@ -184,10 +214,4 @@ class RAGEngine:
             yield answer
 
     def list_available_models(self) -> List[str]:
-        if USE_GROQ:
-            return [self.model]
-        try:
-            models = self._client.list()
-            return [m["name"] for m in models.get("models", [])]
-        except Exception:
-            return [self.model]
+        return [self.model]

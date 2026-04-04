@@ -57,6 +57,13 @@ def device_info() -> dict:
     if label_override:
         return {"device": "override", "label": label_override}
 
+    # HuggingFace Inference API (free, no daily limit)
+    if os.environ.get("HF_TOKEN"):
+        hf_model = os.environ.get("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+        label = f"HuggingFace ({hf_model.split('/')[-1]})"
+        logger.info(f"Device info: {label}")
+        return {"device": "hf", "label": label}
+
     # Groq: LLM runs on Groq cloud, not local hardware
     if os.environ.get("GROQ_API_KEY"):
         groq_model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from utils.document_processor import process_document_chunked, SUPPORTED_EXTENSIONS
 from utils.vector_store import VectorStoreManager
-from utils.rag_engine import RAGEngine, USE_GROQ
+from utils.rag_engine import RAGEngine, BACKEND
 from utils.memory import ConversationMemory, estimate_tokens
 from utils.device import device_info
 

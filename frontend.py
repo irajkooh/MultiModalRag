@@ -33,7 +33,7 @@ def start_keep_alive_scheduler(space_url: str):
     return scheduler
 
 API_BASE     = os.environ.get("API_BASE", "http://localhost:8000")
-_LLM_BACKEND = "Groq" if os.environ.get("GROQ_API_KEY") else "Ollama"
+_LLM_BACKEND = "HuggingFace" if os.environ.get("HF_TOKEN") else ("Groq" if os.environ.get("GROQ_API_KEY") else "Ollama")
 
 def api_get(path: str, timeout: int = 10):
   try:
