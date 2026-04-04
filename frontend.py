@@ -33,7 +33,7 @@ def start_keep_alive_scheduler(space_url: str):
     return scheduler
 
 API_BASE     = os.environ.get("API_BASE", "http://localhost:8000")
-_LLM_BACKEND = "HuggingFace" if os.environ.get("HF_TOKEN") else ("Groq" if os.environ.get("GROQ_API_KEY") else "Ollama")
+
 
 def api_get(path: str, timeout: int = 10):
   try:
@@ -276,12 +276,12 @@ def build_ui():
     with gr.Blocks(title="Multimodal RAG") as demo:
         with gr.Row():
             with gr.Column(elem_classes="main-col"):
-                docs, files, status_msg, model, device = get_status()
-                gr.Markdown(f"""
-                # 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>
-                <span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>
-                <br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span> <span style='color:#7c5cfc;font-weight:bold;'>Powered by {_LLM_BACKEND} + ChromaDB</span>
-                """, elem_id="header")
+                header_md = gr.Markdown(
+                    "# 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>\n"
+                    "<span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>\n"
+                    "<br><span style='color:#ff9800;font-weight:bold;'>| Loading... |</span>",
+                    elem_id="header",
+                )
         with gr.Tabs(selected=0) as tabs:
           with gr.TabItem("💬 Chat"):
             chatbot = gr.Chatbot(
@@ -358,17 +358,26 @@ def build_ui():
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
 
+        def _header_html(model, device):
+          return (
+            "# 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>\n"
+            "<span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>\n"
+            f"<br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span>"
+            " <span style='color:#7c5cfc;font-weight:bold;'>Powered by ChromaDB</span>"
+          )
+
         def refresh_and_update():
           docs, files, status_msg, model, device = get_status()
           return (
             gr.update(choices=docs or [], value=None),
             status_msg,
             gr.update(interactive=True),
+            _header_html(model, device),
           )
 
         demo.load(
             fn=refresh_and_update,
-            outputs=[doc_list, status_text, submit_btn],
+            outputs=[doc_list, status_text, submit_btn, header_md],
         )
         # Unlock Web Speech API for mobile (iOS Safari blocks speechSynthesis
         # from async callbacks unless speak() is called once in a direct user gesture first)
@@ -537,22 +546,22 @@ def build_ui():
         file_upload.upload(
             fn=lambda files: (upload_files(files), *refresh_and_update()),
             inputs=[file_upload],
-            outputs=[upload_status, doc_list, status_text, submit_btn],
+            outputs=[upload_status, doc_list, status_text, submit_btn, header_md],
         )
         add_url_btn.click(
             fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
             inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn, url_input],
+            outputs=[upload_status, doc_list, status_text, submit_btn, header_md, url_input],
         )
         url_input.submit(
             fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
             inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn, url_input],
+            outputs=[upload_status, doc_list, status_text, submit_btn, header_md, url_input],
         )
         delete_btn.click(
           fn=lambda doc: (delete_document(doc), *refresh_and_update()),
           inputs=[doc_list],
-          outputs=[delete_status, doc_list, status_text, submit_btn],
+          outputs=[delete_status, doc_list, status_text, submit_btn, header_md],
         )
         # Show confirmation row when Remove ALL is clicked
         delete_all_btn.click(
@@ -562,7 +571,7 @@ def build_ui():
         # Confirm: execute delete, hide confirmation row
         confirm_yes_btn.click(
           fn=lambda: (gr.update(visible=False), delete_all_embeddings(), *refresh_and_update()),
-          outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn],
+          outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn, header_md],
         )
         # Cancel: just hide the confirmation row
         confirm_no_btn.click(
@@ -571,7 +580,7 @@ def build_ui():
         )
         refresh_btn.click(
           fn=refresh_and_update,
-          outputs=[doc_list, status_text, submit_btn],
+          outputs=[doc_list, status_text, submit_btn, header_md],
         )
         def on_submit(message, history, n, temp):
           history = history or []
