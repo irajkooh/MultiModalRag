@@ -167,10 +167,9 @@ def refresh_ui():
 
 
 def chat_fn(message, history, n_results, temperature):
-  """Send query to API, stream response token by token."""
+  """Send query to API, return complete answer (no character streaming)."""
   if not message.strip():
-    yield history, ""
-    return
+    return history, ""
   resp = api_post("/query", json={"question": message, "n_results": n_results, "temperature": temperature}, timeout=480)
   tokens_user = resp.get("tokens_user", 0)
   tokens_assistant = resp.get("tokens_assistant", 0)
@@ -181,7 +180,6 @@ def chat_fn(message, history, n_results, temperature):
     sources = resp.get("sources", [])
     if sources:
       answer += f"\n\n📄 *Sources: {', '.join(sources)}*"
-  # Gradio 6.x expects: list of dicts with 'role' and 'content' keys
   history = list(history) if history else []
   if history and isinstance(history[0], tuple):
     new_hist = []
@@ -192,14 +190,8 @@ def chat_fn(message, history, n_results, temperature):
         new_hist.append({"role": "assistant", "content": bot})
     history = new_hist
   history.append({"role": "user", "content": message})
-  history.append({"role": "assistant", "content": ""})
-  displayed = ""
-  for char in answer:
-    displayed += char
-    history[-1]["content"] = displayed
-    yield history, {"tokens_user": tokens_user, "tokens_assistant": tokens_assistant}
-    time.sleep(0.005)
-  yield history, {"tokens_user": tokens_user, "tokens_assistant": tokens_assistant}
+  history.append({"role": "assistant", "content": answer})
+  return history, {"tokens_user": tokens_user, "tokens_assistant": tokens_assistant}
 
 
 def clear_memory():
@@ -583,25 +575,12 @@ def build_ui():
         )
         def on_submit(message, history, n, temp):
           history = history or []
-          last_resp = None
-          tokens_user = 0
-          tokens_assistant = 0
-          first_yield = True
-          for updated_history, _ in chat_fn(message, history, n, temp):
-            if isinstance(_, dict):
-              tokens_user = _.get("tokens_user", 0)
-              tokens_assistant = _.get("tokens_assistant", 0)
-            last_resp = updated_history
-            tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
-            if first_yield:
-              first_yield = False
-              yield updated_history, "", tok_html, ""  # clear _ttsText for new question
-            else:
-              yield updated_history, "", tok_html, gr.update()
-          # Send clean text immediately — speechSynthesis in browser handles it, no server TTS delay
-          tts_text = _clean_for_tts(get_last_answer(last_resp)) if last_resp else ""
+          updated_history, stats = chat_fn(message, history, n, temp)
+          tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
+          tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
+          tts_text = _clean_for_tts(get_last_answer(updated_history)) if updated_history else ""
           tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
-          yield last_resp, "", tok_html, tts_text
+          return updated_history, "", tok_html, tts_text
         submit_btn.click(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
