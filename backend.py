@@ -52,7 +52,7 @@ app.add_middleware(
 # ─── Models ───────────────────────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     question: str
-    n_results: int = 5
+    n_results: int = 8
     temperature: float = 0.0
 
 

@@ -313,7 +313,7 @@ def build_ui():
               clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
               n_results_slider = gr.Slider(
-                minimum=1, maximum=10, value=5, step=1,
+                minimum=1, maximum=15, value=8, step=1,
                 label="Top K (context chunks)",
                 elem_id="topk-slider",
               )
@@ -485,45 +485,19 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // ── 3. Auto-scroll chat ──
-                function attachChatScroller() {
+                // ── 3. Scroll to bottom — called once when answer is complete ──
+                window._scrollChatToBottom = function() {
                     var chatEl = document.querySelector('.chatbot-wrap');
-                    if (!chatEl) return false;
+                    if (!chatEl) return;
                     var scrollEl = null;
-                    var userScrolledUp = false;
-                    var scrollListenerAdded = false;
-                    var prevMsgCount = 0;
-                    function findScrollable() {
-                        var divs = chatEl.querySelectorAll('div');
-                        for (var i = 0; i < divs.length; i++) {
-                            if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
-                        }
-                        if (scrollEl && !scrollListenerAdded) {
-                            scrollListenerAdded = true;
-                            scrollEl.addEventListener('scroll', function() {
-                                var gap = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-                                userScrolledUp = gap > 80;
-                            });
-                        }
+                    var divs = chatEl.querySelectorAll('div');
+                    for (var i = 0; i < divs.length; i++) {
+                        if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
                     }
-                    findScrollable();
-                    new MutationObserver(function() {
-                        if (!scrollEl) { findScrollable(); return; }
-                        var msgCount = chatEl.querySelectorAll('[class*="message"], [class*="row"]').length;
-                        if (msgCount !== prevMsgCount) {
-                            prevMsgCount = msgCount;
-                            userScrolledUp = false;
-                        }
-                        if (!userScrolledUp) scrollEl.scrollTop = scrollEl.scrollHeight;
-                    }).observe(chatEl, { childList: true, subtree: true, characterData: true });
-                    return true;
-                }
-                if (!attachChatScroller()) {
-                    var tries = 0;
-                    var ti = setInterval(function() {
-                        if (attachChatScroller() || ++tries > 20) clearInterval(ti);
-                    }, 300);
-                }
+                    if (scrollEl) {
+                        setTimeout(function() { scrollEl.scrollTop = scrollEl.scrollHeight; }, 50);
+                    }
+                };
 
                 // ── 4. TTS — event delegation on document (immune to re-renders) ──
                 window._ttsText    = null;
@@ -659,6 +633,7 @@ def build_ui():
             window._ttsPlaying = false;
             window._ttsText = val || null;
             if (window._ttsSetBtn) window._ttsSetBtn(false);
+            if (window._scrollChatToBottom) window._scrollChatToBottom();
           }""",
         )
         copy_btn.click(fn=get_chat_for_copy, inputs=[chatbot], outputs=[copy_box])

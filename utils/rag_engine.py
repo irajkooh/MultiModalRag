@@ -23,8 +23,12 @@ USE_GROQ     = bool(GROQ_API_KEY)
 OLLAMA_HOST  = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 SYSTEM_PROMPT = """You are a document assistant. Answer questions using ONLY the [CONTEXT] provided.
-If the answer is not in the context, respond: "I DON'T KNOW"
-Be concise and factual. Cite source and page when available.
+Rules:
+1. If the context contains information relevant to the question, answer from it — even if only partially relevant.
+2. Combine information from multiple context chunks if needed.
+3. Only say "I DON'T KNOW" if the context truly contains NO relevant information at all.
+4. Be concise and factual. Cite source and page when available.
+5. Do NOT make up information that is not in the context.
 """
 
 GENERAL_PROMPT = """You are a helpful AI assistant. Answer the user's question directly and concisely.
@@ -34,7 +38,7 @@ If you don't know the answer, say so honestly.
 # Cosine distance threshold (0=identical, 2=opposite).
 # If ALL retrieved chunks score above this, the question is off-topic
 # and we fall back to a general (non-grounded) LLM response.
-RELEVANCE_THRESHOLD = 0.75
+RELEVANCE_THRESHOLD = 1.2
 
 
 def _make_groq_client():
@@ -102,7 +106,7 @@ class RAGEngine:
         self,
         question: str,
         memory: ConversationMemory,
-        n_results: int = 5,
+        n_results: int = 8,
         temperature: float = 0.0,
         stream: bool = False,
     ) -> Generator[str, None, None]:
