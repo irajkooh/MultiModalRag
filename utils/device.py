@@ -58,7 +58,7 @@ def device_info() -> dict:
         return {"device": "override", "label": label_override}
 
     # HuggingFace Inference API (free, no daily limit)
-    if os.environ.get("HF_TOKEN"):
+    if os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"):
         hf_model = os.environ.get("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
         label = f"HuggingFace ({hf_model.split('/')[-1]})"
         logger.info(f"Device info: {label}")
