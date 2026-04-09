@@ -20,7 +20,7 @@ DEFAULT_OLLAMA_MODEL = "llama3.2"
 DEFAULT_GROQ_MODEL   = "llama-3.3-70b-versatile"
 DEFAULT_HF_MODEL     = "meta-llama/Llama-3.1-8B-Instruct"
 
-HF_TOKEN     = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+HF_TOKEN     = os.environ.get("HF_TOKEN")   # must be explicitly set as a Space secret
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 # Pick backend: HF first (free unlimited), then Groq, then Ollama
