@@ -20,14 +20,15 @@ DEFAULT_OLLAMA_MODEL = "llama3.2"
 DEFAULT_GROQ_MODEL   = "llama-3.3-70b-versatile"
 DEFAULT_HF_MODEL     = "meta-llama/Llama-3.1-8B-Instruct"
 
-HF_TOKEN     = os.environ.get("HF_TOKEN")   # must be explicitly set as a Space secret
+HF_TOKEN     = os.environ.get("HF_TOKEN")   # used for dataset sync only, NOT for LLM routing
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+USE_HF_LLM   = os.environ.get("USE_HF_LLM", "").lower() in ("1", "true", "yes")
 
-# Pick backend: HF first (free unlimited), then Groq, then Ollama
-if HF_TOKEN:
-    BACKEND = "hf"
-elif GROQ_API_KEY:
+# Pick backend: Groq first (fast), then HF Inference (only if USE_HF_LLM=1), then Ollama
+if GROQ_API_KEY:
     BACKEND = "groq"
+elif USE_HF_LLM and HF_TOKEN:
+    BACKEND = "hf"
 else:
     BACKEND = "ollama"
 
