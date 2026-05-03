@@ -1,0 +1,65 @@
+##### plsql commands
+plsql # start postgresql
+
+\l # list databases
+\dt # list tables
+\dx # list installed extensions
+
+###################################
+# https://dev.to/anzaeee/installing-apache-age-and-postgresql-on-macos-32pb
+# https://www.youtube.com/watch?v=0-qMwpDh0CA
+
+brew install zlib
+brew install flex
+brew install bison
+
+##### 1) Installing PostgreSQL from Source Code
+curl -O https://ftp.postgresql.org/pub/source/v11.0/postgresql-11.0.tar.gz && tar -xvf postgresql-11.0.tar.gz && rm -f postgresql-11.0.tar.gz
+
+cd postgresql-11.0
+./configure --enable-debug --enable-cassert --prefix=$(pwd) CFLAGS="-glldb -ggdb -Og -g3 -fno-omit-frame-pointer"
+make install 
+
+# psql (PostgreSQL) 17.4 (Postgres.app)
+psql -V 
+
+##### 2) Installing Apache AGE 
+## AGE is a postgresql extention that transforms text to a GraphDB
+# First make sure you're in a directory of your choice, this can be the same as the folder you chose to install PostgreSQL. clone will create age folder.
+
+git clone https://github.com/apache/age.git
+
+cd age
+# https://stackoverflow.com/questions/75579392/error-while-installing-apache-age-using-make-install
+#git checkout PG12
+
+# sudo make PG_CONFIG=[pathname]/pg_config install;
+# For [pathname], you can first look for the pg_config file that will be present in the bin folder for postgresql. Copy path to pg_config file as a file-path
+# pathname: "/Users/ik/postgresql-11.0/bin/"
+
+#sudo make PG_CONFIG="/Users/ik/postgresql-11.0/bin/pg_config" install; 
+#sudo make PG_CONFIG=/Library/Postgresql/17/bin/pg_config install; 
+
+#export PATH=$PG_CONFIG:/Users/ik/postgresql-11.0/bin/:$PATH
+#sudo make PG_CONFIG=PG_CONFIG install; 
+
+ls ../bin/pg_config 
+sudo make PG_CONFIG="../bin/pg_config" install; 
+#sudo make install
+#make installcheck
+make PG_CONFIG="/Users/ik/postgresql-11.0/bin/pg_config" installcheck;
+
+##### test AGE
+psql
+SELECT * FROM pg_catalog.pg_extension;
+
+# install age extension in psql console
+# https://stackoverflow.com/questions/75264652/unable-to-create-graph-in-postgresql-using-age-extension-despite-following-all
+SELECT * FROM pg_extension WHERE extname = 'age';
+\dx
+create extension age
+# psql -c "SELECT version();
+load 'age';
+# DROP EXTENSION age CASCADE;
+search_path = ag_catalog, "$user", public;
+select create_graph('test_graph');

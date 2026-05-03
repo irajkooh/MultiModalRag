@@ -9,8 +9,8 @@ __pycache__/
 dist/
 build/
 
-# Data & vector store (do not bake into image; populated at runtime)
-data/
+# Vector store is regenerated at runtime from the data files
+# data/ is intentionally included so committed files are baked into the image
 vectorstore/
 .ollama/
 

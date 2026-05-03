@@ -25,8 +25,93 @@ DATA_DIR = os.environ.get("DATA_DIR", "./data")
 VECTORSTORE_DIR = os.environ.get("VECTORSTORE_DIR", "./vectorstore")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
 
+# HF Hub Dataset used for persistent user-uploaded file storage.
+# Set HF_DATASET_REPO (e.g. "yourname/MyApp-data") and HF_TOKEN as Space secrets.
+# Files uploaded via the app are pushed here and re-downloaded on every cold start,
+# so they survive container restarts and redeployments.
+HF_DATASET_REPO = os.environ.get("HF_DATASET_REPO", "")
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(VECTORSTORE_DIR, exist_ok=True)
+
+
+# ─── HF Hub Persistent Storage Helpers ───────────────────────────────────────
+
+def _hf_api():
+    """Return a configured HfApi instance, or None if not set up."""
+    if HF_DATASET_REPO and HF_TOKEN:
+        from huggingface_hub import HfApi
+        return HfApi(token=HF_TOKEN)
+    return None
+
+
+def sync_from_hf_hub():
+    """Download user-uploaded files from HF Hub dataset to data dir on startup.
+    Only downloads files that don't already exist locally (committed files win).
+    """
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        import huggingface_hub
+        files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
+        for path_in_repo in files:
+            # We store uploaded files under "data/<filename>" in the dataset repo
+            if not path_in_repo.startswith("data/"):
+                continue
+            basename = Path(path_in_repo).name
+            if not basename or Path(basename).suffix.lower() not in SUPPORTED_EXTENSIONS:
+                continue
+            local_path = Path(DATA_DIR) / basename
+            if local_path.exists():
+                logger.info(f"HF Hub sync: '{basename}' already present locally — skipping.")
+                continue
+            downloaded = huggingface_hub.hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=path_in_repo,
+                repo_type="dataset",
+                token=HF_TOKEN,
+            )
+            shutil.copy2(downloaded, str(local_path))
+            logger.info(f"HF Hub sync: downloaded '{basename}'")
+    except Exception as e:
+        logger.warning(f"HF Hub sync (download) failed: {e}")
+
+
+def push_to_hf_hub(filename: str):
+    """Push a single file from data dir to the HF Hub dataset repo."""
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        api.upload_file(
+            path_or_fileobj=str(Path(DATA_DIR) / filename),
+            path_in_repo=f"data/{filename}",
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            commit_message=f"Upload {filename}",
+        )
+        logger.info(f"HF Hub: pushed '{filename}'")
+    except Exception as e:
+        logger.warning(f"HF Hub push failed for '{filename}': {e}")
+
+
+def delete_from_hf_hub(filename: str):
+    """Delete a single file from the HF Hub dataset repo."""
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        api.delete_file(
+            path_in_repo=f"data/{filename}",
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            commit_message=f"Delete {filename}",
+        )
+        logger.info(f"HF Hub: deleted '{filename}'")
+    except Exception as e:
+        logger.warning(f"HF Hub delete failed for '{filename}': {e}")
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -102,6 +187,8 @@ def index_all_data_dir():
 # ─── Startup ──────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
+    logger.info("Syncing user-uploaded files from HF Hub dataset (if configured)...")
+    sync_from_hf_hub()
     logger.info("Indexing existing documents in data dir...")
     index_all_data_dir()
     logger.info(f"Ready. Vector store has {vs.total_chunks()} chunks.")
@@ -139,6 +226,8 @@ async def upload_document(file: UploadFile = File(...)):
         import asyncio
         loop = asyncio.get_event_loop()
         n_chunks = await loop.run_in_executor(None, index_file, str(save_path))
+        # Persist user-uploaded file to HF Hub so it survives container restarts
+        await loop.run_in_executor(None, push_to_hf_hub, file.filename)
         return {"message": f"Uploaded and indexed '{file.filename}' ({n_chunks} chunks).", "chunks": n_chunks}
     except Exception as e:
         save_path.unlink(missing_ok=True)
@@ -147,19 +236,35 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.delete("/documents/{filename:path}")
 async def delete_document(filename: str):
-    """Remove a document's embeddings from the vector store only (file kept on disk)."""
+    """Remove a document's embeddings from the vector store, delete from disk, and remove from HF Hub."""
     removed_chunks = vs.remove_document(filename)
+    # Delete from disk so the file doesn't get re-indexed on next startup
+    local_path = Path(DATA_DIR) / filename
+    local_path.unlink(missing_ok=True)
+    # Remove from HF Hub so it doesn't come back on container restart
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, delete_from_hf_hub, filename)
     if removed_chunks > 0:
-        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}'. File kept on disk."}
+        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}' and deleted file."}
     else:
+        # File may have been on disk but not indexed
         raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
 
 
 @app.delete("/documents")
 async def delete_all_documents():
-    """Remove ALL embeddings from the vector store. Files are kept on disk."""
+    """Remove ALL embeddings from the vector store, delete all data files from disk and HF Hub."""
+    # Collect filenames before clearing
+    import asyncio
+    filenames = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
     removed = vs.clear_all()
-    return {"message": f"Removed all {removed} indexed chunks. Files kept on disk.", "chunks_removed": removed}
+    # Delete all files from disk and HF Hub
+    loop = asyncio.get_event_loop()
+    for fname in filenames:
+        (Path(DATA_DIR) / fname).unlink(missing_ok=True)
+        await loop.run_in_executor(None, delete_from_hf_hub, fname)
+    return {"message": f"Removed all {removed} indexed chunks and deleted {len(filenames)} file(s).", "chunks_removed": removed}
 
 
 # ─── URL crawl job tracker ────────────────────────────────────────────────────
