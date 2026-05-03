@@ -3,8 +3,8 @@ RAG engine: retrieves relevant context from vector store,
 builds a strict prompt, and queries the LLM.
 
 Backend priority:
-1. HF_TOKEN set → HuggingFace Inference API (free, no daily token limit)
-2. GROQ_API_KEY set → Groq API (fast but 100K tokens/day free limit)
+1. GROQ_API_KEY set → Groq API (fast, 100K tokens/day free tier)
+2. USE_HF_LLM=1 + HF_TOKEN set → HuggingFace Inference API
 3. Otherwise → Ollama (local)
 """
 import os

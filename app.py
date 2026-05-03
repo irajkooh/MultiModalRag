@@ -13,8 +13,8 @@ Application entrypoint (local dev + HuggingFace Spaces).
                    Detection: HF Spaces sets the SPACE_ID environment variable.
 
                    Space : https://huggingface.co/spaces/irajkoohi/MultiModalRag
-                   Deploy: git remote add space https://huggingface.co/spaces/irajkoohi/MultiModalRag
-                           git push space main
+                   Deploy: run ./deploy_changes.sh  (creates an orphan branch without
+                           binary files and force-pushes it to the Space)
 """
 import os
 import threading
@@ -25,9 +25,8 @@ import uvicorn
 
 IS_HF = bool(os.environ.get("SPACE_ID"))
 
-GREEN      = "\033[92m"
-DARK_GREEN = "\033[32m"
-RED        = "\033[91m"
+GREEN  = "\033[92m"
+RED    = "\033[91m"
 YELLOW     = "\033[93m"
 BLUE       = "\033[94m"
 RESET      = "\033[0m"

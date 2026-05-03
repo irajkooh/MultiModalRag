@@ -3,6 +3,7 @@ FastAPI backend for the Multimodal RAG system.
 Exposes endpoints for document management and querying.
 """
 import os
+import asyncio
 import logging
 import shutil
 from pathlib import Path
@@ -223,8 +224,7 @@ async def upload_document(file: UploadFile = File(...)):
         f.write(content)
     
     try:
-        import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         n_chunks = await loop.run_in_executor(None, index_file, str(save_path))
         # Persist user-uploaded file to HF Hub so it survives container restarts
         await loop.run_in_executor(None, push_to_hf_hub, file.filename)
@@ -242,8 +242,7 @@ async def delete_document(filename: str):
     local_path = Path(DATA_DIR) / filename
     local_path.unlink(missing_ok=True)
     # Remove from HF Hub so it doesn't come back on container restart
-    import asyncio
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, delete_from_hf_hub, filename)
     if removed_chunks > 0:
         return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}' and deleted file."}
@@ -256,11 +255,10 @@ async def delete_document(filename: str):
 async def delete_all_documents():
     """Remove ALL embeddings from the vector store, delete all data files from disk and HF Hub."""
     # Collect filenames before clearing
-    import asyncio
     filenames = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
     removed = vs.clear_all()
     # Delete all files from disk and HF Hub
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     for fname in filenames:
         (Path(DATA_DIR) / fname).unlink(missing_ok=True)
         await loop.run_in_executor(None, delete_from_hf_hub, fname)
@@ -403,7 +401,6 @@ def _chitchat_response(text: str) -> str | None:
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(req: QueryRequest):
     """Query the RAG system."""
-    import asyncio
     try:
         # Short-circuit chitchat / greetings — don't pollute with RAG results
         chitchat_answer = _chitchat_response(req.question)
@@ -413,22 +410,14 @@ async def query_documents(req: QueryRequest):
         if vs.total_chunks() == 0:
             return QueryResponse(answer="No documents are indexed yet. Please upload some documents first.", sources=[])
 
-        # Run all blocking work (embedding + Ollama) in a thread executor
-
+        # Run all blocking work (embedding + LLM) in a thread executor
         def _run_query():
             results = vs.query(req.question, n_results=req.n_results)
             sources = list({r["metadata"].get("source", "") for r in results})
-            # Build context for token count
-            context = rag._build_context(results)
-            user_message = f"[CONTEXT]\n{context}\n\n[QUESTION]\n{req.question}\n\nRemember: Answer ONLY from the context above. If not found, say \"I DON'T KNOW\"."
-            # Compose full prompt for LLM
-            system_prompt = getattr(rag, "SYSTEM_PROMPT", "You are a document assistant. Answer questions using ONLY the [CONTEXT] provided. If the answer is not in the context, respond: 'I DON'T KNOW'. Be concise and factual. Cite source and page when available.")
-            prompt = f"{system_prompt}\n{user_message}"
             parts = []
             for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False):
                 parts.append(token)
             answer = "".join(parts)
-            # Per-message token counts
             tokens_user = estimate_tokens(req.question)
             tokens_assistant = estimate_tokens(answer)
             return answer, sources, tokens_user, tokens_assistant

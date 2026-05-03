@@ -268,8 +268,33 @@ _UI_CSS = """
     .main-col  { max-width: 900px; margin: 0 auto; }
     .chatbot-wrap { background: #181c24; border-radius: 12px; }
     .gradio-container { background: #10131a; }
+    .sample-q-btn button {
+        font-size: 0.75em !important;
+        padding: 5px 10px !important;
+        border-radius: 14px !important;
+        border: 1px solid #2d3a55 !important;
+        background: #1a2035 !important;
+        color: #94a3b8 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: unset !important;
+        height: auto !important;
+    }
+    .sample-q-btn button:hover {
+        background: #243050 !important;
+        border-color: #3b82f6 !important;
+        color: #e2e8f0 !important;
+    }
 """
-
+SAMPLE_QUESTIONS = [
+    "What is this document about?",         "Summarize the key points",
+    "What are the main findings?",           "List all topics covered",
+    "What conclusions are drawn?",           "What data or statistics are mentioned?",
+    "Who are the main entities discussed?",  "What recommendations are made?",
+    "What methods or approaches are described?", "Are there any tables or charts?",
+    "What limitations are mentioned?",       "What is the timeline or schedule?",
+]
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
 def build_ui():
@@ -289,6 +314,14 @@ def build_ui():
               height=380,
               elem_classes="chatbot-wrap",
             )
+            # ─ Sample question chips (3 rows × 4 columns) ─
+            sample_q_btns = []
+            for _row in range(3):
+              with gr.Row():
+                for _col in range(4):
+                  _q = SAMPLE_QUESTIONS[_row * 4 + _col]
+                  _btn = gr.Button(_q, size="sm", elem_classes="sample-q-btn")
+                  sample_q_btns.append(_btn)
             with gr.Row():
               msg_input = gr.Textbox(
                 placeholder="Ask a question about your documents...",
@@ -600,6 +633,16 @@ def build_ui():
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
           outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
         )
+        # Wire each sample question button: load text then submit
+        for _sq_btn, _sq_text in zip(sample_q_btns, SAMPLE_QUESTIONS):
+          _sq_btn.click(
+            fn=lambda q=_sq_text: q,
+            outputs=[msg_input],
+          ).then(
+            fn=on_submit,
+            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
+            outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
+          )
         def on_clear_chat():
           status, history = clear_memory()
           if history and isinstance(history[0], tuple):
