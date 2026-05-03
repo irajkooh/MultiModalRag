@@ -14,7 +14,7 @@
 #   4. Pushes to HF Space via a clean orphan branch — binary data files
 #      (PDF, PNG, DOCX) are excluded from the Space push because HF Space
 #      does not support Git LFS; those files live in the HF Dataset repo
-#      irajkoohi/MultiModalRag-dataset and are downloaded at Space startup.
+#      irajkoohi/MultiModalRag_dataset and are downloaded at Space startup.
 #
 # DATA FILES (persistent across Space restarts):
 #   - Add/remove files in data/ and run:
@@ -24,7 +24,7 @@
 #       api = HfApi(token=os.environ['HF_TOKEN'])
 #       api.upload_file(path_or_fileobj=sys.argv[1],
 #                       path_in_repo='data/'+os.path.basename(sys.argv[1]),
-#                       repo_id='irajkoohi/MultiModalRag-dataset',
+#                       repo_id='irajkoohi/MultiModalRag_dataset',
 #                       repo_type='dataset')
 #       " data/yourfile.pdf
 #
@@ -76,4 +76,4 @@ echo ""
 echo "✅ Deployed successfully!"
 echo "   GitHub : https://github.com/irajkooh/MultiModalRag"
 echo "   Space  : https://huggingface.co/spaces/irajkoohi/MultiModalRag"
-echo "   Dataset: https://huggingface.co/datasets/irajkoohi/MultiModalRag-dataset"
+echo "   Dataset: https://huggingface.co/datasets/irajkoohi/MultiModalRag_dataset"
