@@ -26,7 +26,7 @@ def start_keep_alive_scheduler(space_url: str):
         _ping_self,
         trigger=IntervalTrigger(minutes=5),
         args=[space_url],
-        id="keep_alive_5m",
+        id="keep_alive_5",
         replace_existing=True,
     )
     scheduler.start()
@@ -521,6 +521,15 @@ def build_ui():
             document.addEventListener('touchend', unlock, {once: true});
         }"""
         demo.load(fn=None, js=_JS_UNLOCK_TTS)
+        # Client-side keep-alive: ping /status every 30 s from the browser.
+        # This sends real HTTP traffic to the HF Space so the container never
+        # goes idle as long as someone has the tab open.
+        _JS_KEEPALIVE = """() => {
+            setInterval(function() {
+                fetch('/status').catch(function(){});
+            }, 30000);
+        }"""
+        demo.load(fn=None, js=_JS_KEEPALIVE)
         # Client-side keep-alive: ping /status every 30 s from the browser.
         # This sends real HTTP traffic to the HF Space so the container never
         # goes idle as long as someone has the tab open.

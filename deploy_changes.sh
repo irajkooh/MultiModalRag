@@ -42,17 +42,21 @@ for arg in "$@"; do [[ "$arg" == "--reset-db" ]] && RESET_DB=true; done
 if $RESET_DB; then
     echo "▶ Clearing stale vectorstore from HF Hub dataset..."
     python3 - <<'PYEOF'
-import os, sys
-token = os.environ.get("MultiModalRag_Token", "")
+import os, sys, re
+token = os.environ.get("MultiModalRag_Token", "").strip()
 if not token:
-    # Try loading from _secrets/HF_TOKEN.txt
+    # Try loading from _secrets/HF_TOKEN.txt — extract the hf_... token line
     try:
         with open("_secrets/HF_TOKEN.txt") as f:
-            token = f.read().strip()
+            for line in f:
+                line = line.strip()
+                if re.match(r'^hf_[A-Za-z0-9]+$', line):
+                    token = line
+                    break
     except Exception:
         pass
 if not token:
-    print("⚠  MultiModalRag_Token not set — skipping DB reset")
+    print("⚠  HF token not found — skipping DB reset")
     sys.exit(0)
 from huggingface_hub import HfApi
 api = HfApi(token=token)
