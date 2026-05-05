@@ -237,6 +237,7 @@ class QueryRequest(BaseModel):
     question: str
     n_results: int = 8
     temperature: float = 0.0
+    source_filter: List[str] = []
 
 
 class QueryResponse(BaseModel):
@@ -244,6 +245,7 @@ class QueryResponse(BaseModel):
     sources: List[str]
     tokens_user: int = 0  # tokens in user message
     tokens_assistant: int = 0  # tokens in assistant response
+    chunks_used: int = 0  # number of context chunks retrieved
 
 
 class StatusResponse(BaseModel):
@@ -527,6 +529,42 @@ _META_PATTERNS = [
     "help me", "how does this work", "how do you work",
 ]
 
+_DOCS_LIST_PATTERNS = [
+    "how many doc", "how many file", "list doc", "list file",
+    "what doc", "what file", "which doc", "which file",
+    "show doc", "show file", "what are the doc", "what are the file",
+    "what is indexed", "what is uploaded", "what have you indexed",
+    "what have you uploaded", "what documents do you have",
+    "what files do you have", "tell me the doc", "tell me the file",
+    "name the doc", "name the file",
+    # file-type specific
+    "how many docx", "how many xlsx", "how many csv", "how many pdf",
+    "how many image", "how many txt", "how many png", "how many jpg",
+    "list docx", "list xlsx", "list csv", "list pdf", "list image", "list txt",
+    "show docx", "show xlsx", "show csv", "show pdf", "show image", "show txt",
+    "what docx", "what xlsx", "what csv", "what pdf",
+    "which docx", "which xlsx", "which csv", "which pdf",
+    "any docx", "any xlsx", "any csv", "any pdf", "any image",
+    "excel file", "word file", "spreadsheet", "word document",
+]
+
+
+def _docs_list_response() -> str | None:
+    """Return a formatted list of indexed documents, or None if none are indexed."""
+    sources = vs.list_sources()
+    if not sources:
+        return None
+    lines = "\n".join(f"- {s}" for s in sources)
+    # type breakdown
+    from collections import Counter
+    ext_counts = Counter(Path(s).suffix.lower() for s in sources)
+    breakdown = ", ".join(f"{cnt} {ext}" for ext, cnt in sorted(ext_counts.items()))
+    return (
+        f"There are **{len(sources)}** indexed document(s) ({breakdown}):\n\n"
+        f"{lines}\n\n"
+        "You can select specific files in the **🔍 Search in** dropdown above the chat to focus answers on them."
+    )
+
 _META_ANSWER = (
     "I'm your document assistant. Here's how I can help:\n\n"
     "1. **Upload documents** (PDF, Word, Excel, CSV, TXT, images) or **add URLs** in the Documents tab\n"
@@ -544,6 +582,9 @@ def _chitchat_response(text: str) -> str | None:
     for pattern in _META_PATTERNS:
         if pattern in normalized:
             return _META_ANSWER
+    for pattern in _DOCS_LIST_PATTERNS:
+        if pattern in normalized:
+            return _docs_list_response()
     return None
 
 
@@ -553,28 +594,38 @@ async def query_documents(req: QueryRequest):
     try:
         # Short-circuit chitchat / greetings — don't pollute with RAG results
         chitchat_answer = _chitchat_response(req.question)
-        if chitchat_answer:
+        if chitchat_answer is not None:
             return QueryResponse(answer=chitchat_answer, sources=[])
+        # Doc-list question but no docs indexed yet
+        normalized_q = req.question.strip().lower().rstrip("!?.,")
+        if any(p in normalized_q for p in _DOCS_LIST_PATTERNS):
+            return QueryResponse(answer="No documents are indexed yet. Please upload some documents first.", sources=[])
 
         if vs.total_chunks() == 0:
             return QueryResponse(answer="No documents are indexed yet. Please upload some documents first.", sources=[])
 
         # Run all blocking work (embedding + LLM) in a thread executor
         def _run_query():
-            results = vs.query(req.question, n_results=req.n_results)
+            sf = req.source_filter or None
+            results = vs.query(
+                req.question,
+                n_results=req.n_results,
+                source_filter=sf,
+            )
+            chunks_used = len(results)
             sources = list({r["metadata"].get("source", "") for r in results})
             parts = []
-            for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False):
+            for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False, source_filter=sf):
                 parts.append(token)
             answer = "".join(parts)
             tokens_user = estimate_tokens(req.question)
             tokens_assistant = estimate_tokens(answer)
-            return answer, sources, tokens_user, tokens_assistant
+            return answer, sources, tokens_user, tokens_assistant, chunks_used
 
         loop = asyncio.get_running_loop()
-        answer, sources, tokens_user, tokens_assistant = await loop.run_in_executor(None, _run_query)
+        answer, sources, tokens_user, tokens_assistant, chunks_used = await loop.run_in_executor(None, _run_query)
 
-        return QueryResponse(answer=answer, sources=sources, tokens_user=tokens_user, tokens_assistant=tokens_assistant)
+        return QueryResponse(answer=answer, sources=sources, tokens_user=tokens_user, tokens_assistant=tokens_assistant, chunks_used=chunks_used)
     except Exception as e:
         logger.error(f"Query endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

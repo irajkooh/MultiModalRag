@@ -117,7 +117,7 @@ def upload_files(files):
   """
   import urllib.parse
 
-  _noop = (gr.update(), gr.update(), gr.update(), gr.update())
+  _noop = (gr.update(), gr.update(), gr.update(), gr.update(), gr.update())
 
   def _emit(html, refresh=False):
     if refresh:
@@ -126,7 +126,8 @@ def upload_files(files):
               gr.update(choices=docs or [], value=None),
               status_msg,
               gr.update(interactive=True),
-              _header_html(model, device))
+              _header_html(model, device),
+              gr.update(choices=docs or []))
     return (html, *_noop)
 
   if not files:
@@ -210,6 +211,7 @@ def upload_files(files):
     status_msg,
     gr.update(interactive=True),
     _header_html(model, device),
+    gr.update(choices=docs or []),
   )
 
 
@@ -273,11 +275,14 @@ def refresh_ui():
     return gr.update(choices=docs or [], value=None), status_msg, gr.update(interactive=has_docs)
 
 
-def chat_fn(message, history, n_results, temperature):
+def chat_fn(message, history, n_results, temperature, source_filter=None):
   """Send query to API, return complete answer (no character streaming)."""
   if not message.strip():
     return history, ""
-  resp = api_post("/query", json={"question": message, "n_results": n_results, "temperature": temperature}, timeout=480)
+  payload = {"question": message, "n_results": n_results, "temperature": temperature}
+  if source_filter:
+    payload["source_filter"] = source_filter
+  resp = api_post("/query", json=payload, timeout=480)
   tokens_user = resp.get("tokens_user", 0)
   tokens_assistant = resp.get("tokens_assistant", 0)
   if "error" in resp:
@@ -285,8 +290,9 @@ def chat_fn(message, history, n_results, temperature):
   else:
     answer = resp.get("answer", "I DON'T KNOW")
     sources = resp.get("sources", [])
+    chunks_used = resp.get("chunks_used", 0)
     if sources:
-      answer += f"\n\n📄 *Sources: {', '.join(sources)}*"
+      answer += f"\n\n📄 *Sources: {', '.join(sources)} — {chunks_used} chunks retrieved*"
   history = list(history) if history else []
   if history and isinstance(history[0], tuple):
     new_hist = []
@@ -427,6 +433,13 @@ def build_ui():
                   _q = SAMPLE_QUESTIONS[_row * 4 + _col]
                   _btn = gr.Button(_q, size="sm", elem_classes="sample-q-btn")
                   sample_q_btns.append(_btn)
+            source_filter_dd = gr.Dropdown(
+              choices=[],
+              label="🔍 Search in (leave empty = all docs)",
+              multiselect=True,
+              interactive=True,
+            )
+            thinking_indicator = gr.HTML(value="", elem_id="thinking-indicator")
             with gr.Row():
               msg_input = gr.Textbox(
                 placeholder="Ask a question about your documents...",
@@ -482,6 +495,7 @@ def build_ui():
               elem_classes="doc-list",
               interactive=True,
             )
+            doc_list_state = gr.State([])
             with gr.Row():
               delete_btn     = gr.Button("🗑 Remove selected", elem_id="delete-btn")
               delete_all_btn = gr.Button("🗑 Remove ALL",      elem_id="delete-all-btn")
@@ -495,18 +509,25 @@ def build_ui():
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
 
-        def refresh_and_update():
+        def refresh_and_update(selected_docs=None):
           docs, files, status_msg, model, device = get_status()
+          # If selected_docs is provided, keep only those still present
+          if selected_docs is not None:
+            still_selected = [d for d in (selected_docs or []) if d in (docs or [])]
+          else:
+            still_selected = None
           return (
-            gr.update(choices=docs or [], value=None),
+            gr.update(choices=docs or [], value=still_selected),
             status_msg,
             gr.update(interactive=True),
             _header_html(model, device),
+            gr.update(choices=docs or []),
           )
 
         demo.load(
-            fn=refresh_and_update,
-            outputs=[doc_list, status_text, submit_btn, header_md],
+          fn=lambda selected: refresh_and_update(selected),
+          inputs=[doc_list_state],
+          outputs=[doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
         # Unlock Web Speech API for mobile (iOS Safari blocks speechSynthesis
         # from async callbacks unless speak() is called once in a direct user gesture first)
@@ -682,24 +703,30 @@ def build_ui():
             }"""
         )
         file_upload.upload(
-            fn=upload_files,
-            inputs=[file_upload],
-            outputs=[upload_status, doc_list, status_text, submit_btn, header_md],
+          fn=lambda files, selected: (*list(upload_files(files))[-1], *refresh_and_update(selected)),
+          inputs=[file_upload, doc_list_state],
+          outputs=[upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
         add_url_btn.click(
-            fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
-            inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn, header_md, url_input],
+          fn=lambda url, selected: (add_url(url), *refresh_and_update(selected), gr.update(value="")),
+          inputs=[url_input, doc_list_state],
+          outputs=[upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd, url_input],
         )
         url_input.submit(
-            fn=lambda url: (add_url(url), *refresh_and_update(), gr.update(value="")),
-            inputs=[url_input],
-            outputs=[upload_status, doc_list, status_text, submit_btn, header_md, url_input],
+          fn=lambda url, selected: (add_url(url), *refresh_and_update(selected), gr.update(value="")),
+          inputs=[url_input, doc_list_state],
+          outputs=[upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd, url_input],
         )
+        def _delete_and_refresh(selected):
+          msg = delete_document(selected)
+          # Remove deleted docs from selection
+          docs, *_ = get_status()
+          remaining = [d for d in (selected or []) if d in (docs or [])]
+          return (msg, *refresh_and_update(remaining), remaining)
         delete_btn.click(
-          fn=lambda doc: (delete_document(doc), *refresh_and_update()),
-          inputs=[doc_list],
-          outputs=[upload_status, doc_list, status_text, submit_btn, header_md],
+          fn=_delete_and_refresh,
+          inputs=[doc_list_state],
+          outputs=[upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd, doc_list_state],
         )
         # Show confirmation row when Remove ALL is clicked
         delete_all_btn.click(
@@ -709,7 +736,7 @@ def build_ui():
         # Confirm: execute delete, hide confirmation row
         confirm_yes_btn.click(
           fn=lambda: (gr.update(visible=False), delete_all_embeddings(), *refresh_and_update()),
-          outputs=[confirm_row, upload_status, doc_list, status_text, submit_btn, header_md],
+          outputs=[confirm_row, upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
         # Cancel: just hide the confirmation row
         confirm_no_btn.click(
@@ -717,34 +744,50 @@ def build_ui():
           outputs=[confirm_row],
         )
         refresh_btn.click(
-          fn=refresh_and_update,
-          outputs=[doc_list, status_text, submit_btn, header_md],
+          fn=lambda selected: refresh_and_update(selected),
+          inputs=[doc_list_state],
+          outputs=[doc_list, status_text, submit_btn, header_md, source_filter_dd],
+        )
+
+        # Always update state when user changes selection
+        doc_list.change(
+          fn=lambda sel: sel,
+          inputs=[doc_list],
+          outputs=[doc_list_state],
         )
 
         # Auto-refresh the document list every 5 s so users see newly indexed
         # files appear without manually clicking Refresh.
         gr.Timer(value=5).tick(
-          fn=refresh_and_update,
-          outputs=[doc_list, status_text, submit_btn, header_md],
+          fn=lambda selected: refresh_and_update(selected),
+          inputs=[doc_list_state],
+          outputs=[doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
 
-        def on_submit(message, history, n, temp):
+        _THINKING_HTML = "<span style='color:#facc15;font-weight:600;'>⏳ Thinking...</span>"
+
+        def on_submit(message, history, n, temp, src_filter):
+          if not message.strip():
+            yield history, "", gr.update(), ""
+            return
           history = history or []
-          updated_history, stats = chat_fn(message, history, n, temp)
+          yield history, "", _THINKING_HTML, ""
+          updated_history, stats = chat_fn(message, history, n, temp, src_filter)
           tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
           tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
           tts_text = _clean_for_tts(get_last_answer(updated_history)) if updated_history else ""
           tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
-          return updated_history, "", tok_html, tts_text
+          yield updated_history, "", "", tts_text
+          yield updated_history, "", tok_html, tts_text
         submit_btn.click(
           fn=on_submit,
-          inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
+          inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
+          outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
         )
         msg_input.submit(
           fn=on_submit,
-          inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-          outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
+          inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
+          outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
         )
         # Wire each sample question button: load text then submit
         for _sq_btn, _sq_text in zip(sample_q_btns, SAMPLE_QUESTIONS):
@@ -753,8 +796,8 @@ def build_ui():
             outputs=[msg_input],
           ).then(
             fn=on_submit,
-            inputs=[msg_input, chatbot, n_results_slider, temperature_slider],
-            outputs=[chatbot, msg_input, token_stats_text, tts_audio_box],
+            inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
+            outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
           )
         def on_clear_chat():
           status, history = clear_memory()

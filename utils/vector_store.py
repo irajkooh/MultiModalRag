@@ -115,18 +115,36 @@ class VectorStoreManager:
         logger.info(f"Cleared {count} chunks from collection")
         return count
 
-    def query(self, query_text: str, n_results: int = 5) -> List[Dict[str, Any]]:
-        """Semantic search. Returns list of {text, metadata, distance}."""
+    def query(self, query_text: str, n_results: int = 5, source_filter: List[str] = None) -> List[Dict[str, Any]]:
+        """Semantic search. Returns list of {text, metadata, distance}.
+        source_filter: if provided, restrict results to chunks from these sources only.
+        """
         count = self.collection.count()
         if count == 0:
             return []
-        
-        n = min(n_results, count)
+
+        where = None
+        if source_filter:
+            where = (
+                {"source": {"$in": source_filter}}
+                if len(source_filter) > 1
+                else {"source": source_filter[0]}
+            )
+            # Count only filtered chunks to avoid asking for more than available
+            filtered_ids = self.collection.get(where=where)["ids"]
+            n = min(n_results, len(filtered_ids))
+        else:
+            n = min(n_results, count)
+
+        if n == 0:
+            return []
+
         embedding = self._embed([query_text])[0]
         results = self.collection.query(
             query_embeddings=[embedding],
             n_results=n,
             include=["documents", "metadatas", "distances"],
+            where=where,
         )
 
         output = []
