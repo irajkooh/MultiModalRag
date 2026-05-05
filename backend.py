@@ -375,8 +375,8 @@ def _index_background(filename: str, save_path: str):
     """Runs in a background thread: index file, persist to HF Hub, update job status."""
     try:
         n_chunks = index_file(save_path)
-        push_to_hf_hub(filename)
-        push_vectorstore_to_hf_hub()  # persist embeddings so they survive restarts
+        # Mark done IMMEDIATELY so the frontend poll resolves without waiting for
+        # the (potentially slow) HF Hub push that follows.
         with _upload_lock:
             _upload_jobs[filename] = {
                 "status": "done",
@@ -384,6 +384,9 @@ def _index_background(filename: str, save_path: str):
                 "chunks": n_chunks,
             }
         logger.info(f"Background index done: '{filename}' — {n_chunks} chunks")
+        # Push to HF Hub after marking done so a slow upload doesn't block status.
+        push_to_hf_hub(filename)
+        push_vectorstore_to_hf_hub()  # persist embeddings so they survive restarts
     except Exception as e:
         logger.error(f"Background index failed for '{filename}': {e}", exc_info=True)
         # File is kept on disk even if indexing fails — user can retry

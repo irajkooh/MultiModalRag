@@ -127,9 +127,15 @@ def upload_files(files):
     status = "processing"
     while time.time() < deadline:
       time.sleep(2)
-      poll = api_get(f"/documents/upload/status?filename={encoded}", timeout=10)
+      poll = api_get(f"/documents/upload/status?filename={encoded}", timeout=15)
+      # Transient network errors (backend busy / HF Hub push in progress) →
+      # keep polling. Only stop on a definitive job state or 404 (job gone).
       if "error" in poll:
-        break
+        err_msg = str(poll.get("error", ""))
+        if "404" in err_msg or "No upload job" in err_msg:
+          break  # job truly not found
+        # Otherwise it's a transient connection/timeout error — retry
+        continue
       status = poll.get("status", "processing")
       if status in ("done", "error"):
         break
