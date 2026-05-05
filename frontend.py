@@ -87,9 +87,27 @@ def get_status():
   return docs, files, status_msg, model, device
 
 
+def _wait_for_backend(timeout: int = 300) -> bool:
+  """Poll /status until backend responds or timeout (seconds) elapses."""
+  import requests
+  deadline = time.time() + timeout
+  while time.time() < deadline:
+    try:
+      r = requests.get(f"{API_BASE}/status", timeout=3)
+      if r.status_code == 200:
+        return True
+    except Exception:
+      pass
+    time.sleep(3)
+  return False
+
+
 def upload_files(files):
   if not files:
     return "No files selected."
+  # Ensure backend is up before sending any file
+  if not _wait_for_backend(timeout=300):
+    return "<span style='color:#ff4d4f'>\u274c Backend did not start in time. Please refresh and try again.</span>"
   messages = []
   for file in files:
     path = Path(file.name)
@@ -100,34 +118,11 @@ def upload_files(files):
         timeout=60,
       )
     if "error" in resp:
-      messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
-      continue
-
-    # If the backend accepted the file for background indexing, poll for status
-    if resp.get("status") == "processing":
-      import urllib.parse
-      encoded = urllib.parse.quote(path.name, safe="")
-      deadline = time.time() + 900  # wait up to 15 minutes for large PDFs
-      while time.time() < deadline:
-        time.sleep(5)
-        status = api_get(f"/documents/upload/status?filename={encoded}", timeout=15)
-        if "error" in status:
-          messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {status['error']}</span>")
-          break
-        if status.get("status") == "done":
-          messages.append(f"<span style='color:#fff'>✅ {path.name}: {status['message']}</span>")
-          break
-        if status.get("status") == "error":
-          messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {status.get('message', 'Indexing failed.')}</span>")
-          break
-      else:
-        messages.append(f"<span style='color:#f87171'>⚠️ {path.name}: Indexing is taking longer than expected — refresh the document list in a moment.</span>")
+      messages.append(f"<span style='color:#ff4d4f'>\u274c {path.name}: {resp['error']}</span>")
     else:
-      # Synchronous response (legacy or quick file)
-      if "error" in resp:
-        messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
-      else:
-        messages.append(f"<span style='color:#fff'>✅ {path.name}: {resp.get('message', 'Done.')}</span>")
+      # Accepted for background indexing — don't block waiting for it
+      messages.append(f"<span style='color:#facc15'>\u23f3 {path.name}: indexing in background\u2026</span>")
+  return '<br>'.join(messages)
   return '<br>'.join(messages)
 
 
@@ -638,6 +633,14 @@ def build_ui():
           fn=refresh_and_update,
           outputs=[doc_list, status_text, submit_btn, header_md],
         )
+
+        # Auto-refresh the document list every 5 s so users see newly indexed
+        # files appear without manually clicking Refresh.
+        gr.Timer(value=5).tick(
+          fn=refresh_and_update,
+          outputs=[doc_list, status_text, submit_btn, header_md],
+        )
+
         def on_submit(message, history, n, temp):
           history = history or []
           updated_history, stats = chat_fn(message, history, n, temp)

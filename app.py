@@ -17,6 +17,11 @@ Application entrypoint (local dev + HuggingFace Spaces).
                            binary files and force-pushes it to the Space)
 """
 import os
+
+# Suppress the HuggingFace tokenizers fork warning that spams the console
+# when Gradio/uvicorn start worker processes after tokenizers is already loaded.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 import threading
 import time
 import logging
@@ -50,7 +55,7 @@ def run_api():
 def wait_for_api(max_wait: int = None) -> bool:
     import requests
     if max_wait is None:
-        max_wait = 180 if IS_HF else 30
+        max_wait = 300  # wait up to 5 minutes; HF Hub sync at module load can be slow
     for i in range(max_wait):
         try:
             r = requests.get("http://localhost:8000/status", timeout=2)

@@ -3,6 +3,13 @@ FastAPI backend for the Multimodal RAG system.
 Exposes endpoints for document management and querying.
 """
 import os
+
+# On local dev (no SPACE_ID env var) default the embedding model to CPU.
+# MPS (Apple Silicon GPU) can segfault after a previous crash leaves the Metal
+# driver in a bad state. CPU is fast enough for local dev.
+if not os.environ.get("SPACE_ID"):
+    os.environ.setdefault("TORCH_DEVICE", "cpu")
+
 import asyncio
 import logging
 import shutil
@@ -82,6 +89,8 @@ def sync_from_hf_hub():
 
 def push_to_hf_hub(filename: str):
     """Push a single file from data dir to the HF Hub dataset repo."""
+    if not _IS_HF_SPACE:
+        return  # skip network upload during local dev
     api = _hf_api()
     if not api:
         return
@@ -153,6 +162,8 @@ def push_vectorstore_to_hf_hub():
     """Push the entire vectorstore directory to HF Hub dataset.
     Called after every index or delete operation so embeddings survive restarts.
     """
+    if not _IS_HF_SPACE:
+        return  # skip network upload during local dev
     api = _hf_api()
     if not api:
         return
@@ -188,14 +199,20 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(mes
 logger = logging.getLogger(__name__)
 
 # ─── Pre-init: restore persisted data so ChromaDB loads existing embeddings ──
-# This runs BEFORE VectorStoreManager is created. Restoring the vectorstore here
-# means ChromaDB will open the existing DB — no re-indexing needed on cold start.
+# This runs BEFORE VectorStoreManager is created. On HF Spaces (SPACE_ID is set)
+# it downloads the latest data + vectorstore from HF Hub. Locally, files are
+# already on disk so we skip the network calls for a fast startup.
+_IS_HF_SPACE = bool(os.environ.get("SPACE_ID"))
+
 logger.info("Pre-init: copying committed baseline files...")
 _copy_committed_files()
-logger.info("Pre-init: restoring vectorstore from HF Hub (if configured)...")
-sync_vectorstore_from_hf_hub()
-logger.info("Pre-init: restoring data files from HF Hub (if configured)...")
-sync_from_hf_hub()
+if _IS_HF_SPACE:
+    logger.info("Pre-init: restoring vectorstore from HF Hub (Space cold-start)...")
+    sync_vectorstore_from_hf_hub()
+    logger.info("Pre-init: restoring data files from HF Hub (Space cold-start)...")
+    sync_from_hf_hub()
+else:
+    logger.info("Pre-init: local run — skipping HF Hub sync (files already on disk).")
 
 # ─── Singletons ───────────────────────────────────────────────────────────────
 vs = VectorStoreManager(persist_dir=VECTORSTORE_DIR)
@@ -268,12 +285,10 @@ def index_all_data_dir():
 # ─── Startup ──────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    # Files and vectorstore were already restored at module load (pre-init).
-    # index_all_data_dir() is a no-op for already-indexed docs; it only indexes
-    # any files that arrived in data/ but aren't in the vectorstore yet.
-    logger.info("Indexing any new documents not yet in vectorstore...")
-    index_all_data_dir()
-    logger.info(f"Ready. Vector store has {vs.total_chunks()} chunks.")
+    logger.info("Startup: launching background indexer for data/ files...")
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, index_all_data_dir)
+    logger.info("HTTP server ready. Indexing continues in background.")
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
