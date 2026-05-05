@@ -24,9 +24,9 @@ def start_keep_alive_scheduler(space_url: str):
     scheduler = BackgroundScheduler(timezone="UTC", daemon=True)
     scheduler.add_job(
         _ping_self,
-        trigger=IntervalTrigger(minutes=20),
+        trigger=IntervalTrigger(minutes=5),
         args=[space_url],
-        id="keep_alive_20m",
+        id="keep_alive_5m",
         replace_existing=True,
     )
     scheduler.start()
@@ -157,34 +157,38 @@ def upload_files(files):
       continue
 
     # ── Phase 2: indexing (parsing + embedding) ───────────────────────────────
+    # IMPORTANT: we MUST yield on every 2-second poll loop iteration, not only
+    # on phase changes.  HF Space (and many nginx proxies) kill SSE connections
+    # that go idle for >60 s — yielding continuously keeps the stream alive.
     encoded = urllib.parse.quote(path.name, safe="")
     deadline = time.time() + UPLOAD_TIMEOUT
     poll = {}
     status = "processing"
-    last_phase = ""
-
-    preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: parsing document…</span>"]
-    yield _emit('<br>'.join(preview))
+    phase_str = "parsing document…"
+    poll_start = time.time()
 
     while time.time() < deadline:
       time.sleep(2)
+      elapsed = int(time.time() - poll_start)
       poll = api_get(f"/documents/upload/status?filename={encoded}", timeout=15)
       if "error" in poll:
         err_msg = str(poll.get("error", ""))
         if "404" in err_msg or "No upload job" in err_msg:
           break
-        continue  # transient error — keep polling
+        # Transient network error — keep alive with last known phase
+        preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: {phase_str} ({elapsed}s)</span>"]
+        yield _emit('<br>'.join(preview))
+        continue
       status = poll.get("status", "processing")
       if status == "done":
         break
       if status == "error":
         break
-      # Reflect backend phase ("parsing document…" / "embedding N chunks…")
-      phase = poll.get("phase", "")
-      if phase and phase != last_phase:
-        last_phase = phase
-        preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: {phase}</span>"]
-        yield _emit('<br>'.join(preview))
+      # Update phase label (may change between "parsing" and "embedding N chunks")
+      phase_str = poll.get("phase", phase_str) or phase_str
+      # Always yield — keeps HF proxy alive and shows live elapsed time
+      preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: {phase_str} ({elapsed}s)</span>"]
+      yield _emit('<br>'.join(preview))
 
     # ── Phase 3: result for this file ─────────────────────────────────────────
     if status == "done":
@@ -517,6 +521,15 @@ def build_ui():
             document.addEventListener('touchend', unlock, {once: true});
         }"""
         demo.load(fn=None, js=_JS_UNLOCK_TTS)
+        # Client-side keep-alive: ping /status every 30 s from the browser.
+        # This sends real HTTP traffic to the HF Space so the container never
+        # goes idle as long as someone has the tab open.
+        _JS_KEEPALIVE = """() => {
+            setInterval(function() {
+                fetch('/status').catch(function(){});
+            }, 30000);
+        }"""
+        demo.load(fn=None, js=_JS_KEEPALIVE)
         demo.load(
             fn=None,
             js="""() => {

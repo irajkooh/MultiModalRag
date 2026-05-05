@@ -379,10 +379,22 @@ def _index_background(filename: str, save_path: str):
     try:
         _set_phase("parsing document…")
         chunks = process_document_chunked(save_path)
-        _set_phase(f"embedding {len(chunks)} chunks…")
+        total = len(chunks)
         source_name = Path(save_path).name
         vs.remove_document(source_name)
-        n_chunks = vs.add_documents(chunks, source_name)
+
+        # Embed and upsert in batches of 150 so we can report live progress and
+        # avoid one massive blocking encode() call (critical on HF Space CPU).
+        EMBED_BATCH = 150
+        done = 0
+        for i in range(0, max(total, 1), EMBED_BATCH):
+            batch = chunks[i : i + EMBED_BATCH]
+            end = min(i + EMBED_BATCH, total)
+            _set_phase(f"embedding chunks {i + 1}–{end} of {total}…")
+            vs.add_documents(batch, source_name, chunk_offset=i)
+            done += len(batch)
+
+        n_chunks = done
         # Mark done IMMEDIATELY so the frontend poll resolves without waiting for
         # the (potentially slow) HF Hub push that follows.
         with _upload_lock:

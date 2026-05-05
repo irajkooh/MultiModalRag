@@ -36,6 +36,37 @@
 set -euo pipefail
 
 MSG="${1:-"chore: update app"}"
+RESET_DB=false
+for arg in "$@"; do [[ "$arg" == "--reset-db" ]] && RESET_DB=true; done
+
+if $RESET_DB; then
+    echo "▶ Clearing stale vectorstore from HF Hub dataset..."
+    python3 - <<'PYEOF'
+import os, sys
+token = os.environ.get("MultiModalRag_Token", "")
+if not token:
+    # Try loading from _secrets/HF_TOKEN.txt
+    try:
+        with open("_secrets/HF_TOKEN.txt") as f:
+            token = f.read().strip()
+    except Exception:
+        pass
+if not token:
+    print("⚠  MultiModalRag_Token not set — skipping DB reset")
+    sys.exit(0)
+from huggingface_hub import HfApi
+api = HfApi(token=token)
+repo = "irajkoohi/MultiModalRag_dataset"
+try:
+    files = [f for f in api.list_repo_files(repo, repo_type="dataset") if f.startswith("vectorstore/")]
+    for f in files:
+        api.delete_file(path_in_repo=f, repo_id=repo, repo_type="dataset",
+                        commit_message="reset vectorstore")
+    print(f"✅  Cleared {len(files)} vectorstore file(s) from HF Hub dataset")
+except Exception as e:
+    print(f"⚠  DB reset failed: {e}")
+PYEOF
+fi
 
 echo "▶ Staging modified files..."
 git add -u
