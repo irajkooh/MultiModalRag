@@ -32,7 +32,7 @@ def get_file_hash(filepath: str) -> str:
     return h.hexdigest()
 
 
-def image_to_base64(image: Image.Image, max_size: Tuple[int, int] = (1024, 1024)) -> str:
+def image_to_base64(image: Image.Image, max_size: Tuple[int, int] = (512, 512)) -> str:
     """Resize and encode a PIL image to base64."""
     image.thumbnail(max_size, Image.LANCZOS)
     buf = io.BytesIO()
@@ -83,19 +83,26 @@ def extract_pdf(filepath: str) -> List[Dict[str, Any]]:
                 "metadata": chunk_meta,
             })
 
-        # Extract embedded images from page
+        # Extract embedded images only from pages where text is sparse —
+        # avoids running slow Tesseract OCR on decorative images when the page
+        # already has readable text.
+        page_has_text = len(page_text.strip()) > 80
         try:
-            if hasattr(page, "images") and page.images:
-                for img_idx, img_obj in enumerate(page.images):
+            if not page_has_text and hasattr(page, "images") and page.images:
+                MAX_IMAGES_PER_PAGE = 2
+                for img_idx, img_obj in enumerate(page.images[:MAX_IMAGES_PER_PAGE]):
                     try:
                         pil_img = Image.open(io.BytesIO(img_obj.data))
+                        # Skip tiny decorative images
+                        if pil_img.width < 100 or pil_img.height < 100:
+                            continue
                         ocr_text = ocr_image(pil_img)
-                        img_b64 = image_to_base64(pil_img)
+                        # Don't store image_b64 in metadata — it bloats ChromaDB
+                        # SQLite with MBs of data per image and isn't used for retrieval.
                         img_meta = {
                             **chunk_meta,
                             "type": "image",
                             "image_index": img_idx,
-                            "image_b64": img_b64,
                         }
                         text_content = ocr_text if ocr_text else f"[Image on page {page_num}]"
                         chunks.append({
@@ -115,14 +122,12 @@ def extract_image(filepath: str) -> List[Dict[str, Any]]:
     filename = Path(filepath).name
     pil_img = Image.open(filepath).convert("RGB")
     ocr_text = ocr_image(pil_img)
-    img_b64 = image_to_base64(pil_img)
-
+    # image_b64 intentionally omitted — not needed for vector retrieval
     return [{
         "text": f"[Source: {filename}]\n{ocr_text if ocr_text else '[Image with no detectable text]'}",
         "metadata": {
             "source": filename,
             "type": "image",
-            "image_b64": img_b64,
             "file_hash": get_file_hash(filepath),
         },
     }]

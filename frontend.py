@@ -102,15 +102,48 @@ def _wait_for_backend(timeout: int = 300) -> bool:
   return False
 
 
+def _header_html(model, device):
+  return (
+    "# 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>\n"
+    "<span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>\n"
+    f"<br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span>"
+    " <span style='color:#7c5cfc;font-weight:bold;'>Powered by ChromaDB</span>"
+  )
+
+
 def upload_files(files):
+  """Generator: yields (upload_status, doc_list, status_text, submit_btn, header_md)
+  after each phase so the UI updates live as each file is uploaded and indexed.
+  """
   import urllib.parse
+
+  _noop = (gr.update(), gr.update(), gr.update(), gr.update())
+
+  def _emit(html, refresh=False):
+    if refresh:
+      docs, _, status_msg, model, device = get_status()
+      return (html,
+              gr.update(choices=docs or [], value=None),
+              status_msg,
+              gr.update(interactive=True),
+              _header_html(model, device))
+    return (html, *_noop)
+
   if not files:
-    return "No files selected."
+    yield _emit("<span style='color:#f87171'>No files selected.</span>")
+    return
   if not _wait_for_backend(timeout=300):
-    return "<span style='color:#ff4d4f'>&#10060; Backend did not start in time. Please refresh and try again.</span>"
+    yield _emit("<span style='color:#ff4d4f'>&#10060; Backend did not start in time. Please refresh and try again.</span>")
+    return
+
   messages = []
   for file in files:
     path = Path(file.name)
+
+    # ── Phase 1: uploading to server ──────────────────────────────────────────
+    preview = messages + [f"<span style='color:#93c5fd'>&#8593; {path.name}: uploading to server…</span>"]
+    yield _emit('<br>'.join(preview))
+
     with open(path, "rb") as f:
       resp = api_post(
         "/documents/upload",
@@ -119,26 +152,40 @@ def upload_files(files):
       )
     if "error" in resp:
       messages.append(f"<span style='color:#ff4d4f'>&#10060; {path.name}: {resp['error']}</span>")
+      yield _emit('<br>'.join(messages))
       continue
-    # Poll /documents/upload/status until done or error (max 5 min)
+
+    # ── Phase 2: indexing (parsing + embedding) ───────────────────────────────
     encoded = urllib.parse.quote(path.name, safe="")
     deadline = time.time() + 300
     poll = {}
     status = "processing"
+    last_phase = ""
+
+    preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: parsing document…</span>"]
+    yield _emit('<br>'.join(preview))
+
     while time.time() < deadline:
       time.sleep(2)
       poll = api_get(f"/documents/upload/status?filename={encoded}", timeout=15)
-      # Transient network errors (backend busy / HF Hub push in progress) →
-      # keep polling. Only stop on a definitive job state or 404 (job gone).
       if "error" in poll:
         err_msg = str(poll.get("error", ""))
         if "404" in err_msg or "No upload job" in err_msg:
-          break  # job truly not found
-        # Otherwise it's a transient connection/timeout error — retry
-        continue
+          break
+        continue  # transient error — keep polling
       status = poll.get("status", "processing")
-      if status in ("done", "error"):
+      if status == "done":
         break
+      if status == "error":
+        break
+      # Reflect backend phase ("parsing document…" / "embedding N chunks…")
+      phase = poll.get("phase", "")
+      if phase and phase != last_phase:
+        last_phase = phase
+        preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: {phase}</span>"]
+        yield _emit('<br>'.join(preview))
+
+    # ── Phase 3: result for this file ─────────────────────────────────────────
     if status == "done":
       chunks = poll.get("chunks", "?")
       messages.append(f"<span style='color:#4ade80'>&#10003; {path.name}: indexed ({chunks} chunks)</span>")
@@ -146,7 +193,19 @@ def upload_files(files):
       messages.append(f"<span style='color:#ff4d4f'>&#10060; {path.name}: {poll.get('message', 'indexing failed')}</span>")
     else:
       messages.append(f"<span style='color:#f87171'>&#9888; {path.name}: timed out — check Refresh</span>")
-  return '<br>'.join(messages)
+
+    # Refresh doc list immediately after each file so it appears without waiting
+    yield _emit('<br>'.join(messages), refresh=True)
+
+  # Final refresh in case the last yield already covered it
+  docs, _, status_msg, model, device = get_status()
+  yield (
+    '<br>'.join(messages),
+    gr.update(choices=docs or [], value=None),
+    status_msg,
+    gr.update(interactive=True),
+    _header_html(model, device),
+  )
 
 
 def delete_document(filenames):
@@ -431,14 +490,6 @@ def build_ui():
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
 
-        def _header_html(model, device):
-          return (
-            "# 🧠 <span style='color:#3b82f6;'>Multimodal RAG</span>\n"
-            "<span style='color:#7c5cfc;font-size:1.1em;'>Chat with your pdf, word, excel, csv, txt, image, chart, and table documents.</span>\n"
-            f"<br><span style='color:#ff9800;font-weight:bold;'>| LLM: {model} | Device: {device} |</span>"
-            " <span style='color:#7c5cfc;font-weight:bold;'>Powered by ChromaDB</span>"
-          )
-
         def refresh_and_update():
           docs, files, status_msg, model, device = get_status()
           return (
@@ -617,7 +668,7 @@ def build_ui():
             }"""
         )
         file_upload.upload(
-            fn=lambda files: (upload_files(files), *refresh_and_update()),
+            fn=upload_files,
             inputs=[file_upload],
             outputs=[upload_status, doc_list, status_text, submit_btn, header_md],
         )

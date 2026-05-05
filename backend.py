@@ -373,8 +373,16 @@ _upload_lock = threading.Lock()
 
 def _index_background(filename: str, save_path: str):
     """Runs in a background thread: index file, persist to HF Hub, update job status."""
+    def _set_phase(msg: str):
+        with _upload_lock:
+            _upload_jobs[filename]["phase"] = msg
     try:
-        n_chunks = index_file(save_path)
+        _set_phase("parsing document…")
+        chunks = process_document_chunked(save_path)
+        _set_phase(f"embedding {len(chunks)} chunks…")
+        source_name = Path(save_path).name
+        vs.remove_document(source_name)
+        n_chunks = vs.add_documents(chunks, source_name)
         # Mark done IMMEDIATELY so the frontend poll resolves without waiting for
         # the (potentially slow) HF Hub push that follows.
         with _upload_lock:
