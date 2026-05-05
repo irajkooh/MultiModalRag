@@ -530,15 +530,6 @@ def build_ui():
             }, 30000);
         }"""
         demo.load(fn=None, js=_JS_KEEPALIVE)
-        # Client-side keep-alive: ping /status every 30 s from the browser.
-        # This sends real HTTP traffic to the HF Space so the container never
-        # goes idle as long as someone has the tab open.
-        _JS_KEEPALIVE = """() => {
-            setInterval(function() {
-                fetch('/status').catch(function(){});
-            }, 30000);
-        }"""
-        demo.load(fn=None, js=_JS_KEEPALIVE)
         demo.load(
             fn=None,
             js="""() => {
