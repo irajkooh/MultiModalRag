@@ -103,11 +103,11 @@ def _wait_for_backend(timeout: int = 300) -> bool:
 
 
 def upload_files(files):
+  import urllib.parse
   if not files:
     return "No files selected."
-  # Ensure backend is up before sending any file
   if not _wait_for_backend(timeout=300):
-    return "<span style='color:#ff4d4f'>\u274c Backend did not start in time. Please refresh and try again.</span>"
+    return "<span style='color:#ff4d4f'>&#10060; Backend did not start in time. Please refresh and try again.</span>"
   messages = []
   for file in files:
     path = Path(file.name)
@@ -118,33 +118,50 @@ def upload_files(files):
         timeout=60,
       )
     if "error" in resp:
-      messages.append(f"<span style='color:#ff4d4f'>\u274c {path.name}: {resp['error']}</span>")
+      messages.append(f"<span style='color:#ff4d4f'>&#10060; {path.name}: {resp['error']}</span>")
+      continue
+    # Poll /documents/upload/status until done or error (max 5 min)
+    encoded = urllib.parse.quote(path.name, safe="")
+    deadline = time.time() + 300
+    poll = {}
+    status = "processing"
+    while time.time() < deadline:
+      time.sleep(2)
+      poll = api_get(f"/documents/upload/status?filename={encoded}", timeout=10)
+      if "error" in poll:
+        break
+      status = poll.get("status", "processing")
+      if status in ("done", "error"):
+        break
+    if status == "done":
+      chunks = poll.get("chunks", "?")
+      messages.append(f"<span style='color:#4ade80'>&#10003; {path.name}: indexed ({chunks} chunks)</span>")
+    elif status == "error":
+      messages.append(f"<span style='color:#ff4d4f'>&#10060; {path.name}: {poll.get('message', 'indexing failed')}</span>")
     else:
-      # Accepted for background indexing — don't block waiting for it
-      messages.append(f"<span style='color:#facc15'>\u23f3 {path.name}: indexing in background\u2026</span>")
-  return '<br>'.join(messages)
+      messages.append(f"<span style='color:#f87171'>&#9888; {path.name}: timed out — check Refresh</span>")
   return '<br>'.join(messages)
 
 
 def delete_document(filenames):
     import urllib.parse
     if not filenames:
-        return "Please select at least one document."
+        return "<span style='color:#f87171'>Please select at least one document.</span>"
     messages = []
     for filename in filenames:
         resp = api_delete(f"/documents/{urllib.parse.quote(filename, safe='')}")
         if "error" in resp:
-            messages.append(f"❌ {filename}: {resp['error']}")
+            messages.append(f"<span style='color:#ff4d4f'>&#10060; {filename}: {resp['error']}</span>")
         else:
-            messages.append(f"🗑️ {resp['message']}")
-    return "\n".join(messages)
+            messages.append(f"<span style='color:#4ade80'>&#128465; {filename}: removed</span>")
+    return '<br>'.join(messages)
 
 
 def delete_all_embeddings():
     resp = api_delete("/documents")
     if "error" in resp:
-        return f"❌ {resp['error']}"
-    return f"🗑️ {resp['message']}"
+        return f"<span style='color:#ff4d4f'>&#10060; {resp['error']}</span>"
+    return f"<span style='color:#4ade80'>&#128465; {resp['message']}</span>"
 
 
 def add_url(url: str) -> str:
@@ -404,7 +421,6 @@ def build_ui():
               gr.Markdown('<span style="font-size:0.95em;color:#f87171;">⚠️ Remove ALL embeddings? This cannot be undone.</span>')
               confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_id="confirm-yes-btn")
               confirm_no_btn  = gr.Button("✖ Cancel",          elem_id="confirm-no-btn")
-            delete_status = gr.Markdown(value="", elem_id="delete-status")
 
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
@@ -612,7 +628,7 @@ def build_ui():
         delete_btn.click(
           fn=lambda doc: (delete_document(doc), *refresh_and_update()),
           inputs=[doc_list],
-          outputs=[delete_status, doc_list, status_text, submit_btn, header_md],
+          outputs=[upload_status, doc_list, status_text, submit_btn, header_md],
         )
         # Show confirmation row when Remove ALL is clicked
         delete_all_btn.click(
@@ -622,7 +638,7 @@ def build_ui():
         # Confirm: execute delete, hide confirmation row
         confirm_yes_btn.click(
           fn=lambda: (gr.update(visible=False), delete_all_embeddings(), *refresh_and_update()),
-          outputs=[confirm_row, delete_status, doc_list, status_text, submit_btn, header_md],
+          outputs=[confirm_row, upload_status, doc_list, status_text, submit_btn, header_md],
         )
         # Cancel: just hide the confirmation row
         confirm_no_btn.click(

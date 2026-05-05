@@ -36,7 +36,6 @@
 set -euo pipefail
 
 MSG="${1:-"chore: update app"}"
-BINARY_EXTS=("*.pdf" "*.png" "*.jpg" "*.jpeg" "*.docx" "*.xlsx")
 
 echo "▶ Staging modified files..."
 git add -u
@@ -52,35 +51,37 @@ fi
 echo "▶ Pushing to GitHub (origin)..."
 git push origin main
 
-# ── HF Space push via clean orphan branch (no binary files) ──────────────────
+# ── HF Space push via a temp directory (never touches working tree) ──────────
 echo "▶ Building clean Space deploy branch (binary files excluded)..."
 
-# Save data dir — git checkout later would delete files committed only in the
-# orphan branch but absent from main.
-_data_backup=$(mktemp -d)
-cp -r data/. "$_data_backup/"
+_tmpdir=$(mktemp -d)
+# Copy entire working tree to temp dir, excluding what doesn't belong on Space
+rsync -a --exclude='.git' \
+         --exclude='data/*.pdf' \
+         --exclude='data/*.png' \
+         --exclude='data/*.jpg' \
+         --exclude='data/*.jpeg' \
+         --exclude='data/*.docx' \
+         --exclude='data/*.xlsx' \
+         --exclude='vectorstore/' \
+         --exclude='vectorstore_corrupted_backup/' \
+         --exclude='_secrets/' \
+         --exclude='.venv/' \
+         --exclude='__pycache__/' \
+         --exclude='*.pyc' \
+         . "$_tmpdir/"
 
-git checkout --orphan space-deploy
+# Build an orphan git repo in the temp dir and push it
+pushd "$_tmpdir" > /dev/null
+git init -q
+git checkout -b space-deploy
 git add -A
-
-# Remove binary data files from the index (they live in HF Dataset instead)
-for ext in "${BINARY_EXTS[@]}"; do
-    # shellcheck disable=SC2046
-    git rm --cached $(git ls-files "data/$ext") 2>/dev/null || true
-done
-
-git commit -m "$MSG [space deploy]"
-
+git commit -q -m "$MSG [space deploy]"
 echo "▶ Force-pushing to HuggingFace Space..."
+git remote add space "$(cd - > /dev/null && git remote get-url space)"
 git push space space-deploy:main --force
-
-echo "▶ Returning to main branch..."
-git checkout -f main
-git branch -D space-deploy
-
-# Restore data files that may have been wiped by the branch switch
-cp -rn "$_data_backup/." data/ 2>/dev/null || true
-rm -rf "$_data_backup"
+popd > /dev/null
+rm -rf "$_tmpdir"
 
 echo ""
 echo "✅ Deployed successfully!"

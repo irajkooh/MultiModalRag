@@ -285,10 +285,12 @@ def index_all_data_dir():
 # ─── Startup ──────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Startup: launching background indexer for data/ files...")
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, index_all_data_dir)
-    logger.info("HTTP server ready. Indexing continues in background.")
+    # ChromaDB PersistentClient already restores the vectorstore from disk on init.
+    # Do NOT auto-index data/ here — that would re-index files the user deleted
+    # from the index, making them reappear after every restart.
+    # On HF Spaces, sync_from_hf_hub() + sync_vectorstore_from_hf_hub() run at
+    # module load (before this), so the vectorstore is already fully restored.
+    logger.info("HTTP server ready.")
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
