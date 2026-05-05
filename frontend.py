@@ -97,12 +97,37 @@ def upload_files(files):
       resp = api_post(
         "/documents/upload",
         files={"file": (path.name, f, "application/octet-stream")},
-        timeout=120,
+        timeout=60,
       )
     if "error" in resp:
       messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
+      continue
+
+    # If the backend accepted the file for background indexing, poll for status
+    if resp.get("status") == "processing":
+      import urllib.parse
+      encoded = urllib.parse.quote(path.name, safe="")
+      deadline = time.time() + 900  # wait up to 15 minutes for large PDFs
+      while time.time() < deadline:
+        time.sleep(5)
+        status = api_get(f"/documents/upload/status?filename={encoded}", timeout=15)
+        if "error" in status:
+          messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {status['error']}</span>")
+          break
+        if status.get("status") == "done":
+          messages.append(f"<span style='color:#fff'>✅ {path.name}: {status['message']}</span>")
+          break
+        if status.get("status") == "error":
+          messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {status.get('message', 'Indexing failed.')}</span>")
+          break
+      else:
+        messages.append(f"<span style='color:#f87171'>⚠️ {path.name}: Indexing is taking longer than expected — refresh the document list in a moment.</span>")
     else:
-      messages.append(f"<span style='color:#fff'>✅ {path.name}: {resp['message']}</span>")
+      # Synchronous response (legacy or quick file)
+      if "error" in resp:
+        messages.append(f"<span style='color:#ff4d4f'>❌ {path.name}: {resp['error']}</span>")
+      else:
+        messages.append(f"<span style='color:#fff'>✅ {path.name}: {resp.get('message', 'Done.')}</span>")
   return '<br>'.join(messages)
 
 

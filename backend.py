@@ -212,26 +212,36 @@ async def get_status():
 
 
 @app.post("/documents/upload")
-async def upload_document(file: UploadFile = File(...)):
-    """Upload a document, save to data dir, and index it."""
+async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """Save a document to disk and start background indexing. Returns immediately."""
     suffix = Path(file.filename).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         raise HTTPException(400, f"Unsupported file type: {suffix}. Supported: {SUPPORTED_EXTENSIONS}")
-    
+
     save_path = Path(DATA_DIR) / file.filename
+    content = await file.read()
     with open(save_path, "wb") as f:
-        content = await file.read()
         f.write(content)
-    
-    try:
-        loop = asyncio.get_running_loop()
-        n_chunks = await loop.run_in_executor(None, index_file, str(save_path))
-        # Persist user-uploaded file to HF Hub so it survives container restarts
-        await loop.run_in_executor(None, push_to_hf_hub, file.filename)
-        return {"message": f"Uploaded and indexed '{file.filename}' ({n_chunks} chunks).", "chunks": n_chunks}
-    except Exception as e:
-        save_path.unlink(missing_ok=True)
-        raise HTTPException(500, f"Indexing failed: {str(e)}")
+
+    with _upload_lock:
+        _upload_jobs[file.filename] = {"status": "processing"}
+
+    background_tasks.add_task(_index_background, file.filename, str(save_path))
+    return {
+        "message": f"⏳ Indexing started for '{file.filename}' — polling for status.",
+        "status": "processing",
+        "filename": file.filename,
+    }
+
+
+@app.get("/documents/upload/status")
+async def upload_status(filename: str):
+    """Poll the indexing status of a background file upload."""
+    with _upload_lock:
+        job = _upload_jobs.get(filename)
+    if job is None:
+        raise HTTPException(404, f"No upload job found for '{filename}'")
+    return job
 
 
 @app.delete("/documents/{filename:path}")
@@ -263,6 +273,30 @@ async def delete_all_documents():
         (Path(DATA_DIR) / fname).unlink(missing_ok=True)
         await loop.run_in_executor(None, delete_from_hf_hub, fname)
     return {"message": f"Removed all {removed} indexed chunks and deleted {len(filenames)} file(s).", "chunks_removed": removed}
+
+
+# ─── Upload job tracker ──────────────────────────────────────────────────────
+_upload_jobs: dict = {}   # filename → {"status": "processing"|"done"|"error", ...}
+_upload_lock = threading.Lock()
+
+
+def _index_background(filename: str, save_path: str):
+    """Runs in a background thread: index file, persist to HF Hub, update job status."""
+    try:
+        n_chunks = index_file(save_path)
+        push_to_hf_hub(filename)
+        with _upload_lock:
+            _upload_jobs[filename] = {
+                "status": "done",
+                "message": f"Uploaded and indexed '{filename}' ({n_chunks} chunks).",
+                "chunks": n_chunks,
+            }
+        logger.info(f"Background index done: '{filename}' — {n_chunks} chunks")
+    except Exception as e:
+        logger.error(f"Background index failed for '{filename}': {e}", exc_info=True)
+        Path(save_path).unlink(missing_ok=True)
+        with _upload_lock:
+            _upload_jobs[filename] = {"status": "error", "message": str(e)}
 
 
 # ─── URL crawl job tracker ────────────────────────────────────────────────────
