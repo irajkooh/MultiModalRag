@@ -136,6 +136,7 @@ def upload_files(files):
     yield _emit("<span style='color:#ff4d4f'>&#10060; Backend did not start in time. Please refresh and try again.</span>")
     return
 
+  UPLOAD_TIMEOUT = 1800  # 30 min — large PDFs (e.g. 1000-page codes) take time
   messages = []
   for file in files:
     path = Path(file.name)
@@ -157,7 +158,7 @@ def upload_files(files):
 
     # ── Phase 2: indexing (parsing + embedding) ───────────────────────────────
     encoded = urllib.parse.quote(path.name, safe="")
-    deadline = time.time() + 300
+    deadline = time.time() + UPLOAD_TIMEOUT
     poll = {}
     status = "processing"
     last_phase = ""

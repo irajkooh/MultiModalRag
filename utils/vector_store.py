@@ -55,17 +55,22 @@ class VectorStoreManager:
             device=self.device,
         ).tolist()
 
-    def add_documents(self, chunks: List[Dict[str, Any]], source_name: str) -> int:
-        """Add document chunks. Returns number of chunks added."""
+    def add_documents(self, chunks: List[Dict[str, Any]], source_name: str,
+                       chunk_offset: int = 0) -> int:
+        """Add document chunks. Returns number of chunks added.
+
+        chunk_offset: first chunk's ID index (used when calling in sub-batches
+        so that IDs remain globally unique across calls for the same source).
+        """
         if not chunks:
             return 0
 
         texts = [c["text"] for c in chunks]
         metadatas = [c["metadata"] for c in chunks]
-        
-        # Build unique IDs: source + chunk index
+
+        # Build unique IDs: source + absolute chunk index
         ids = [
-            f"{source_name}__chunk_{i}"
+            f"{source_name}__chunk_{chunk_offset + i}"
             for i in range(len(chunks))
         ]
 
@@ -86,7 +91,7 @@ class VectorStoreManager:
                 documents=texts[i:i+batch],
                 metadatas=clean_metas[i:i+batch],
             )
-        
+
         logger.info(f"Added {len(chunks)} chunks for '{source_name}'")
         return len(chunks)
 
