@@ -30,8 +30,8 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
 # Set HF_DATASET_REPO (e.g. "yourname/MyApp-data") and HF_TOKEN as Space secrets.
 # Files uploaded via the app are pushed here and re-downloaded on every cold start,
 # so they survive container restarts and redeployments.
-HF_DATASET_REPO = os.environ.get("HF_DATASET_REPO", "")
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_DATASET_REPO = os.environ.get("MultiModalRag_dataset", "")
+HF_TOKEN = os.environ.get("MultiModalRag_Token", "")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(VECTORSTORE_DIR, exist_ok=True)
@@ -369,7 +369,7 @@ def _index_background(filename: str, save_path: str):
         logger.info(f"Background index done: '{filename}' — {n_chunks} chunks")
     except Exception as e:
         logger.error(f"Background index failed for '{filename}': {e}", exc_info=True)
-        Path(save_path).unlink(missing_ok=True)
+        # File is kept on disk even if indexing fails — user can retry
         with _upload_lock:
             _upload_jobs[filename] = {"status": "error", "message": str(e)}
 

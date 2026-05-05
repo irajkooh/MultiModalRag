@@ -54,6 +54,12 @@ git push origin main
 
 # ── HF Space push via clean orphan branch (no binary files) ──────────────────
 echo "▶ Building clean Space deploy branch (binary files excluded)..."
+
+# Save data dir — git checkout later would delete files committed only in the
+# orphan branch but absent from main.
+_data_backup=$(mktemp -d)
+cp -r data/. "$_data_backup/"
+
 git checkout --orphan space-deploy
 git add -A
 
@@ -71,6 +77,10 @@ git push space space-deploy:main --force
 echo "▶ Returning to main branch..."
 git checkout -f main
 git branch -D space-deploy
+
+# Restore data files that may have been wiped by the branch switch
+cp -rn "$_data_backup/." data/ 2>/dev/null || true
+rm -rf "$_data_backup"
 
 echo ""
 echo "✅ Deployed successfully!"
