@@ -114,8 +114,88 @@ def delete_from_hf_hub(filename: str):
     except Exception as e:
         logger.warning(f"HF Hub delete failed for '{filename}': {e}")
 
+
+def sync_vectorstore_from_hf_hub():
+    """Download persisted vectorstore from HF Hub dataset.
+    Must be called BEFORE VectorStoreManager is initialized so ChromaDB can
+    load existing embeddings and avoid re-indexing on cold start.
+    """
+    if not (HF_DATASET_REPO and HF_TOKEN):
+        return
+    try:
+        import huggingface_hub
+        from huggingface_hub import HfApi
+        api = HfApi(token=HF_TOKEN)
+        files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
+        vs_files = [f for f in files if f.startswith("vectorstore/")]
+        if not vs_files:
+            logger.info("HF Hub: no persisted vectorstore found — will build from scratch.")
+            return
+        for path_in_repo in vs_files:
+            rel = path_in_repo[len("vectorstore/"):]
+            if not rel:
+                continue
+            local = Path(VECTORSTORE_DIR) / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            dl = huggingface_hub.hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=path_in_repo,
+                repo_type="dataset",
+                token=HF_TOKEN,
+            )
+            shutil.copy2(dl, str(local))
+            logger.info(f"HF Hub vectorstore: restored '{rel}'")
+    except Exception as e:
+        logger.warning(f"HF Hub vectorstore sync failed: {e}")
+
+
+def push_vectorstore_to_hf_hub():
+    """Push the entire vectorstore directory to HF Hub dataset.
+    Called after every index or delete operation so embeddings survive restarts.
+    """
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        api.upload_folder(
+            folder_path=VECTORSTORE_DIR,
+            path_in_repo="vectorstore",
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            commit_message="Update vectorstore",
+            ignore_patterns=["*.lock", ".DS_Store"],
+        )
+        logger.info("HF Hub: pushed vectorstore")
+    except Exception as e:
+        logger.warning(f"HF Hub vectorstore push failed: {e}")
+
+
+def _copy_committed_files():
+    """Copy baseline PDFs committed to the Space repo under _secrets/data/ into DATA_DIR.
+    These are always available in the Space even without HF Hub Dataset configured.
+    """
+    secrets_data = Path("_secrets/data")
+    if not secrets_data.exists():
+        return
+    for fp in secrets_data.iterdir():
+        if fp.suffix.lower() in SUPPORTED_EXTENSIONS:
+            dest = Path(DATA_DIR) / fp.name
+            if not dest.exists():
+                shutil.copy2(str(fp), str(dest))
+                logger.info(f"Copied committed file '{fp.name}' → data/")
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
+
+# ─── Pre-init: restore persisted data so ChromaDB loads existing embeddings ──
+# This runs BEFORE VectorStoreManager is created. Restoring the vectorstore here
+# means ChromaDB will open the existing DB — no re-indexing needed on cold start.
+logger.info("Pre-init: copying committed baseline files...")
+_copy_committed_files()
+logger.info("Pre-init: restoring vectorstore from HF Hub (if configured)...")
+sync_vectorstore_from_hf_hub()
+logger.info("Pre-init: restoring data files from HF Hub (if configured)...")
+sync_from_hf_hub()
 
 # ─── Singletons ───────────────────────────────────────────────────────────────
 vs = VectorStoreManager(persist_dir=VECTORSTORE_DIR)
@@ -188,9 +268,10 @@ def index_all_data_dir():
 # ─── Startup ──────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Syncing user-uploaded files from HF Hub dataset (if configured)...")
-    sync_from_hf_hub()
-    logger.info("Indexing existing documents in data dir...")
+    # Files and vectorstore were already restored at module load (pre-init).
+    # index_all_data_dir() is a no-op for already-indexed docs; it only indexes
+    # any files that arrived in data/ but aren't in the vectorstore yet.
+    logger.info("Indexing any new documents not yet in vectorstore...")
     index_all_data_dir()
     logger.info(f"Ready. Vector store has {vs.total_chunks()} chunks.")
 
@@ -246,33 +327,26 @@ async def upload_status(filename: str):
 
 @app.delete("/documents/{filename:path}")
 async def delete_document(filename: str):
-    """Remove a document's embeddings from the vector store, delete from disk, and remove from HF Hub."""
+    """Remove a document's embeddings from the vector store only. File is kept on disk."""
     removed_chunks = vs.remove_document(filename)
-    # Delete from disk so the file doesn't get re-indexed on next startup
-    local_path = Path(DATA_DIR) / filename
-    local_path.unlink(missing_ok=True)
-    # Remove from HF Hub so it doesn't come back on container restart
+    # Persist the updated vectorstore so the removal survives restarts
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, delete_from_hf_hub, filename)
+    await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
     if removed_chunks > 0:
-        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}' and deleted file."}
+        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}'. File kept on disk."}
     else:
-        # File may have been on disk but not indexed
         raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
 
 
 @app.delete("/documents")
 async def delete_all_documents():
-    """Remove ALL embeddings from the vector store, delete all data files from disk and HF Hub."""
-    # Collect filenames before clearing
+    """Remove ALL embeddings from the vector store only. Files are kept on disk."""
     filenames = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
     removed = vs.clear_all()
-    # Delete all files from disk and HF Hub
+    # Persist the cleared vectorstore
     loop = asyncio.get_running_loop()
-    for fname in filenames:
-        (Path(DATA_DIR) / fname).unlink(missing_ok=True)
-        await loop.run_in_executor(None, delete_from_hf_hub, fname)
-    return {"message": f"Removed all {removed} indexed chunks and deleted {len(filenames)} file(s).", "chunks_removed": removed}
+    await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
+    return {"message": f"Removed all {removed} indexed chunks. {len(filenames)} file(s) kept on disk.", "chunks_removed": removed}
 
 
 # ─── Upload job tracker ──────────────────────────────────────────────────────
@@ -285,6 +359,7 @@ def _index_background(filename: str, save_path: str):
     try:
         n_chunks = index_file(save_path)
         push_to_hf_hub(filename)
+        push_vectorstore_to_hf_hub()  # persist embeddings so they survive restarts
         with _upload_lock:
             _upload_jobs[filename] = {
                 "status": "done",

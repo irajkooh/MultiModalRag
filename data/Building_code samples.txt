@@ -4,13 +4,13 @@
 https://www.ada.gov/law-and-regs/design-standards/2010-stds/
 
 #### 2024 IBC.pdf
-https://www.pinetoplakesideaz.gov/DocumentCenter/View/3717/2024-IBC
+chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.pinetoplakesideaz.gov/DocumentCenter/View/3717/2024-IBC
 
 #### Significant Changes to the International Codes (PDF).pdf
-https://content.civicplus.com/api/assets/95754205-2fa5-47dc-b23e-d8d00be75d71?cache=1800
+chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://content.civicplus.com/api/assets/95754205-2fa5-47dc-b23e-d8d00be75d71?cache=1800
 
 #### ASCE 7-05.pdf
-https://fluxus.cca.edu/~bbeazley/extreme-structures/links/ASCE%207-05.pdf
+chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://fluxus.cca.edu/~bbeazley/extreme-structures/links/ASCE%207-05.pdf
 
 
 What is the maximum rise and minimum run for stair treads?

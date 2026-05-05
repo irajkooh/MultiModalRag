@@ -313,12 +313,10 @@ _UI_CSS = """
     }
 """
 SAMPLE_QUESTIONS = [
-    "What is this document about?",         "Summarize the key points",
-    "What are the main findings?",           "List all topics covered",
-    "What conclusions are drawn?",           "What data or statistics are mentioned?",
-    "Who are the main entities discussed?",  "What recommendations are made?",
-    "What methods or approaches are described?", "Are there any tables or charts?",
-    "What limitations are mentioned?",       "What is the timeline or schedule?",
+    "How you can help me?",                          "How many documents are there?",
+    "What is the first document about?",             "Summarize each document in max 10 bullet points.",
+    "List top keywords or concepts mentioned.",      "What are the names mentioned in documents?",
+    "List all the links in the documents?",          "What problems or challenges are discussed?",
 ]
 
 # ─── Build UI ──────────────────────────────────────────────────────────────────
@@ -339,9 +337,9 @@ def build_ui():
               height=380,
               elem_classes="chatbot-wrap",
             )
-            # ─ Sample question chips (3 rows × 4 columns) ─
+            # ─ Sample question chips (2 rows × 4 columns) ─
             sample_q_btns = []
-            for _row in range(3):
+            for _row in range(2):
               with gr.Row():
                 for _col in range(4):
                   _q = SAMPLE_QUESTIONS[_row * 4 + _col]
