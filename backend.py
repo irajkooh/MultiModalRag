@@ -1111,8 +1111,8 @@ _TABLE_INTENT_RE = re.compile(
     r"calculate|tallest|largest|smallest|highest|lowest|most|least|"
     r"(?:max|min)(?!\s+\d)|"
     r"per (month|year|day|week|item|person|category)|"
-    r"(sales|revenue|profit|cost|price|amount|balance|credit|debit|spending|paid|owe)\b.*\b(of|for|by|in|per)\b|"
-    r"\b(of|for|by|in)\b.*\b(sales|revenue|profit|cost|price|amount|balance|credit|debit))\b",
+    r"(sales|revenue|profit|cost|price|amount|balance|credit|debit|spendings?|paid|owe)\b.*\b(of|for|by|in|per)\b|"
+    r"\b(of|for|by|in)\b.*\b(sales|revenue|profit|cost|price|amount|balance|credit|debit|spendings?))\b",
     re.IGNORECASE,
 )
 
