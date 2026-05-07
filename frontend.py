@@ -489,6 +489,7 @@ def build_ui():
                   label="Chat",
                   height=580,
                   elem_classes="chatbot-wrap",
+                  autoscroll=False,
                 )
               with gr.Column(scale=1):
                 with gr.Column(elem_classes="sample-q-panel"):
@@ -750,7 +751,8 @@ def build_ui():
                 }
                 document.addEventListener('mousedown', function(e) {
                     var askWrap = document.getElementById('ask-btn');
-                    if (askWrap && askWrap.contains(e.target)) {
+                    var isSampleBtn = e.target.closest && e.target.closest('.sample-q-btn');
+                    if ((askWrap && askWrap.contains(e.target)) || isSampleBtn) {
                         var el = _getChatScrollEl();
                         window._savedScrollTop = el ? el.scrollTop : 0;
                         _startScrollLock();
