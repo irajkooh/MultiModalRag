@@ -812,7 +812,8 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
-                window._scrollLockInterval = null;
+                window._scrollLockActive = false;
+                window._scrollLockInterval = null; // kept for compat with tts_audio_box handler
                 function _getChatScrollEl() {
                     var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return null;
@@ -835,17 +836,16 @@ def build_ui():
                         var isThinking = !!indicator.textContent.trim();
                         ov.style.display = isThinking ? 'block' : 'none';
                         if (isThinking) {
-                            var scrollEl = _getChatScrollEl();
                             var savedTop = window._savedScrollTop || 0;
-                            if (window._scrollLockInterval) clearInterval(window._scrollLockInterval);
-                            window._scrollLockInterval = setInterval(function() {
-                                if (scrollEl) scrollEl.scrollTop = savedTop;
-                            }, 50);
+                            window._scrollLockActive = true;
+                            (function lockFrame() {
+                                if (!window._scrollLockActive) return;
+                                var el = _getChatScrollEl();
+                                if (el) el.scrollTop = savedTop;
+                                requestAnimationFrame(lockFrame);
+                            })();
                         } else {
-                            if (window._scrollLockInterval) {
-                                clearInterval(window._scrollLockInterval);
-                                window._scrollLockInterval = null;
-                            }
+                            window._scrollLockActive = false;
                         }
                     }).observe(indicator, {childList:true, subtree:true, characterData:true});
                 }
@@ -937,7 +937,7 @@ def build_ui():
             yield history, "", gr.update(), "", gr.update()
             return
           history = history or []
-          yield history, "", _THINKING_HTML, "", gr.update()
+          yield gr.update(), "", _THINKING_HTML, "", gr.update()
           updated_history, stats = chat_fn(message, history, n, temp, src_filter)
           tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
           tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
@@ -981,6 +981,7 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
+            window._scrollLockActive = false;
             if (window._scrollLockInterval) { clearInterval(window._scrollLockInterval); window._scrollLockInterval = null; }
             if (window.speechSynthesis && window.speechSynthesis.speaking)
                 window.speechSynthesis.cancel();
