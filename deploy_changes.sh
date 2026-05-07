@@ -86,6 +86,60 @@ fi
 echo "▶ Pushing to GitHub (origin)..."
 git push origin main
 
+# ── Upload committed binary data files to HF Hub dataset ─────────────────────
+# PDFs/DOCX/PNGs are excluded from the Space rsync (no Git LFS support).
+# Uploading them here ensures sync_from_hf_hub() can download them on Space startup.
+echo "▶ Syncing binary data files to HF Hub dataset..."
+python3 - <<'PYEOF'
+import os, sys, re, subprocess
+from pathlib import Path
+
+token = os.environ.get("MultiModalRag_Token", "").strip()
+if not token:
+    try:
+        with open("_secrets/HF_TOKEN.txt") as f:
+            for line in f:
+                line = line.strip()
+                if re.match(r'^hf_[A-Za-z0-9]+$', line):
+                    token = line
+                    break
+    except Exception:
+        pass
+if not token:
+    print("⚠  HF token not found — skipping data file sync to HF Hub")
+    sys.exit(0)
+
+from huggingface_hub import HfApi, CommitOperationAdd
+api = HfApi(token=token)
+repo = "irajkoohi/MultiModalRag_dataset"
+
+result = subprocess.run(["git", "ls-files", "data/"], capture_output=True, text=True)
+committed = result.stdout.splitlines()
+
+# Only top-level binary files (no subdirs like images/ or tables/)
+binary_exts = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx'}
+to_upload = [
+    f for f in committed
+    if Path(f).suffix.lower() in binary_exts and '/' not in f[len("data/"):]
+]
+
+if not to_upload:
+    print("  No binary data files to upload.")
+    sys.exit(0)
+
+ops = [CommitOperationAdd(path_in_repo=f, path_or_fileobj=f) for f in to_upload]
+try:
+    api.create_commit(
+        repo_id=repo,
+        repo_type="dataset",
+        operations=ops,
+        commit_message="deploy: sync data files",
+    )
+    print(f"✅  Uploaded {len(ops)} file(s): {[Path(f).name for f in to_upload]}")
+except Exception as e:
+    print(f"⚠  HF Hub data sync failed: {e}")
+PYEOF
+
 # ── HF Space push via a temp directory (never touches working tree) ──────────
 echo "▶ Building clean Space deploy branch (binary files excluded)..."
 
