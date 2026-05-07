@@ -735,6 +735,26 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
+                // Capture scroll position before submit fires (ask-btn or Enter key)
+                // Must be captured here, before Gradio auto-scrolls to "Thinking..."
+                window._savedScrollTop = 0;
+                document.addEventListener('mousedown', function(e) {
+                    var askWrap = document.getElementById('ask-btn');
+                    if (askWrap && askWrap.contains(e.target)) {
+                        var el = _getChatScrollEl();
+                        window._savedScrollTop = el ? el.scrollTop : 0;
+                    }
+                }, true);
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        var inputWrap = document.getElementById('chat-input-wrap');
+                        if (inputWrap && inputWrap.contains(e.target)) {
+                            var el = _getChatScrollEl();
+                            window._savedScrollTop = el ? el.scrollTop : 0;
+                        }
+                    }
+                }, true);
+
                 // ── 3. Scroll to bottom — called once when answer is complete ──
                 window._scrollChatToBottom = function() {
                     var chatEl = document.querySelector('.chatbot-wrap');
@@ -816,7 +836,7 @@ def build_ui():
                         ov.style.display = isThinking ? 'block' : 'none';
                         if (isThinking) {
                             var scrollEl = _getChatScrollEl();
-                            var savedTop = scrollEl ? scrollEl.scrollTop : 0;
+                            var savedTop = window._savedScrollTop || 0;
                             if (window._scrollLockInterval) clearInterval(window._scrollLockInterval);
                             window._scrollLockInterval = setInterval(function() {
                                 if (scrollEl) scrollEl.scrollTop = savedTop;
