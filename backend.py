@@ -12,6 +12,7 @@ if not os.environ.get("SPACE_ID"):
 
 import asyncio
 import logging
+import re
 import shutil
 from pathlib import Path
 from typing import List, Optional
@@ -22,11 +23,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from utils.document_processor import process_document_chunked, SUPPORTED_EXTENSIONS
+from utils.document_processor import process_document_chunked, SUPPORTED_EXTENSIONS, extract_dataframes, extract_images
 from utils.vector_store import VectorStoreManager
-from utils.rag_engine import RAGEngine, BACKEND
+from utils.rag_engine import RAGEngine, BACKEND, RELEVANCE_THRESHOLD
 from utils.memory import ConversationMemory, estimate_tokens
 from utils.device import device_info
+from utils.table_store import TableStore
+from utils.image_store import ImageStore
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
@@ -181,6 +184,106 @@ def push_vectorstore_to_hf_hub():
         logger.warning(f"HF Hub vectorstore push failed: {e}")
 
 
+def push_tables_to_hf_hub():
+    if not _IS_HF_SPACE:
+        return
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        api.upload_folder(
+            folder_path=str(Path(DATA_DIR) / "tables"),
+            path_in_repo="tables",
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            commit_message="Update tables",
+            ignore_patterns=["*.lock", ".DS_Store"],
+        )
+        logger.info("HF Hub: pushed tables")
+    except Exception as e:
+        logger.warning(f"HF Hub tables push failed: {e}")
+
+
+def sync_tables_from_hf_hub():
+    if not (HF_DATASET_REPO and HF_TOKEN):
+        return
+    try:
+        import huggingface_hub
+        from huggingface_hub import HfApi
+        api = HfApi(token=HF_TOKEN)
+        files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
+        table_files = [f for f in files if f.startswith("tables/")]
+        if not table_files:
+            return
+        tables_dir = Path(DATA_DIR) / "tables"
+        tables_dir.mkdir(parents=True, exist_ok=True)
+        for path_in_repo in table_files:
+            rel = path_in_repo[len("tables/"):]
+            if not rel:
+                continue
+            local = tables_dir / rel
+            dl = huggingface_hub.hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=path_in_repo,
+                repo_type="dataset",
+                token=HF_TOKEN,
+            )
+            shutil.copy2(dl, str(local))
+            logger.info(f"HF Hub tables: restored '{rel}'")
+    except Exception as e:
+        logger.warning(f"HF Hub tables sync failed: {e}")
+
+
+def push_images_to_hf_hub():
+    if not _IS_HF_SPACE:
+        return
+    api = _hf_api()
+    if not api:
+        return
+    try:
+        api.upload_folder(
+            folder_path=str(Path(DATA_DIR) / "images"),
+            path_in_repo="images",
+            repo_id=HF_DATASET_REPO,
+            repo_type="dataset",
+            commit_message="Update images",
+            ignore_patterns=["*.lock", ".DS_Store"],
+        )
+        logger.info("HF Hub: pushed images")
+    except Exception as e:
+        logger.warning(f"HF Hub images push failed: {e}")
+
+
+def sync_images_from_hf_hub():
+    if not (HF_DATASET_REPO and HF_TOKEN):
+        return
+    try:
+        import huggingface_hub
+        from huggingface_hub import HfApi
+        api = HfApi(token=HF_TOKEN)
+        files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
+        image_files = [f for f in files if f.startswith("images/")]
+        if not image_files:
+            return
+        images_dir = Path(DATA_DIR) / "images"
+        for path_in_repo in image_files:
+            rel = path_in_repo[len("images/"):]
+            if not rel:
+                continue
+            local = images_dir / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            dl = huggingface_hub.hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=path_in_repo,
+                repo_type="dataset",
+                token=HF_TOKEN,
+            )
+            shutil.copy2(dl, str(local))
+            logger.info(f"HF Hub images: restored '{rel}'")
+    except Exception as e:
+        logger.warning(f"HF Hub images sync failed: {e}")
+
+
 def _copy_committed_files():
     """Copy baseline PDFs committed to the Space repo under _secrets/data/ into DATA_DIR.
     These are always available in the Space even without HF Hub Dataset configured.
@@ -211,6 +314,10 @@ if _IS_HF_SPACE:
     sync_vectorstore_from_hf_hub()
     logger.info("Pre-init: restoring data files from HF Hub (Space cold-start)...")
     sync_from_hf_hub()
+    logger.info("Pre-init: restoring tables from HF Hub...")
+    sync_tables_from_hf_hub()
+    logger.info("Pre-init: restoring images from HF Hub...")
+    sync_images_from_hf_hub()
 else:
     logger.info("Pre-init: local run — skipping HF Hub sync (files already on disk).")
 
@@ -218,6 +325,8 @@ else:
 vs = VectorStoreManager(persist_dir=VECTORSTORE_DIR)
 rag = RAGEngine(vector_store=vs, model=OLLAMA_MODEL)
 memory = ConversationMemory()
+ts = TableStore()
+img_store = ImageStore()
 
 
 # ─── App ──────────────────────────────────────────────────────────────────────
@@ -243,9 +352,11 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: List[str]
-    tokens_user: int = 0  # tokens in user message
-    tokens_assistant: int = 0  # tokens in assistant response
-    chunks_used: int = 0  # number of context chunks retrieved
+    tokens_user: int = 0
+    tokens_assistant: int = 0
+    chunks_used: int = 0
+    sql_query: str = ""
+    answer_method: str = "rag"  # "rag" | "table_query"
 
 
 class StatusResponse(BaseModel):
@@ -264,12 +375,18 @@ class URLIndexRequest(BaseModel):
 
 # ─── Helper ───────────────────────────────────────────────────────────────────
 def index_file(filepath: str) -> int:
-    """Process and index a file into the vector store."""
+    """Process and index a file into the vector store, and extract tables into TableStore."""
     chunks = process_document_chunked(filepath)
     source_name = Path(filepath).name
-    # Remove old version first (re-index)
     vs.remove_document(source_name)
-    return vs.add_documents(chunks, source_name)
+    n = vs.add_documents(chunks, source_name)
+    try:
+        dfs = _extract_tables(filepath)
+        if dfs:
+            ts.save(source_name, dfs)
+    except Exception as e:
+        logger.warning(f"Table extraction failed for '{source_name}': {e}")
+    return n
 
 
 def index_all_data_dir():
@@ -292,6 +409,42 @@ async def startup_event():
     # from the index, making them reappear after every restart.
     # On HF Spaces, sync_from_hf_hub() + sync_vectorstore_from_hf_hub() run at
     # module load (before this), so the vectorstore is already fully restored.
+
+    def _backfill_tables():
+        for fp in Path(DATA_DIR).iterdir():
+            if fp.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                continue
+            src = fp.name
+            if ts.was_attempted(src):
+                continue
+            try:
+                dfs = _extract_tables(str(fp))
+                ts.save(src, dfs)
+                if dfs:
+                    logger.info(f"Startup backfill: {len(dfs)} table(s) for '{src}'")
+            except Exception as e:
+                logger.warning(f"Startup backfill failed for '{src}': {e}")
+                ts.save(src, [])
+
+    def _backfill_images():
+        for fp in Path(DATA_DIR).iterdir():
+            if fp.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                continue
+            src = fp.name
+            if img_store.was_attempted(src):
+                continue
+            try:
+                images = extract_images(str(fp))
+                img_store.save(src, images)
+                if images:
+                    logger.info(f"Startup backfill: {len(images)} image(s) for '{src}'")
+            except Exception as e:
+                logger.warning(f"Startup image backfill failed for '{src}': {e}")
+                img_store.save(src, [])
+
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _backfill_tables)
+    loop.run_in_executor(None, _backfill_images)
     logger.info("HTTP server ready.")
 
 
@@ -348,13 +501,44 @@ async def upload_status(filename: str):
 async def delete_document(filename: str):
     """Remove a document's embeddings from the vector store only. File is kept on disk."""
     removed_chunks = vs.remove_document(filename)
-    # Persist the updated vectorstore so the removal survives restarts
+    ts.remove(filename)
+    img_store.remove(filename)
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
+    await loop.run_in_executor(None, push_tables_to_hf_hub)
+    await loop.run_in_executor(None, push_images_to_hf_hub)
     if removed_chunks > 0:
         return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}'. File kept on disk."}
     else:
         raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
+
+
+@app.post("/reextract")
+async def reextract_all():
+    """Re-run table and image extraction on all files in DATA_DIR. No re-embedding."""
+    files = [f for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
+    results = {}
+    for f in files:
+        source_name = f.name
+        tables_saved = 0
+        images_saved = 0
+        try:
+            dfs = _extract_tables(str(f))
+            ts.save(source_name, dfs)
+            tables_saved = len(dfs)
+        except Exception as e:
+            logger.warning(f"Table reextract failed for '{source_name}': {e}")
+        try:
+            images = extract_images(str(f))
+            img_store.save(source_name, images)
+            images_saved = len(images)
+        except Exception as e:
+            logger.warning(f"Image reextract failed for '{source_name}': {e}")
+        results[source_name] = {"tables": tables_saved, "images": images_saved}
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, push_tables_to_hf_hub)
+    loop.run_in_executor(None, push_images_to_hf_hub)
+    return {"results": results}
 
 
 @app.delete("/documents")
@@ -362,9 +546,12 @@ async def delete_all_documents():
     """Remove ALL embeddings from the vector store only. Files are kept on disk."""
     filenames = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
     removed = vs.clear_all()
-    # Persist the cleared vectorstore
+    ts.clear_all()
+    img_store.clear_all()
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
+    await loop.run_in_executor(None, push_tables_to_hf_hub)
+    await loop.run_in_executor(None, push_images_to_hf_hub)
     return {"message": f"Removed all {removed} indexed chunks. {len(filenames)} file(s) kept on disk.", "chunks_removed": removed}
 
 
@@ -397,6 +584,25 @@ def _index_background(filename: str, save_path: str):
             done += len(batch)
 
         n_chunks = done
+
+        _set_phase("extracting tables…")
+        try:
+            dfs = _extract_tables(save_path)
+            ts.save(source_name, dfs)
+            if dfs:
+                logger.info(f"TableStore: saved {len(dfs)} table(s) for '{source_name}'")
+        except Exception as e:
+            logger.warning(f"Table extraction failed for '{source_name}': {e}")
+
+        _set_phase("extracting images…")
+        try:
+            images = extract_images(save_path)
+            img_store.save(source_name, images)
+            if images:
+                logger.info(f"ImageStore: saved {len(images)} image(s) for '{source_name}'")
+        except Exception as e:
+            logger.warning(f"Image extraction failed for '{source_name}': {e}")
+
         # Mark done IMMEDIATELY so the frontend poll resolves without waiting for
         # the (potentially slow) HF Hub push that follows.
         with _upload_lock:
@@ -408,7 +614,9 @@ def _index_background(filename: str, save_path: str):
         logger.info(f"Background index done: '{filename}' — {n_chunks} chunks")
         # Push to HF Hub after marking done so a slow upload doesn't block status.
         push_to_hf_hub(filename)
-        push_vectorstore_to_hf_hub()  # persist embeddings so they survive restarts
+        push_vectorstore_to_hf_hub()
+        push_tables_to_hf_hub()
+        push_images_to_hf_hub()
     except Exception as e:
         logger.error(f"Background index failed for '{filename}': {e}", exc_info=True)
         # File is kept on disk even if indexing fails — user can retry
@@ -561,8 +769,7 @@ def _docs_list_response() -> str | None:
     breakdown = ", ".join(f"{cnt} {ext}" for ext, cnt in sorted(ext_counts.items()))
     return (
         f"There are **{len(sources)}** indexed document(s) ({breakdown}):\n\n"
-        f"{lines}\n\n"
-        "You can select specific files in the **🔍 Search in** dropdown above the chat to focus answers on them."
+        f"{lines}"
     )
 
 _META_ANSWER = (
@@ -588,6 +795,304 @@ def _chitchat_response(text: str) -> str | None:
     return None
 
 
+
+def _llm_extract_dataframes(filepath: str) -> list:
+    """LLM-based table extraction fallback for images and PDFs where the heuristic fails."""
+    import io as _io
+    import pandas as _pd
+    from pathlib import Path as _Path
+    ext = _Path(filepath).suffix.lower()
+    ocr_text = ""
+    try:
+        if ext in {".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif"}:
+            from utils.document_processor import ocr_image
+            from PIL import Image
+            ocr_text = ocr_image(Image.open(filepath).convert("RGB"))
+        elif ext == ".pdf":
+            from pypdf import PdfReader
+            reader = PdfReader(filepath)
+            ocr_text = "\n".join(p.extract_text() or "" for p in reader.pages)
+    except Exception as e:
+        logger.warning(f"LLM table fallback OCR failed for '{filepath}': {e}")
+        return []
+
+    if not ocr_text.strip():
+        return []
+
+    prompt = (
+        "The following is text extracted from a document. "
+        "If it contains a table, output ONLY a valid CSV representation — "
+        "no explanation, no markdown fences, just raw CSV rows. "
+        "Use clean column names in the header row. Strip leading row/line numbers. "
+        "If no table is present, output exactly: NO_TABLE\n\n"
+        f"{ocr_text}"
+    )
+    try:
+        csv_text = _call_llm([{"role": "user", "content": prompt}]).strip()
+        if not csv_text or csv_text.startswith("NO_TABLE"):
+            return []
+        if csv_text.startswith("```"):
+            csv_text = "\n".join(l for l in csv_text.splitlines() if not l.startswith("```"))
+        df = _pd.read_csv(_io.StringIO(csv_text.strip()))
+        return [df] if not df.empty else []
+    except Exception as e:
+        logger.warning(f"LLM table fallback parse failed for '{filepath}': {e}")
+        return []
+
+
+def _extract_tables(filepath: str) -> list:
+    """Extract DataFrames from a file, falling back to LLM parsing for images/PDFs."""
+    dfs = extract_dataframes(filepath)
+    if not dfs:
+        ext = Path(filepath).suffix.lower()
+        if ext in {".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif", ".pdf"}:
+            dfs = _llm_extract_dataframes(filepath)
+    return dfs
+
+
+def _call_llm(messages) -> str:
+    """Direct LLM call with no RAG context."""
+    if BACKEND == "groq":
+        resp = rag._client.chat.completions.create(
+            model=rag.model, messages=messages, temperature=0.0,
+        )
+        return resp.choices[0].message.content
+    elif BACKEND == "hf":
+        resp = rag._client.chat_completion(
+            model=rag.model, messages=messages, temperature=0.01, max_tokens=2048,
+        )
+        return resp.choices[0].message.content
+    else:
+        response = rag._client.chat(
+            model=rag.model, messages=messages, options={"temperature": 0.0},
+        )
+        return response["message"]["content"]
+
+
+def _strip_sql_fences(raw: str) -> str:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        lines = raw.split("\n")
+        raw = "\n".join(lines[1:])
+        if "```" in raw:
+            raw = raw[: raw.rfind("```")]
+    return raw.strip()
+
+
+def _select_relevant_tables(question: str, schema_info: list) -> list:
+    """Return the most relevant table(s) based on keyword overlap with column names and sample data."""
+    import re as _re
+    if len(schema_info) <= 1:
+        return schema_info
+    q_words = set(_re.sub(r"[^a-z0-9]", " ", question.lower()).split())
+    scores = []
+    for s in schema_info:
+        col_words = set(_re.sub(r"[^a-z0-9]", " ", " ".join(s["numeric_cols"] + s["text_cols"]).lower()).split())
+        sample_words = set(_re.sub(r"[^a-z0-9]", " ", s["sample"].lower()).split())
+        score = len(q_words & col_words) + 0.3 * len(q_words & sample_words)
+        scores.append(score)
+    max_score = max(scores)
+    if max_score == 0:
+        return schema_info
+    sorted_scores = sorted(scores, reverse=True)
+    # Narrow to best table only when it's clearly dominant
+    if len(sorted_scores) >= 2 and sorted_scores[0] >= 2 * sorted_scores[1] + 0.01:
+        return [schema_info[scores.index(max_score)]]
+    return [s for s, sc in zip(schema_info, scores) if sc >= max_score * 0.5]
+
+
+def _question_to_sql(question: str, schema_info: list, conn) -> tuple[str, list, list] | None:
+    """Convert a natural language question to SQL, execute it, and return (sql, rows, col_names).
+
+    Returns None if SQL generation or execution fails after retries.
+    Uses the table schema to build a structured prompt that prevents column confusion.
+    """
+    import pandas as pd
+
+    # Narrow to the most relevant table(s) to prevent cross-table column confusion
+    relevant = _select_relevant_tables(question, schema_info)
+
+    schema_text = "\n\n".join(
+        f"Table `{s['table_name']}` (source: {s['source']}, {s['nrows']} rows)\n"
+        f"  Numeric columns (REAL — safe for SUM/AVG/MIN/MAX): {', '.join(s['numeric_cols']) or 'none'}\n"
+        f"  Text columns (strings only — NEVER use in SUM/AVG/MIN/MAX): {', '.join(s['text_cols'])}\n"
+        f"  Sample rows:\n{s['sample']}"
+        for s in relevant
+    )
+    table_col_blocks = "\n".join(
+        f"  `{s['table_name']}` valid columns: "
+        + ", ".join(f"`{c}`" for c in s["numeric_cols"] + s["text_cols"])
+        for s in relevant
+    )
+    # Build dynamic warnings for columns that look like OCR-garbage text columns
+    text_col_warnings = []
+    for s in relevant:
+        bad_cols = [c for c in s["text_cols"] if c.lower() in ("balance", "total", "amount", "price")]
+        if bad_cols:
+            text_col_warnings.append(
+                f"WARNING: {', '.join(bad_cols)} in `{s['table_name']}` are TEXT (OCR output with symbols like '$', '€', ',') — "
+                f"they CANNOT be summed. Use {', '.join(s['numeric_cols']) or 'numeric columns'} instead."
+            )
+    warnings_block = ("\n".join(text_col_warnings) + "\n\n") if text_col_warnings else ""
+
+    sql_prompt = (
+        "SQLite database tables:\n\n"
+        + schema_text
+        + "\n\nCOLUMN CONSTRAINTS (only these column names are valid — no others exist):\n"
+        + table_col_blocks
+        + "\n\n"
+        + warnings_block
+        + "RULES:\n"
+        "  1. NEVER use text columns in SUM/AVG/MIN/MAX — they contain strings, not numbers.\n"
+        "  2. For date comparisons ALWAYS wrap with DATE(): WHERE DATE(Date)='2022-01-02'\n"
+        "     WRONG: WHERE Date='2022-01-02'   CORRECT: WHERE DATE(Date)='2022-01-02'\n"
+        "  3. For spending/expense queries on a bank table: filter Credit < 0 (negative = debit/spending)\n"
+        "  4. ONLY filter on columns explicitly mentioned in the question. Do NOT infer extra filters from sample data.\n"
+        "     WRONG (question says 'all items'): WHERE LOWER(Item)='apple' AND LOWER(Sales_Rep)='william'\n"
+        "     CORRECT:                           WHERE LOWER(Sales_Rep)='william'\n"
+        "  5. Always use LOWER() for text column comparisons.\n"
+        "     For exact names: WHERE LOWER(Sales_Rep)='william'\n"
+        "     For categories/keywords: WHERE LOWER(Description) LIKE '%grocery%'\n"
+        "     NEVER use bare equality for text without LOWER().\n"
+        "\n"
+        "Query patterns:\n"
+        "  Specific day:           WHERE DATE(Date)='2022-01-02'\n"
+        "  Month filter:           WHERE strftime('%Y-%m', Date)='2026-03'\n"
+        "  Exact text filter:      WHERE LOWER(Sales_Rep)='william'\n"
+        "  Category/keyword:       WHERE LOWER(Description) LIKE '%grocery%'\n"
+        "  All items for person:   SELECT SUM(Sales) FROM tbl WHERE LOWER(Sales_Rep)='william'\n"
+        "  Numeric aggregation:    SELECT SUM(Sales) FROM tbl WHERE ...\n"
+        "  Spending total:         SELECT SUM(Credit) FROM tbl WHERE strftime('%Y-%m', Date)='2026-03' AND Credit < 0\n"
+        "  Spending by category:   SELECT SUM(Credit) FROM tbl WHERE strftime('%Y-%m', Date)='2026-03' AND LOWER(Description) LIKE '%grocery%' AND Credit < 0\n"
+        "  Spending list:          SELECT Date, Description, Credit FROM tbl WHERE Credit < 0 ORDER BY Credit\n"
+        "\n"
+        f"Question: {question}\n\n"
+        "Write one SQLite SELECT statement. OUTPUT ONLY THE SQL — no markdown, no explanation.\n"
+    )
+    sql_messages = [
+        {"role": "system", "content": "Output only a valid SQLite SELECT statement. No markdown. No explanation."},
+        {"role": "user", "content": sql_prompt},
+    ]
+
+    for attempt in range(2):
+        sql = _strip_sql_fences(_call_llm(sql_messages).strip())
+        try:
+            cursor = conn.execute(sql)
+            rows = cursor.fetchall()
+            col_names = [d[0] for d in cursor.description] if cursor.description else []
+            return sql, rows, col_names
+        except Exception as e:
+            logger.warning(f"SQL exec failed (attempt {attempt + 1}): {e}\nSQL: {sql}")
+            if attempt == 0:
+                sql_messages = sql_messages + [
+                    {"role": "assistant", "content": sql},
+                    {"role": "user", "content": f"Error: {e}\nReturn only the corrected SQL query."},
+                ]
+    return None
+
+
+_TABLE_INTENT_RE = re.compile(
+    r"\b(sum|total|average|avg|mean|max|min|maximum|minimum|count|how much|how many|"
+    r"calculate|tallest|largest|smallest|highest|lowest|most|least|"
+    r"per (month|year|day|week|item|person|category)|"
+    r"(sales|revenue|profit|cost|price|amount|balance|credit|debit|spending|paid|owe)\b.*\b(of|for|by|in|per)\b|"
+    r"\b(of|for|by|in)\b.*\b(sales|revenue|profit|cost|price|amount|balance|credit|debit))\b",
+    re.IGNORECASE,
+)
+
+
+def _is_table_question(question: str) -> bool:
+    """Return True only if the question is asking for quantitative/analytical data from tables."""
+    return bool(_TABLE_INTENT_RE.search(question))
+
+
+def _run_table_query(question: str, source_filter=None) -> tuple[str, str] | None:
+    """Answer a question using stored tables via text-to-SQL + LLM synthesis. Returns (answer, sql) or None."""
+    import pandas as pd
+
+    if source_filter:
+        sources = source_filter
+    else:
+        # Use all files in DATA_DIR, not just embedded ones
+        sources = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
+
+    # On-demand extraction for sources not yet attempted
+    for src in sources:
+        if not ts.was_attempted(src):
+            fp = Path(DATA_DIR) / src
+            if fp.exists():
+                try:
+                    extracted = _extract_tables(str(fp))
+                    ts.save(src, extracted)
+                except Exception as e:
+                    logger.warning(f"On-demand table extraction failed for '{src}': {e}")
+                    ts.save(src, [])
+
+    conn, schema_info = ts.load_into_memory(sources)
+    if not schema_info:
+        conn.close()
+        return None
+
+    result = _question_to_sql(question, schema_info, conn)
+
+    if result is None:
+        conn.close()
+        return None
+
+    sql, rows, col_names = result
+
+    if not rows:
+        conn.close()
+        return "No matching data found in the tables.", sql
+
+    result_df = pd.DataFrame(rows, columns=col_names) if col_names else pd.DataFrame(rows)
+    result_str = result_df.to_string(index=False)
+
+    # When result is a single aggregate value, fetch the underlying detail rows
+    detail_str = ""
+    if len(rows) == 1 and len(col_names) == 1:
+        import re as _re
+        m = _re.search(r"(FROM\s+\S+(?:\s+WHERE\s+.+)?)", sql, _re.IGNORECASE | _re.DOTALL)
+        if m:
+            detail_sql = f"SELECT * {m.group(1).rstrip(';')}"
+            try:
+                dcursor = conn.execute(detail_sql)
+                drows = dcursor.fetchall()
+                dcols = [d[0] for d in dcursor.description]
+                if drows:
+                    ddf = pd.DataFrame(drows, columns=dcols)
+                    detail_str = f"\n\nUnderlying rows:\n{ddf.to_string(index=False)}"
+            except Exception:
+                pass
+
+    conn.close()
+
+    # For a single aggregate value: return it directly — no synthesis LLM to avoid misinterpretation
+    if len(rows) == 1 and len(col_names) == 1:
+        raw_val = rows[0][0]
+        col_label = col_names[0]
+        answer = f"**{col_label}:** {raw_val}"
+        if detail_str:
+            answer += detail_str
+        return answer, sql
+
+    answer_messages = [
+        {"role": "system", "content": "You are a helpful data analyst. Answer concisely based on the query results. NEVER recalculate or modify the numbers — report them exactly as returned by SQL."},
+        {
+            "role": "user",
+            "content": (
+                f"Question: {question}\n\n"
+                f"SQL: {sql}\n\n"
+                f"Results:\n{result_str}"
+                f"{detail_str}\n\n"
+                "Report the exact values from the results. Do not round, negate, or recalculate any numbers."
+            ),
+        },
+    ]
+    answer = _call_llm(answer_messages).strip()
+    return (answer if answer else result_str), sql
+
+
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(req: QueryRequest):
     """Query the RAG system."""
@@ -607,25 +1112,48 @@ async def query_documents(req: QueryRequest):
         # Run all blocking work (embedding + LLM) in a thread executor
         def _run_query():
             sf = req.source_filter or None
+
+            table_result = _run_table_query(req.question, sf) if _is_table_question(req.question) else None
+            if table_result:
+                table_answer, table_sql = table_result
+                sources = sf if sf else vs.list_sources()
+                memory.add("user", req.question)
+                memory.add("assistant", f"{table_answer}\n\n[SQL used: {table_sql}]")
+                return table_answer, table_sql, "table_query", list(sources), estimate_tokens(req.question), estimate_tokens(table_answer), 0
+
             results = vs.query(
                 req.question,
                 n_results=req.n_results,
                 source_filter=sf,
             )
-            chunks_used = len(results)
-            sources = list({r["metadata"].get("source", "") for r in results})
+            relevant = [r for r in results if r.get("distance", 2.0) <= RELEVANCE_THRESHOLD]
+            chunks_used = len(relevant)
+            if relevant:
+                best_dist = min(r.get("distance", 2.0) for r in relevant)
+                source_chunks = [r for r in relevant if r.get("distance", 2.0) <= best_dist + 0.3]
+            else:
+                source_chunks = []
+            sources = list({r["metadata"].get("source", "") for r in source_chunks})
             parts = []
             for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False, source_filter=sf):
                 parts.append(token)
             answer = "".join(parts)
             tokens_user = estimate_tokens(req.question)
             tokens_assistant = estimate_tokens(answer)
-            return answer, sources, tokens_user, tokens_assistant, chunks_used
+            return answer, "", "rag", sources, tokens_user, tokens_assistant, chunks_used
 
         loop = asyncio.get_running_loop()
-        answer, sources, tokens_user, tokens_assistant, chunks_used = await loop.run_in_executor(None, _run_query)
+        answer, sql_query, answer_method, sources, tokens_user, tokens_assistant, chunks_used = await loop.run_in_executor(None, _run_query)
 
-        return QueryResponse(answer=answer, sources=sources, tokens_user=tokens_user, tokens_assistant=tokens_assistant, chunks_used=chunks_used)
+        return QueryResponse(
+            answer=answer,
+            sources=sources,
+            tokens_user=tokens_user,
+            tokens_assistant=tokens_assistant,
+            chunks_used=chunks_used,
+            sql_query=sql_query,
+            answer_method=answer_method,
+        )
     except Exception as e:
         logger.error(f"Query endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

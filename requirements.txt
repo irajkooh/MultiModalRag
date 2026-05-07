@@ -25,6 +25,7 @@ Pillow>=10.0.0
 openpyxl==3.1.5
 python-docx==1.1.2
 pandas==2.2.3
+pyarrow>=14.0.0
 
 # ── Embeddings / ML ───────────────────────────────────────────────────────────
 # torch is pre-installed CPU-only in the Dockerfile RUN step above

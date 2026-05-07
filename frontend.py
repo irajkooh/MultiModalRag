@@ -4,6 +4,7 @@ Chat and document management with clean, responsive layout.
 """
 import os
 import time
+import fnmatch
 import requests
 import gradio as gr
 from pathlib import Path
@@ -143,7 +144,7 @@ def upload_files(files):
     path = Path(file.name)
 
     # ── Phase 1: uploading to server ──────────────────────────────────────────
-    preview = messages + [f"<span style='color:#93c5fd'>&#8593; {path.name}: uploading to server…</span>"]
+    preview = messages + [f"<span style='color:#fbbf24'>&#9881; {path.name}: uploading…</span>"]
     yield _emit('<br>'.join(preview))
 
     with open(path, "rb") as f:
@@ -291,8 +292,21 @@ def chat_fn(message, history, n_results, temperature, source_filter=None):
     answer = resp.get("answer", "I DON'T KNOW")
     sources = resp.get("sources", [])
     chunks_used = resp.get("chunks_used", 0)
+    sql_query = resp.get("sql_query", "")
+    answer_method = resp.get("answer_method", "rag")
+
+    if answer_method == "table_query":
+      method_note = "🗃️ *Answer generated from structured table query (SQL)*"
+    else:
+      method_note = f"🔍 *Answer retrieved from document chunks ({chunks_used} chunks)*"
+
+    if sql_query:
+      answer += f"\n\n<details><summary>SQL query used</summary>\n\n```sql\n{sql_query}\n```\n\n</details>"
+
     if sources:
-      answer += f"\n\n📄 *Sources: {', '.join(sources)} — {chunks_used} chunks retrieved*"
+      answer += f"\n\n{method_note}\n📄 *Sources: {', '.join(sources)}*"
+    else:
+      answer += f"\n\n{method_note}"
   history = list(history) if history else []
   if history and isinstance(history[0], tuple):
     new_hist = []
@@ -360,7 +374,8 @@ _EMOJI_RE = _re.compile(
 )
 
 def _clean_for_tts(text: str) -> str:
-    text = _re.sub(r"\n\n📄 \*Sources:[^\n]*", "", text)   # remove sources line
+    text = _re.sub(r"<details>.*?</details>", "", text, flags=_re.DOTALL)  # remove SQL block
+    text = _re.sub(r"\n\n[🗃🔍📄][^\n]*", "", text)         # remove method/sources lines
     text = _re.sub(r"\*+([^*]*)\*+", r"\1", text)          # remove bold/italic
     text = _re.sub(r"`[^`]*`", "", text)                    # remove inline code
     text = _re.sub(r"#+\s", "", text)                       # remove headers
@@ -379,31 +394,70 @@ def get_chat_for_copy(history):
 _UI_THEME = gr.themes.Soft()
 _UI_CSS = """
     .main-col  { max-width: 900px; margin: 0 auto; }
-    .chatbot-wrap { background: #181c24; border-radius: 12px; }
+    /* Chat window — deep cosmic violet */
+    .chatbot-wrap { background: #16082e; border-radius: 12px; border: 1px solid #3d1a7a; }
     .gradio-container { background: #10131a; }
+    /* Sample questions — deep midnight navy */
+    .sample-q-panel {
+        background: #071b2e !important;
+        border-radius: 12px !important;
+        padding: 10px 10px 6px 10px !important;
+        border: 1px solid #1a4d7a !important;
+    }
+    /* Search filter — deep crimson/burgundy */
+    .filter-panel {
+        background: #1c0810 !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+        border: 1px solid #6b1a2e !important;
+    }
+    .filter-panel .wrap {
+        max-height: 72px !important;
+        overflow-y: auto !important;
+        flex-wrap: wrap !important;
+    }
+    .filter-panel .wrap::-webkit-scrollbar { width: 4px; }
+    .filter-panel .wrap::-webkit-scrollbar-track { background: #1c0810; }
+    .filter-panel .wrap::-webkit-scrollbar-thumb { background: #6b1a2e; border-radius: 4px; }
+    #thinking-indicator { display: none !important; }
+    /* Question box — deep forest emerald */
+    #chat-input-wrap {
+        position: relative !important;
+        background: #061c10 !important;
+        border-radius: 10px !important;
+        border: 1px solid #1a6b3d !important;
+        padding: 6px !important;
+    }
+    #chat-input-wrap textarea {
+        background: #061c10 !important;
+        color: #e2e8f0 !important;
+    }
+    #ask-btn { width: 52px !important; min-width: 52px !important; max-width: 52px !important; padding: 0 !important; aspect-ratio: 1; }
     .sample-q-btn button {
         font-size: 0.75em !important;
         padding: 5px 10px !important;
         border-radius: 14px !important;
-        border: 1px solid #2d3a55 !important;
-        background: #1a2035 !important;
+        border: 1px solid #1a3a5c !important;
+        background: #0a2540 !important;
         color: #94a3b8 !important;
-        white-space: nowrap;
+        white-space: normal !important;
         overflow: hidden;
         text-overflow: ellipsis;
         min-height: unset !important;
         height: auto !important;
+        width: 100% !important;
+        text-align: left !important;
     }
     .sample-q-btn button:hover {
-        background: #243050 !important;
+        background: #0e3460 !important;
         border-color: #3b82f6 !important;
         color: #e2e8f0 !important;
     }
 """
 SAMPLE_QUESTIONS = [
     "How you can help me?",                          "How many documents are there?",
-    "What is the first document about?",             "Summarize each document in max 10 bullet points.",
-    "List top keywords or concepts mentioned.",      "What are the names mentioned in documents?",
+    "What is the first document about?",             "Summarize each doc in max 10 bullet points.",
+    "List top keywords or concepts mentioned.",      "What are the names mentioned in docs?",
     "List all the links in the documents?",          "What problems or challenges are discussed?",
 ]
 
@@ -420,38 +474,45 @@ def build_ui():
                 )
         with gr.Tabs(selected=0) as tabs:
           with gr.TabItem("💬 Chat"):
-            chatbot = gr.Chatbot(
-              label="Chat",
-              height=380,
-              elem_classes="chatbot-wrap",
-            )
-            # ─ Sample question chips (2 rows × 4 columns) ─
-            sample_q_btns = []
-            for _row in range(2):
-              with gr.Row():
-                for _col in range(4):
-                  _q = SAMPLE_QUESTIONS[_row * 4 + _col]
-                  _btn = gr.Button(_q, size="sm", elem_classes="sample-q-btn")
-                  sample_q_btns.append(_btn)
-            source_filter_dd = gr.Dropdown(
-              choices=[],
-              label="🔍 Search in (leave empty = all docs)",
-              multiselect=True,
-              interactive=True,
-            )
             thinking_indicator = gr.HTML(value="", elem_id="thinking-indicator")
             with gr.Row():
+              with gr.Column(scale=5):
+                chatbot = gr.Chatbot(
+                  label="Chat",
+                  height=580,
+                  elem_classes="chatbot-wrap",
+                )
+              with gr.Column(scale=1):
+                with gr.Column(elem_classes="sample-q-panel"):
+                  sample_q_btns = []
+                  for _q in SAMPLE_QUESTIONS:
+                    _btn = gr.Button(_q, size="sm", elem_classes="sample-q-btn")
+                    sample_q_btns.append(_btn)
+                with gr.Column(elem_classes="filter-panel"):
+                  filter_pattern_tb = gr.Textbox(
+                    placeholder="*.png  *.pdf  img_*",
+                    show_label=False,
+                    lines=1,
+                    max_lines=1,
+                  )
+                  source_filter_dd = gr.Dropdown(
+                    choices=[],
+                    label="🔍 Search in (leave empty = all docs)",
+                    multiselect=True,
+                    interactive=True,
+                  )
+            with gr.Row(elem_id="chat-action-row"):
               msg_input = gr.Textbox(
-                placeholder="Ask a question about your documents...",
+                placeholder="",
                 show_label=False,
-                scale=8,
+                scale=7,
                 lines=1,
                 max_lines=1,
                 autofocus=True,
+                elem_id="chat-input-wrap",
               )
-              submit_btn = gr.Button("Ask", elem_id="ask-btn", elem_classes="primary-btn", scale=1)
-            with gr.Row():
-              read_btn       = gr.Button("Read", elem_id="read-btn",       scale=2)
+              submit_btn     = gr.Button("Ask",          elem_id="ask-btn",       elem_classes="primary-btn", scale=1, min_width=48)
+              read_btn       = gr.Button("Read",          elem_id="read-btn",                                  scale=1)
               copy_btn       = gr.Button("📋 Copy Chat", elem_id="copy-btn",       elem_classes=["btn-copy"],  scale=1)
               clear_chat_btn = gr.Button("🗑 Clear Chat", elem_id="clear-chat-btn", elem_classes=["btn-clear"], scale=1)
             with gr.Row():
@@ -500,6 +561,7 @@ def build_ui():
               delete_btn     = gr.Button("🗑 Remove selected", elem_id="delete-btn")
               delete_all_btn = gr.Button("🗑 Remove ALL",      elem_id="delete-all-btn")
               refresh_btn    = gr.Button("↻ Refresh list",    elem_id="refresh-btn")
+              reextract_btn  = gr.Button("⚙ Re-extract tables & images", elem_id="reextract-btn")
             # Confirmation row for Remove ALL
             with gr.Row(visible=False) as confirm_row:
               gr.Markdown('<span style="font-size:0.95em;color:#f87171;">⚠️ Remove ALL embeddings? This cannot be undone.</span>')
@@ -551,6 +613,24 @@ def build_ui():
             }, 30000);
         }"""
         demo.load(fn=None, js=_JS_KEEPALIVE)
+
+        def _apply_filter(pattern: str):
+            docs, *_ = get_status()
+            docs = docs or []
+            if not pattern or not pattern.strip():
+                return gr.update(choices=docs, value=[])
+            matched = []
+            for pat in pattern.split():
+                matched.extend(fnmatch.filter(docs, pat))
+            matched = list(dict.fromkeys(matched))  # dedupe, preserve order
+            return gr.update(choices=docs, value=matched)
+
+        filter_pattern_tb.submit(fn=_apply_filter, inputs=[filter_pattern_tb], outputs=[source_filter_dd])
+
+        demo.load(
+            fn=None,
+            js="""() => { setTimeout(function(){ window.scrollTo(0, 0); }, 200); }"""
+        )
         demo.load(
             fn=None,
             js="""() => {
@@ -700,11 +780,26 @@ def build_ui():
                         if (window._ttsToggle) window._ttsToggle();
                     }
                 }, true);
+
+                // ── 5. Thinking overlay inside question box ──
+                function _setupThinkingOverlay() {
+                    var indicator = document.getElementById('thinking-indicator');
+                    var wrap = document.getElementById('chat-input-wrap');
+                    if (!indicator || !wrap) { setTimeout(_setupThinkingOverlay, 400); return; }
+                    var ov = document.createElement('div');
+                    ov.style.cssText = 'position:absolute;top:50%;left:14px;transform:translateY(-50%);z-index:100;pointer-events:none;color:#3b82f6;font-weight:600;font-size:1.1em;display:none;';
+                    ov.textContent = '⏳ Thinking...';
+                    wrap.appendChild(ov);
+                    new MutationObserver(function() {
+                        ov.style.display = indicator.textContent.trim() ? 'block' : 'none';
+                    }).observe(indicator, {childList:true, subtree:true, characterData:true});
+                }
+                setTimeout(_setupThinkingOverlay, 600);
             }"""
         )
         file_upload.upload(
-          fn=lambda files, selected: (*list(upload_files(files))[-1], *refresh_and_update(selected)),
-          inputs=[file_upload, doc_list_state],
+          fn=upload_files,
+          inputs=[file_upload],
           outputs=[upload_status, doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
         add_url_btn.click(
@@ -749,6 +844,21 @@ def build_ui():
           outputs=[doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
 
+        def run_reextract():
+          r = api_post("/reextract", timeout=300)
+          if "error" in r:
+            return f"❌ Re-extract failed: {r['error']}"
+          lines = [f"✅ Re-extraction complete:"]
+          for src, counts in r.get("results", {}).items():
+            lines.append(f"  • {src} — {counts['tables']} table(s), {counts['images']} image(s)")
+          return "\n".join(lines)
+
+        reextract_btn.click(
+          fn=run_reextract,
+          inputs=[],
+          outputs=[status_text],
+        )
+
         # Always update state when user changes selection
         doc_list.change(
           fn=lambda sel: sel,
@@ -768,26 +878,26 @@ def build_ui():
 
         def on_submit(message, history, n, temp, src_filter):
           if not message.strip():
-            yield history, "", gr.update(), ""
+            yield history, "", gr.update(), "", gr.update()
             return
           history = history or []
-          yield history, "", _THINKING_HTML, ""
+          yield history, "", _THINKING_HTML, "", gr.update()
           updated_history, stats = chat_fn(message, history, n, temp, src_filter)
           tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
           tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
           tts_text = _clean_for_tts(get_last_answer(updated_history)) if updated_history else ""
           tok_html = f"<span style='color:#3b82f6; font-weight:600;'>Tokens sent: {tokens_user} &nbsp;&nbsp; Tokens received: {tokens_assistant}</span>"
-          yield updated_history, "", "", tts_text
-          yield updated_history, "", tok_html, tts_text
+          yield updated_history, "", "", tts_text, tok_html
+        _submit_outputs = [chatbot, msg_input, thinking_indicator, tts_audio_box, token_stats_text]
         submit_btn.click(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
-          outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
+          outputs=_submit_outputs,
         )
         msg_input.submit(
           fn=on_submit,
           inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
-          outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
+          outputs=_submit_outputs,
         )
         # Wire each sample question button: load text then submit
         for _sq_btn, _sq_text in zip(sample_q_btns, SAMPLE_QUESTIONS):
@@ -797,7 +907,7 @@ def build_ui():
           ).then(
             fn=on_submit,
             inputs=[msg_input, chatbot, n_results_slider, temperature_slider, source_filter_dd],
-            outputs=[chatbot, msg_input, thinking_indicator, tts_audio_box],
+            outputs=_submit_outputs,
           )
         def on_clear_chat():
           status, history = clear_memory()

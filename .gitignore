@@ -3,8 +3,11 @@ __pycache__/
 *.pyo
 .env
 vectorstore/
-# data/ is intentionally tracked so local files are deployed to HF Space
-# and baked into the Docker image. Users can add/remove via the app UI.
+# data/ is intentionally tracked so source PDFs/images are baked into the Docker image.
+# Generated directories (images/, tables/) are excluded — they restore from HF Hub on cold start.
+data/images/
+data/tables/
+_secrets/
 *.egg-info/
 dist/
 build/
