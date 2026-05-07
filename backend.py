@@ -171,13 +171,25 @@ def push_vectorstore_to_hf_hub():
     if not api:
         return
     try:
+        # Compact SQLite before uploading to keep file sizes small.
+        # ChromaDB accumulates free pages over time; VACUUM reclaims them.
+        _sqlite_path = Path(VECTORSTORE_DIR) / "chroma.sqlite3"
+        if _sqlite_path.exists():
+            try:
+                import sqlite3 as _sqlite3
+                _conn = _sqlite3.connect(str(_sqlite_path), timeout=5)
+                _conn.execute("VACUUM")
+                _conn.close()
+                logger.info("Vectorstore SQLite compacted before push")
+            except Exception as _ve:
+                logger.warning(f"SQLite VACUUM skipped: {_ve}")
         api.upload_folder(
             folder_path=VECTORSTORE_DIR,
             path_in_repo="vectorstore",
             repo_id=HF_DATASET_REPO,
             repo_type="dataset",
             commit_message="Update vectorstore",
-            ignore_patterns=["*.lock", ".DS_Store"],
+            ignore_patterns=["*.lock", ".DS_Store", "*.wal", "*.shm"],
         )
         logger.info("HF Hub: pushed vectorstore")
     except Exception as e:
@@ -458,14 +470,19 @@ async def startup_event():
             "%d file(s) in data/ not in vectorstore — indexing: %s",
             len(missing), [f.name for f in missing],
         )
+        failed = []
         for fp in missing:
             try:
                 n = index_file(str(fp))
                 logger.info(f"Startup index: '{fp.name}' — {n} chunks")
             except Exception as e:
                 logger.error(f"Startup index failed for '{fp.name}': {e}")
+                failed.append(fp.name)
         if _IS_HF_SPACE:
-            push_vectorstore_to_hf_hub()
+            if failed:
+                logger.warning(f"Skipping vectorstore push — {len(failed)} file(s) failed: {failed}")
+            else:
+                push_vectorstore_to_hf_hub()
 
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _index_missing_files)
