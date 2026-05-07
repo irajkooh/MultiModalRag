@@ -794,23 +794,15 @@ def build_ui():
 
                 // ── 5. Thinking overlay inside question box ──
                 window._lastQuestion = '';
-                function _captureQuestion(sampleText) {
-                    if (sampleText) { window._lastQuestion = sampleText; return; }
+                document.addEventListener('input', function(e) {
                     var wrap = document.getElementById('chat-input-wrap');
-                    var ta = wrap ? wrap.querySelector('textarea') : null;
-                    if (ta && ta.value.trim()) window._lastQuestion = ta.value.trim();
-                }
-                document.addEventListener('mousedown', function(e) {
-                    var askWrap = document.getElementById('ask-btn');
-                    var sqBtn = e.target.closest && e.target.closest('.sample-q-btn');
-                    if (sqBtn) { _captureQuestion(sqBtn.textContent.trim()); }
-                    else if (askWrap && askWrap.contains(e.target)) { _captureQuestion(null); }
-                }, true);
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        var inputWrap = document.getElementById('chat-input-wrap');
-                        if (inputWrap && inputWrap.contains(e.target)) _captureQuestion(null);
+                    if (wrap && wrap.contains(e.target) && e.target.tagName === 'TEXTAREA') {
+                        window._lastQuestion = e.target.value.trim();
                     }
+                }, true);
+                document.addEventListener('mousedown', function(e) {
+                    var sqBtn = e.target.closest && e.target.closest('.sample-q-btn');
+                    if (sqBtn) window._lastQuestion = sqBtn.textContent.trim();
                 }, true);
                 function _setupThinkingOverlay() {
                     var indicator = document.getElementById('thinking-indicator');
