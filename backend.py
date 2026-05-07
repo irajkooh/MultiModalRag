@@ -975,7 +975,14 @@ def _question_to_sql(question: str, schema_info: list, conn) -> tuple[str, list,
     ]
 
     for attempt in range(2):
-        sql = _strip_sql_fences(_call_llm(sql_messages).strip())
+        try:
+            llm_out = _call_llm(sql_messages)
+        except Exception as e:
+            logger.warning(f"LLM SQL generation failed: {e}")
+            return None
+        if not llm_out:
+            return None
+        sql = _strip_sql_fences(llm_out.strip())
         try:
             cursor = conn.execute(sql)
             rows = cursor.fetchall()
@@ -992,8 +999,9 @@ def _question_to_sql(question: str, schema_info: list, conn) -> tuple[str, list,
 
 
 _TABLE_INTENT_RE = re.compile(
-    r"\b(sum|total|average|avg|mean|max|min|maximum|minimum|count|how much|how many|"
+    r"\b(sum|total|average|avg|mean|maximum|minimum|count|how much|how many|"
     r"calculate|tallest|largest|smallest|highest|lowest|most|least|"
+    r"(?:max|min)(?!\s+\d)|"
     r"per (month|year|day|week|item|person|category)|"
     r"(sales|revenue|profit|cost|price|amount|balance|credit|debit|spending|paid|owe)\b.*\b(of|for|by|in|per)\b|"
     r"\b(of|for|by|in)\b.*\b(sales|revenue|profit|cost|price|amount|balance|credit|debit))\b",
