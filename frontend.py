@@ -736,39 +736,6 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // Capture scroll position and immediately lock before submit fires
-                window._savedScrollTop = 0;
-                window._scrollLockId   = 0;
-                function _startScrollLock() {
-                    var savedTop = window._savedScrollTop;
-                    var id = ++window._scrollLockId;
-                    (function lockFrame() {
-                        if (window._scrollLockId !== id) return;
-                        var el = _getChatScrollEl();
-                        if (el) el.scrollTop = savedTop;
-                        requestAnimationFrame(lockFrame);
-                    })();
-                }
-                document.addEventListener('mousedown', function(e) {
-                    var askWrap = document.getElementById('ask-btn');
-                    var isSampleBtn = e.target.closest && e.target.closest('.sample-q-btn');
-                    if ((askWrap && askWrap.contains(e.target)) || isSampleBtn) {
-                        var el = _getChatScrollEl();
-                        window._savedScrollTop = el ? el.scrollTop : 0;
-                        _startScrollLock();
-                    }
-                }, true);
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        var inputWrap = document.getElementById('chat-input-wrap');
-                        if (inputWrap && inputWrap.contains(e.target)) {
-                            var el = _getChatScrollEl();
-                            window._savedScrollTop = el ? el.scrollTop : 0;
-                            _startScrollLock();
-                        }
-                    }
-                }, true);
-
                 // ── 3. Scroll to bottom — called once when answer is complete ──
                 window._scrollChatToBottom = function() {
                     var chatEl = document.querySelector('.chatbot-wrap');
@@ -826,16 +793,6 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
-                function _getChatScrollEl() {
-                    var chatEl = document.querySelector('.chatbot-wrap');
-                    if (!chatEl) return null;
-                    var scrollEl = null;
-                    var divs = chatEl.querySelectorAll('div');
-                    for (var i = 0; i < divs.length; i++) {
-                        if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
-                    }
-                    return scrollEl;
-                }
                 function _setupThinkingOverlay() {
                     var indicator = document.getElementById('thinking-indicator');
                     var wrap = document.getElementById('chat-input-wrap');
@@ -847,11 +804,6 @@ def build_ui():
                     new MutationObserver(function() {
                         var isThinking = !!indicator.textContent.trim();
                         ov.style.display = isThinking ? 'block' : 'none';
-                        if (isThinking) {
-                            _startScrollLock();
-                        } else {
-                            window._scrollLockId++;
-                        }
                     }).observe(indicator, {childList:true, subtree:true, characterData:true});
                 }
                 setTimeout(_setupThinkingOverlay, 600);
@@ -986,7 +938,6 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            if (window._scrollLockId !== undefined) window._scrollLockId++;
             if (window.speechSynthesis && window.speechSynthesis.speaking)
                 window.speechSynthesis.cancel();
             window._ttsPlaying = false;
