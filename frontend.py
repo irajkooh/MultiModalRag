@@ -237,6 +237,14 @@ def delete_all_embeddings():
     return f"<span style='color:#4ade80'>&#128465; {resp['message']}</span>"
 
 
+def get_debug_info():
+    import json
+    data = api_get("/debug", timeout=15)
+    if "error" in data:
+        return f"<span style='color:#ff4d4f'>⚠️ {data['error']}</span>"
+    return f"<pre style='color:#e2e8f0;font-size:0.85em;white-space:pre-wrap;background:#111;padding:10px;border-radius:8px'>{json.dumps(data, indent=2)}</pre>"
+
+
 def add_url(url: str) -> str:
     """
     Start a background crawl, then poll until done (or error).
@@ -567,6 +575,8 @@ def build_ui():
               gr.Markdown('<span style="font-size:0.95em;color:#f87171;">⚠️ Remove ALL embeddings? This cannot be undone.</span>')
               confirm_yes_btn = gr.Button("✔ Yes, remove all", elem_id="confirm-yes-btn")
               confirm_no_btn  = gr.Button("✖ Cancel",          elem_id="confirm-no-btn")
+            debug_btn = gr.Button("🔍 Debug Info", elem_id="debug-btn")
+            debug_out = gr.HTML(value="", elem_id="debug-out")
 
         tts_audio_box= gr.Textbox(value="", visible=False, elem_id="tts-ready-box")
         copy_box     = gr.Textbox(value="", visible=False, elem_id="copy-box")
@@ -858,6 +868,7 @@ def build_ui():
           inputs=[],
           outputs=[status_text],
         )
+        debug_btn.click(fn=get_debug_info, outputs=[debug_out])
 
         # Always update state when user changes selection
         doc_list.change(

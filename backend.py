@@ -63,30 +63,32 @@ def sync_from_hf_hub():
     """
     api = _hf_api()
     if not api:
+        print("[STARTUP] sync_data: SKIPPED — HF_DATASET_REPO or HF_TOKEN not set", flush=True)
         return
     try:
         import huggingface_hub
         files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
-        for path_in_repo in files:
-            # We store uploaded files under "data/<filename>" in the dataset repo
-            if not path_in_repo.startswith("data/"):
-                continue
+        data_files = [f for f in files if f.startswith("data/") and
+                      Path(f).suffix.lower() in SUPPORTED_EXTENSIONS and Path(f).name]
+        print(f"[STARTUP] sync_data: {len(data_files)} supported file(s) in HF Hub", flush=True)
+        downloaded_count = 0
+        for path_in_repo in data_files:
             basename = Path(path_in_repo).name
-            if not basename or Path(basename).suffix.lower() not in SUPPORTED_EXTENSIONS:
-                continue
             local_path = Path(DATA_DIR) / basename
             if local_path.exists():
-                logger.info(f"HF Hub sync: '{basename}' already present locally — skipping.")
                 continue
-            downloaded = huggingface_hub.hf_hub_download(
+            dl = huggingface_hub.hf_hub_download(
                 repo_id=HF_DATASET_REPO,
                 filename=path_in_repo,
                 repo_type="dataset",
                 token=HF_TOKEN,
             )
-            shutil.copy2(downloaded, str(local_path))
-            logger.info(f"HF Hub sync: downloaded '{basename}'")
+            shutil.copy2(dl, str(local_path))
+            downloaded_count += 1
+            print(f"[STARTUP] sync_data: downloaded '{basename}'", flush=True)
+        print(f"[STARTUP] sync_data: {downloaded_count} new file(s) downloaded", flush=True)
     except Exception as e:
+        print(f"[STARTUP] sync_data: FAILED — {e}", flush=True)
         logger.warning(f"HF Hub sync (download) failed: {e}")
 
 
@@ -133,6 +135,7 @@ def sync_vectorstore_from_hf_hub():
     load existing embeddings and avoid re-indexing on cold start.
     """
     if not (HF_DATASET_REPO and HF_TOKEN):
+        print("[STARTUP] sync_vectorstore: SKIPPED — HF_DATASET_REPO or HF_TOKEN not set", flush=True)
         return
     try:
         import huggingface_hub
@@ -141,8 +144,9 @@ def sync_vectorstore_from_hf_hub():
         files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
         vs_files = [f for f in files if f.startswith("vectorstore/")]
         if not vs_files:
-            logger.info("HF Hub: no persisted vectorstore found — will build from scratch.")
+            print("[STARTUP] sync_vectorstore: no vectorstore in HF Hub — will build from scratch", flush=True)
             return
+        print(f"[STARTUP] sync_vectorstore: downloading {len(vs_files)} file(s)...", flush=True)
         for path_in_repo in vs_files:
             rel = path_in_repo[len("vectorstore/"):]
             if not rel:
@@ -156,8 +160,9 @@ def sync_vectorstore_from_hf_hub():
                 token=HF_TOKEN,
             )
             shutil.copy2(dl, str(local))
-            logger.info(f"HF Hub vectorstore: restored '{rel}'")
+        print(f"[STARTUP] sync_vectorstore: restored {len(vs_files)} file(s) OK", flush=True)
     except Exception as e:
+        print(f"[STARTUP] sync_vectorstore: FAILED — {e}", flush=True)
         logger.warning(f"HF Hub vectorstore sync failed: {e}")
 
 
@@ -319,22 +324,31 @@ logger = logging.getLogger(__name__)
 # already on disk so we skip the network calls for a fast startup.
 _IS_HF_SPACE = bool(os.environ.get("SPACE_ID"))
 
-logger.info("Pre-init: copying committed baseline files...")
+print(
+    f"[STARTUP] IS_HF_SPACE={_IS_HF_SPACE} | "
+    f"HF_DATASET_REPO={'SET' if HF_DATASET_REPO else 'NOT SET'} | "
+    f"HF_TOKEN={'SET' if HF_TOKEN else 'NOT SET'}",
+    flush=True,
+)
 _copy_committed_files()
 if _IS_HF_SPACE:
-    logger.info("Pre-init: restoring vectorstore from HF Hub (Space cold-start)...")
     sync_vectorstore_from_hf_hub()
-    logger.info("Pre-init: restoring data files from HF Hub (Space cold-start)...")
     sync_from_hf_hub()
-    logger.info("Pre-init: restoring tables from HF Hub...")
     sync_tables_from_hf_hub()
-    logger.info("Pre-init: restoring images from HF Hub...")
     sync_images_from_hf_hub()
 else:
     logger.info("Pre-init: local run — skipping HF Hub sync (files already on disk).")
 
 # ─── Singletons ───────────────────────────────────────────────────────────────
 vs = VectorStoreManager(persist_dir=VECTORSTORE_DIR)
+_vs_chunks = vs.total_chunks()
+_vs_sources = vs.list_sources()
+_data_files = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
+print(
+    f"[STARTUP] VS loaded: {_vs_chunks} chunks, {len(_vs_sources)} source(s): {_vs_sources}",
+    flush=True,
+)
+print(f"[STARTUP] DATA_DIR files: {_data_files}", flush=True)
 rag = RAGEngine(vector_store=vs, model=OLLAMA_MODEL)
 memory = ConversationMemory()
 ts = TableStore()
@@ -474,10 +488,14 @@ async def startup_event():
         for fp in missing:
             try:
                 n = index_file(str(fp))
-                logger.info(f"Startup index: '{fp.name}' — {n} chunks")
+                logger.warning(f"Startup index OK: '{fp.name}' — {n} chunks")
             except Exception as e:
-                logger.error(f"Startup index failed for '{fp.name}': {e}")
+                logger.error(f"Startup index FAILED: '{fp.name}': {e}", exc_info=True)
                 failed.append(fp.name)
+        logger.warning(
+            "Startup index complete: %d OK, %d failed. VS now has %d chunks.",
+            len(missing) - len(failed), len(failed), vs.total_chunks(),
+        )
         if _IS_HF_SPACE:
             if failed:
                 logger.warning(f"Skipping vectorstore push — {len(failed)} file(s) failed: {failed}")
@@ -505,6 +523,30 @@ async def get_status():
         model=rag.model,
         device=device_info()["label"],
     )
+
+
+@app.get("/debug")
+async def get_debug():
+    """Diagnostic endpoint — shows startup config and current VS/data state."""
+    data_files = [
+        f.name for f in Path(DATA_DIR).iterdir()
+        if f.suffix.lower() in SUPPORTED_EXTENSIONS
+    ]
+    vs_files = []
+    try:
+        vs_files = list(Path(VECTORSTORE_DIR).rglob("*"))
+        vs_files = [str(p.relative_to(VECTORSTORE_DIR)) for p in vs_files if p.is_file()]
+    except Exception:
+        pass
+    return {
+        "is_hf_space": _IS_HF_SPACE,
+        "hf_dataset_repo_set": bool(HF_DATASET_REPO),
+        "hf_token_set": bool(HF_TOKEN),
+        "vs_chunks": vs.total_chunks(),
+        "vs_sources": vs.list_sources(),
+        "data_dir_files": data_files,
+        "vectorstore_files": vs_files,
+    }
 
 
 @app.post("/documents/upload")
