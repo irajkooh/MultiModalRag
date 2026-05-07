@@ -154,6 +154,49 @@ except Exception as e:
     print(f"⚠  HF Hub data sync failed: {e}")
 PYEOF
 
+# ── Upload data/tables/ (SQLite DBs) to HF Hub dataset ───────────────────────
+echo "▶ Syncing data/tables/ to HF Hub dataset..."
+python3 - <<'PYEOF'
+import os, sys, re
+from pathlib import Path
+
+token = os.environ.get("MultiModalRag_Token", "").strip()
+if not token:
+    try:
+        with open("_secrets/HF_TOKEN.txt") as f:
+            for line in f:
+                line = line.strip()
+                if re.match(r'^hf_[A-Za-z0-9]+$', line):
+                    token = line
+                    break
+    except Exception:
+        pass
+if not token:
+    print("⚠  HF token not found — skipping tables sync to HF Hub")
+    sys.exit(0)
+
+tables_dir = Path("data/tables")
+if not tables_dir.exists() or not any(tables_dir.iterdir()):
+    print("  data/tables/ is empty — skipping.")
+    sys.exit(0)
+
+from huggingface_hub import HfApi
+api = HfApi(token=token)
+repo = "irajkoohi/MultiModalRag_dataset"
+try:
+    api.upload_folder(
+        folder_path=str(tables_dir),
+        path_in_repo="tables",
+        repo_id=repo,
+        repo_type="dataset",
+        commit_message="deploy: sync tables",
+        ignore_patterns=["*.lock", ".DS_Store"],
+    )
+    print(f"✅  Uploaded data/tables/ to HF Hub dataset")
+except Exception as e:
+    print(f"⚠  Tables sync failed: {e}")
+PYEOF
+
 # ── HF Space push via a temp directory (never touches working tree) ──────────
 echo "▶ Building clean Space deploy branch (binary files excluded)..."
 
