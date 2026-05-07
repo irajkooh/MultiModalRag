@@ -793,17 +793,6 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
-                window._lastQuestion = '';
-                document.addEventListener('input', function(e) {
-                    var wrap = document.getElementById('chat-input-wrap');
-                    if (wrap && wrap.contains(e.target) && e.target.tagName === 'TEXTAREA') {
-                        window._lastQuestion = e.target.value.trim();
-                    }
-                }, true);
-                document.addEventListener('mousedown', function(e) {
-                    var sqBtn = e.target.closest && e.target.closest('.sample-q-btn');
-                    if (sqBtn) window._lastQuestion = sqBtn.textContent.trim();
-                }, true);
                 function _setupThinkingOverlay() {
                     var indicator = document.getElementById('thinking-indicator');
                     var wrap = document.getElementById('chat-input-wrap');
@@ -819,9 +808,10 @@ def build_ui():
                     ov.appendChild(line2);
                     wrap.appendChild(ov);
                     new MutationObserver(function() {
+                        var span = indicator.querySelector('[data-q]');
                         var isThinking = !!indicator.textContent.trim();
                         if (isThinking) {
-                            line2.textContent = window._lastQuestion || '';
+                            line2.textContent = span ? (span.getAttribute('data-q') || '') : '';
                             ov.style.display = 'block';
                         } else {
                             ov.style.display = 'none';
@@ -909,14 +899,16 @@ def build_ui():
           outputs=[doc_list, status_text, submit_btn, header_md, source_filter_dd],
         )
 
-        _THINKING_HTML = "<span style='color:#facc15;font-weight:600;'>⏳ Thinking...</span>"
+        def _thinking_html(q):
+          import html as _html
+          return f"<span style='color:#facc15;font-weight:600;' data-q='{_html.escape(q, quote=True)}'>⏳ Thinking...</span>"
 
         def on_submit(message, history, n, temp, src_filter):
           if not message.strip():
             yield history, "", gr.update(), "", gr.update()
             return
           history = history or []
-          yield gr.update(), "", _THINKING_HTML, gr.update(), gr.update()
+          yield gr.update(), "", _thinking_html(message), gr.update(), gr.update()
           updated_history, stats = chat_fn(message, history, n, temp, src_filter)
           tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
           tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
