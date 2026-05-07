@@ -793,17 +793,47 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
+                window._lastQuestion = '';
+                function _captureQuestion(sampleText) {
+                    if (sampleText) { window._lastQuestion = sampleText; return; }
+                    var wrap = document.getElementById('chat-input-wrap');
+                    var ta = wrap ? wrap.querySelector('textarea') : null;
+                    if (ta && ta.value.trim()) window._lastQuestion = ta.value.trim();
+                }
+                document.addEventListener('mousedown', function(e) {
+                    var askWrap = document.getElementById('ask-btn');
+                    var sqBtn = e.target.closest && e.target.closest('.sample-q-btn');
+                    if (sqBtn) { _captureQuestion(sqBtn.textContent.trim()); }
+                    else if (askWrap && askWrap.contains(e.target)) { _captureQuestion(null); }
+                }, true);
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        var inputWrap = document.getElementById('chat-input-wrap');
+                        if (inputWrap && inputWrap.contains(e.target)) _captureQuestion(null);
+                    }
+                }, true);
                 function _setupThinkingOverlay() {
                     var indicator = document.getElementById('thinking-indicator');
                     var wrap = document.getElementById('chat-input-wrap');
                     if (!indicator || !wrap) { setTimeout(_setupThinkingOverlay, 400); return; }
                     var ov = document.createElement('div');
-                    ov.style.cssText = 'position:absolute;top:50%;left:14px;transform:translateY(-50%);z-index:100;pointer-events:none;color:#3b82f6;font-weight:600;font-size:1.1em;display:none;';
-                    ov.textContent = '⏳ Thinking...';
+                    ov.style.cssText = 'position:absolute;top:50%;left:14px;right:60px;transform:translateY(-50%);z-index:100;pointer-events:none;display:none;';
+                    var line1 = document.createElement('div');
+                    line1.style.cssText = 'color:#3b82f6;font-weight:600;font-size:1.05em;';
+                    line1.textContent = '⏳ Thinking...';
+                    var line2 = document.createElement('div');
+                    line2.style.cssText = 'color:#9ca3af;font-size:0.88em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                    ov.appendChild(line1);
+                    ov.appendChild(line2);
                     wrap.appendChild(ov);
                     new MutationObserver(function() {
                         var isThinking = !!indicator.textContent.trim();
-                        ov.style.display = isThinking ? 'block' : 'none';
+                        if (isThinking) {
+                            line2.textContent = window._lastQuestion || '';
+                            ov.style.display = 'block';
+                        } else {
+                            ov.style.display = 'none';
+                        }
                     }).observe(indicator, {childList:true, subtree:true, characterData:true});
                 }
                 setTimeout(_setupThinkingOverlay, 600);
