@@ -442,7 +442,28 @@ async def startup_event():
                 logger.warning(f"Startup image backfill failed for '{src}': {e}")
                 img_store.save(src, [])
 
+    def _reindex_if_empty():
+        """If vectorstore is empty but data files exist, re-index them all.
+        This self-heals after a failed HF Hub vectorstore restore on cold start.
+        """
+        if vs.total_chunks() > 0:
+            return
+        data_files = [
+            fp for fp in Path(DATA_DIR).iterdir()
+            if fp.suffix.lower() in SUPPORTED_EXTENSIONS
+        ]
+        if not data_files:
+            return
+        logger.warning(
+            "Vectorstore is empty but %d data file(s) found — re-indexing for self-heal.",
+            len(data_files),
+        )
+        index_all_data_dir()
+        if _IS_HF_SPACE:
+            push_vectorstore_to_hf_hub()
+
     loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _reindex_if_empty)
     loop.run_in_executor(None, _backfill_tables)
     loop.run_in_executor(None, _backfill_images)
     logger.info("HTTP server ready.")
