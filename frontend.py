@@ -792,6 +792,17 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
+                window._scrollLockInterval = null;
+                function _getChatScrollEl() {
+                    var chatEl = document.querySelector('.chatbot-wrap');
+                    if (!chatEl) return null;
+                    var scrollEl = null;
+                    var divs = chatEl.querySelectorAll('div');
+                    for (var i = 0; i < divs.length; i++) {
+                        if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
+                    }
+                    return scrollEl;
+                }
                 function _setupThinkingOverlay() {
                     var indicator = document.getElementById('thinking-indicator');
                     var wrap = document.getElementById('chat-input-wrap');
@@ -801,7 +812,21 @@ def build_ui():
                     ov.textContent = '⏳ Thinking...';
                     wrap.appendChild(ov);
                     new MutationObserver(function() {
-                        ov.style.display = indicator.textContent.trim() ? 'block' : 'none';
+                        var isThinking = !!indicator.textContent.trim();
+                        ov.style.display = isThinking ? 'block' : 'none';
+                        if (isThinking) {
+                            var scrollEl = _getChatScrollEl();
+                            var savedTop = scrollEl ? scrollEl.scrollTop : 0;
+                            if (window._scrollLockInterval) clearInterval(window._scrollLockInterval);
+                            window._scrollLockInterval = setInterval(function() {
+                                if (scrollEl) scrollEl.scrollTop = savedTop;
+                            }, 50);
+                        } else {
+                            if (window._scrollLockInterval) {
+                                clearInterval(window._scrollLockInterval);
+                                window._scrollLockInterval = null;
+                            }
+                        }
                     }).observe(indicator, {childList:true, subtree:true, characterData:true});
                 }
                 setTimeout(_setupThinkingOverlay, 600);
@@ -936,6 +961,7 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
+            if (window._scrollLockInterval) { clearInterval(window._scrollLockInterval); window._scrollLockInterval = null; }
             if (window.speechSynthesis && window.speechSynthesis.speaking)
                 window.speechSynthesis.cancel();
             window._ttsPlaying = false;
