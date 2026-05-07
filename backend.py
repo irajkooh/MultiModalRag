@@ -94,8 +94,8 @@ def sync_from_hf_hub():
 
 def push_to_hf_hub(filename: str):
     """Push a single file from data dir to the HF Hub dataset repo."""
-    if not _IS_HF_SPACE:
-        return  # skip network upload during local dev
+    if not (HF_DATASET_REPO and HF_TOKEN):
+        return
     api = _hf_api()
     if not api:
         return
@@ -170,8 +170,8 @@ def push_vectorstore_to_hf_hub():
     """Push the entire vectorstore directory to HF Hub dataset.
     Called after every index or delete operation so embeddings survive restarts.
     """
-    if not _IS_HF_SPACE:
-        return  # skip network upload during local dev
+    if not (HF_DATASET_REPO and HF_TOKEN):
+        return
     api = _hf_api()
     if not api:
         return
@@ -202,7 +202,7 @@ def push_vectorstore_to_hf_hub():
 
 
 def push_tables_to_hf_hub():
-    if not _IS_HF_SPACE:
+    if not (HF_DATASET_REPO and HF_TOKEN):
         return
     api = _hf_api()
     if not api:
@@ -252,7 +252,7 @@ def sync_tables_from_hf_hub():
 
 
 def push_images_to_hf_hub():
-    if not _IS_HF_SPACE:
+    if not (HF_DATASET_REPO and HF_TOKEN):
         return
     api = _hf_api()
     if not api:
