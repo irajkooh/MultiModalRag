@@ -442,28 +442,33 @@ async def startup_event():
                 logger.warning(f"Startup image backfill failed for '{src}': {e}")
                 img_store.save(src, [])
 
-    def _reindex_if_empty():
-        """If vectorstore is empty but data files exist, re-index them all.
-        This self-heals after a failed HF Hub vectorstore restore on cold start.
+    def _index_missing_files():
+        """Index any file in data/ that is not yet in the vectorstore.
+        Runs on every startup to self-heal after a stale or failed vectorstore restore.
+        Safe to run because deleted files are now removed from disk too.
         """
-        if vs.total_chunks() > 0:
-            return
-        data_files = [
+        indexed = set(vs.list_sources())
+        missing = [
             fp for fp in Path(DATA_DIR).iterdir()
-            if fp.suffix.lower() in SUPPORTED_EXTENSIONS
+            if fp.suffix.lower() in SUPPORTED_EXTENSIONS and fp.name not in indexed
         ]
-        if not data_files:
+        if not missing:
             return
         logger.warning(
-            "Vectorstore is empty but %d data file(s) found — re-indexing for self-heal.",
-            len(data_files),
+            "%d file(s) in data/ not in vectorstore — indexing: %s",
+            len(missing), [f.name for f in missing],
         )
-        index_all_data_dir()
+        for fp in missing:
+            try:
+                n = index_file(str(fp))
+                logger.info(f"Startup index: '{fp.name}' — {n} chunks")
+            except Exception as e:
+                logger.error(f"Startup index failed for '{fp.name}': {e}")
         if _IS_HF_SPACE:
             push_vectorstore_to_hf_hub()
 
     loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _reindex_if_empty)
+    loop.run_in_executor(None, _index_missing_files)
     loop.run_in_executor(None, _backfill_tables)
     loop.run_in_executor(None, _backfill_images)
     logger.info("HTTP server ready.")
@@ -520,16 +525,19 @@ async def upload_status(filename: str):
 
 @app.delete("/documents/{filename:path}")
 async def delete_document(filename: str):
-    """Remove a document's embeddings from the vector store only. File is kept on disk."""
+    """Remove a document's embeddings and delete the file from disk and HF Hub."""
     removed_chunks = vs.remove_document(filename)
     ts.remove(filename)
     img_store.remove(filename)
+    file_path = Path(DATA_DIR) / filename
+    file_path.unlink(missing_ok=True)
     loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, delete_from_hf_hub, filename)
     await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
     await loop.run_in_executor(None, push_tables_to_hf_hub)
     await loop.run_in_executor(None, push_images_to_hf_hub)
     if removed_chunks > 0:
-        return {"message": f"Removed {removed_chunks} indexed chunks for '{filename}'. File kept on disk."}
+        return {"message": f"Removed '{filename}' ({removed_chunks} chunks)."}
     else:
         raise HTTPException(404, f"No indexed chunks found for '{filename}'.")
 
@@ -564,16 +572,20 @@ async def reextract_all():
 
 @app.delete("/documents")
 async def delete_all_documents():
-    """Remove ALL embeddings from the vector store only. Files are kept on disk."""
+    """Remove ALL embeddings and delete all user files from disk and HF Hub."""
     filenames = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
     removed = vs.clear_all()
     ts.clear_all()
     img_store.clear_all()
+    for name in filenames:
+        (Path(DATA_DIR) / name).unlink(missing_ok=True)
     loop = asyncio.get_running_loop()
+    for name in filenames:
+        await loop.run_in_executor(None, delete_from_hf_hub, name)
     await loop.run_in_executor(None, push_vectorstore_to_hf_hub)
     await loop.run_in_executor(None, push_tables_to_hf_hub)
     await loop.run_in_executor(None, push_images_to_hf_hub)
-    return {"message": f"Removed all {removed} indexed chunks. {len(filenames)} file(s) kept on disk.", "chunks_removed": removed}
+    return {"message": f"Removed {removed} indexed chunks and {len(filenames)} file(s).", "chunks_removed": removed}
 
 
 # ─── Upload job tracker ──────────────────────────────────────────────────────
