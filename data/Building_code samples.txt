@@ -34,3 +34,18 @@ https://codes.iccsafe.org/codes/iecc
 https://codes.iccsafe.org/codes/chicago
 
 https://codes.iccsafe.org/content/IBC2024P1
+
+
+
+##### sample questions:
+how to install postgresql?
+create a cover letter for tella for lead architect position
+
+what is the total price of sold apples by william?
+what is the total sales of all items for william?
+what is the total sales of all sellers in 1/2/2022?
+what is the max, min, and avg values in column credit?
+what is the max, min, and avg credit, and balance?
+what are spendings in march 2026?
+how much i paid for grocery in march?
+how much i paid for grocery in april?
