@@ -89,7 +89,7 @@ git push origin main
 # ── Upload committed binary data files to HF Hub dataset ─────────────────────
 # PDFs/DOCX/PNGs are excluded from the Space rsync (no Git LFS support).
 # Uploading them here ensures sync_from_hf_hub() can download them on Space startup.
-echo "▶ Syncing binary data files to HF Hub dataset..."
+echo "▶ Syncing data files to HF Hub dataset (upload new + delete removed)..."
 python3 - <<'PYEOF'
 import os, sys, re, subprocess
 from pathlib import Path
@@ -109,33 +109,47 @@ if not token:
     print("⚠  HF token not found — skipping data file sync to HF Hub")
     sys.exit(0)
 
-from huggingface_hub import HfApi, CommitOperationAdd
+from huggingface_hub import HfApi, CommitOperationAdd, CommitOperationDelete
 api = HfApi(token=token)
 repo = "irajkoohi/MultiModalRag_dataset"
 
 result = subprocess.run(["git", "ls-files", "data/"], capture_output=True, text=True)
 committed = result.stdout.splitlines()
 
-# Only top-level binary files (no subdirs like images/ or tables/)
-binary_exts = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx'}
-to_upload = [
+# Top-level data files only (no subdirs like images/ or tables/)
+sync_exts = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx', '.txt'}
+local_files = [
     f for f in committed
-    if Path(f).suffix.lower() in binary_exts and '/' not in f[len("data/"):]
+    if Path(f).suffix.lower() in sync_exts and '/' not in f[len("data/"):]
+]
+local_set = set(local_files)
+
+# Files present on HF Hub dataset under data/ (top-level only)
+hub_data_files = [
+    f for f in api.list_repo_files(repo, repo_type="dataset")
+    if f.startswith("data/") and '/' not in f[len("data/"):]
 ]
 
-if not to_upload:
-    print("  No binary data files to upload.")
+upload_ops = [CommitOperationAdd(path_in_repo=f, path_or_fileobj=f) for f in local_files]
+delete_ops = [CommitOperationDelete(path_in_repo=f) for f in hub_data_files if f not in local_set]
+
+all_ops = upload_ops + delete_ops
+if not all_ops:
+    print("  Data files already in sync — nothing to do.")
     sys.exit(0)
 
-ops = [CommitOperationAdd(path_in_repo=f, path_or_fileobj=f) for f in to_upload]
 try:
     api.create_commit(
         repo_id=repo,
         repo_type="dataset",
-        operations=ops,
+        operations=all_ops,
         commit_message="deploy: sync data files",
     )
-    print(f"✅  Uploaded {len(ops)} file(s): {[Path(f).name for f in to_upload]}")
+    if upload_ops:
+        print(f"✅  Uploaded {len(upload_ops)} file(s): {[Path(f).name for f in local_files]}")
+    if delete_ops:
+        to_del = [Path(f).name for f in hub_data_files if f not in local_set]
+        print(f"🗑️  Deleted {len(delete_ops)} stale file(s) from HF Hub: {to_del}")
 except Exception as e:
     print(f"⚠  HF Hub data sync failed: {e}")
 PYEOF
