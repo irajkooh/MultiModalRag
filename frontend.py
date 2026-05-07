@@ -967,7 +967,19 @@ def build_ui():
             window._ttsPlaying = false;
             window._ttsText = val || null;
             if (window._ttsSetBtn) window._ttsSetBtn(false);
-            if (window._scrollChatToBottom) window._scrollChatToBottom();
+            function _scrollNow() {
+                var chatEl = document.querySelector('.chatbot-wrap');
+                if (!chatEl) return;
+                var scrollEl = null;
+                var divs = chatEl.querySelectorAll('div');
+                for (var i = 0; i < divs.length; i++) {
+                    if (divs[i].scrollHeight > divs[i].clientHeight + 10) scrollEl = divs[i];
+                }
+                if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+            }
+            setTimeout(_scrollNow, 100);
+            setTimeout(_scrollNow, 350);
+            setTimeout(_scrollNow, 700);
           }""",
         )
         copy_btn.click(fn=get_chat_for_copy, inputs=[chatbot], outputs=[copy_box])
