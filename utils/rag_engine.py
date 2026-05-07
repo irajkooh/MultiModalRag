@@ -68,6 +68,11 @@ def _make_ollama_client():
     return ollama.Client(host=OLLAMA_HOST)
 
 
+def _is_rate_limit(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "429" in msg or "rate_limit" in msg or "rate limit" in msg
+
+
 class RAGEngine:
     def __init__(self, vector_store: VectorStoreManager, model: str = None):
         self.vs = vector_store
@@ -165,31 +170,53 @@ class RAGEngine:
         memory.add("assistant", answer)
         yield answer
 
+    def _hf_fallback(self, messages, memory, question, temperature):
+        from huggingface_hub import InferenceClient
+        model = os.environ.get("HF_MODEL", DEFAULT_HF_MODEL)
+        client = InferenceClient(token=HF_TOKEN)
+        resp = client.chat_completion(
+            model=model,
+            messages=messages,
+            temperature=max(temperature, 0.01),
+            max_tokens=2048,
+        )
+        answer = resp.choices[0].message.content
+        memory.add("user", question)
+        memory.add("assistant", answer)
+        yield answer
+
     def _query_groq(self, messages, memory, question, temperature, stream):
-        if stream:
-            response_text = ""
-            with self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                stream=True,
-            ) as stream_resp:
-                for chunk in stream_resp:
-                    token = chunk.choices[0].delta.content or ""
-                    response_text += token
-                    yield token
-            memory.add("user", question)
-            memory.add("assistant", response_text)
-        else:
-            resp = self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-            )
-            answer = resp.choices[0].message.content
-            memory.add("user", question)
-            memory.add("assistant", answer)
-            yield answer
+        try:
+            if stream:
+                response_text = ""
+                with self._client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temperature,
+                    stream=True,
+                ) as stream_resp:
+                    for chunk in stream_resp:
+                        token = chunk.choices[0].delta.content or ""
+                        response_text += token
+                        yield token
+                memory.add("user", question)
+                memory.add("assistant", response_text)
+            else:
+                resp = self._client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=temperature,
+                )
+                answer = resp.choices[0].message.content
+                memory.add("user", question)
+                memory.add("assistant", answer)
+                yield answer
+        except Exception as e:
+            if _is_rate_limit(e) and HF_TOKEN:
+                logger.warning("Groq rate limit reached — falling back to HF Inference")
+                yield from self._hf_fallback(messages, memory, question, temperature)
+            else:
+                raise
 
     def _query_ollama(self, messages, memory, question, temperature, stream):
         if stream:
