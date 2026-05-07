@@ -10,8 +10,11 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 # Approximate token budget for conversation history (leave room for system + context)
-MAX_HISTORY_TOKENS = 2000
+MAX_HISTORY_TOKENS = 1200
 AVG_CHARS_PER_TOKEN = 4  # conservative estimate
+
+# Truncate individual messages before storing to prevent context bloat
+MAX_STORED_CHARS = 800
 
 
 def estimate_tokens(text: str) -> int:
@@ -37,7 +40,8 @@ class ConversationMemory:
         self.summary: Optional[str] = None  # compressed older history
 
     def add(self, role: str, content: str):
-        self.messages.append(Message(role=role, content=content))
+        stored = content if len(content) <= MAX_STORED_CHARS else content[:MAX_STORED_CHARS] + " …"
+        self.messages.append(Message(role=role, content=stored))
         self._maybe_compress()
 
     def _total_tokens(self) -> int:

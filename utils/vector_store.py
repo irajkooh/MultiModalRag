@@ -156,6 +156,16 @@ class VectorStoreManager:
             output.append({"text": doc, "metadata": meta, "distance": dist})
         return output
 
+    def query_per_source(self, query_text: str, n_per_source: int = 2) -> List[Dict[str, Any]]:
+        """Fetch top n_per_source chunks from every source independently.
+        Ensures all documents are represented regardless of collection size.
+        """
+        results = []
+        for source in self.list_sources():
+            chunks = self.query(query_text, n_results=n_per_source, source_filter=[source])
+            results.extend(chunks)
+        return results
+
     def list_sources(self) -> List[str]:
         """List all unique source document names."""
         if self.collection.count() == 0:

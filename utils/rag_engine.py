@@ -135,8 +135,9 @@ class RAGEngine:
         temperature: float = 0.0,
         stream: bool = False,
         source_filter: list = None,
+        pre_fetched_results: list = None,
     ) -> Generator[str, None, None]:
-        results = self.vs.query(question, n_results=n_results, source_filter=source_filter)
+        results = pre_fetched_results if pre_fetched_results is not None else self.vs.query(question, n_results=n_results, source_filter=source_filter)
 
         if self._is_off_topic(results):
             logger.info(f"Off-topic query (no relevant chunks): '{question[:60]}'")

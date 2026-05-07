@@ -829,6 +829,18 @@ _META_PATTERNS = [
     "help me", "how does this work", "how do you work",
 ]
 
+_ALL_DOCS_SUMMARY_PATTERNS = [
+    "summarize each doc", "summarize all doc", "summarize every doc",
+    "summarize each file", "summarize all file", "summarize every file",
+    "summary of each", "summary of all doc", "summary of every doc",
+    "overview of each", "overview of all doc",
+    "describe each doc", "describe all doc", "describe every doc",
+    "bullet point each", "bullet points for each",
+    "summarize the doc", "summarize the file",
+    "summarize all the doc", "summarize all the file",
+    "give me a summary of each", "give me a summary of all",
+]
+
 _DOCS_LIST_PATTERNS = [
     "how many doc", "how many file", "list doc", "list file",
     "what doc", "what file", "which doc", "which file",
@@ -863,6 +875,10 @@ def _docs_list_response() -> str | None:
         f"There are **{len(sources)}** indexed document(s) ({breakdown}):\n\n"
         f"{lines}"
     )
+
+def _is_all_docs_summary(text: str) -> bool:
+    normalized = text.strip().lower().rstrip("!?.,")
+    return any(p in normalized for p in _ALL_DOCS_SUMMARY_PATTERNS)
 
 _META_ANSWER = (
     "I'm your document assistant. Here's how I can help:\n\n"
@@ -1221,21 +1237,22 @@ async def query_documents(req: QueryRequest):
                 memory.add("assistant", f"{table_answer}\n\n[SQL used: {table_sql}]")
                 return table_answer, table_sql, "table_query", list(sources), estimate_tokens(req.question), estimate_tokens(table_answer), 0
 
-            results = vs.query(
-                req.question,
-                n_results=req.n_results,
-                source_filter=sf,
-            )
+            # "Summarize each/all doc" — fetch chunks from every source so no doc is missed
+            if _is_all_docs_summary(req.question) and not sf:
+                results = vs.query_per_source(req.question, n_per_source=2)
+            else:
+                results = vs.query(req.question, n_results=req.n_results, source_filter=sf)
+
             relevant = [r for r in results if r.get("distance", 2.0) <= RELEVANCE_THRESHOLD]
             chunks_used = len(relevant)
             if relevant:
                 best_dist = min(r.get("distance", 2.0) for r in relevant)
                 source_chunks = [r for r in relevant if r.get("distance", 2.0) <= best_dist + 0.3]
             else:
-                source_chunks = []
+                source_chunks = results if _is_all_docs_summary(req.question) else []
             sources = list({r["metadata"].get("source", "") for r in source_chunks})
             parts = []
-            for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False, source_filter=sf):
+            for token in rag.query(req.question, memory, n_results=req.n_results, temperature=req.temperature, stream=False, source_filter=sf, pre_fetched_results=results):
                 parts.append(token)
             answer = "".join(parts)
             tokens_user = estimate_tokens(req.question)
