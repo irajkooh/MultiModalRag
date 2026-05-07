@@ -309,7 +309,7 @@ def chat_fn(message, history, n_results, temperature, source_filter=None):
       method_note = f"🔍 *Answer retrieved from document chunks ({chunks_used} chunks)*"
 
     if sql_query:
-      answer += f"\n\n<details><summary>SQL query used</summary>\n\n```sql\n{sql_query}\n```\n\n</details>"
+      answer += f"\n\n**SQL query used:**\n```sql\n{sql_query}\n```"
 
     if sources:
       answer += f"\n\n{method_note}\n📄 *Sources: {', '.join(sources)}*"
