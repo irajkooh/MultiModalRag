@@ -735,14 +735,25 @@ def build_ui():
                     btn.addEventListener('mouseleave', reset);
                 }, true);
 
-                // Capture scroll position before submit fires (ask-btn or Enter key)
-                // Must be captured here, before Gradio auto-scrolls to "Thinking..."
+                // Capture scroll position and immediately lock before submit fires
                 window._savedScrollTop = 0;
+                window._scrollLockId   = 0;
+                function _startScrollLock() {
+                    var savedTop = window._savedScrollTop;
+                    var id = ++window._scrollLockId;
+                    (function lockFrame() {
+                        if (window._scrollLockId !== id) return;
+                        var el = _getChatScrollEl();
+                        if (el) el.scrollTop = savedTop;
+                        requestAnimationFrame(lockFrame);
+                    })();
+                }
                 document.addEventListener('mousedown', function(e) {
                     var askWrap = document.getElementById('ask-btn');
                     if (askWrap && askWrap.contains(e.target)) {
                         var el = _getChatScrollEl();
                         window._savedScrollTop = el ? el.scrollTop : 0;
+                        _startScrollLock();
                     }
                 }, true);
                 document.addEventListener('keydown', function(e) {
@@ -751,6 +762,7 @@ def build_ui():
                         if (inputWrap && inputWrap.contains(e.target)) {
                             var el = _getChatScrollEl();
                             window._savedScrollTop = el ? el.scrollTop : 0;
+                            _startScrollLock();
                         }
                     }
                 }, true);
@@ -812,8 +824,6 @@ def build_ui():
                 }, true);
 
                 // ── 5. Thinking overlay inside question box ──
-                window._scrollLockActive = false;
-                window._scrollLockInterval = null; // kept for compat with tts_audio_box handler
                 function _getChatScrollEl() {
                     var chatEl = document.querySelector('.chatbot-wrap');
                     if (!chatEl) return null;
@@ -836,16 +846,9 @@ def build_ui():
                         var isThinking = !!indicator.textContent.trim();
                         ov.style.display = isThinking ? 'block' : 'none';
                         if (isThinking) {
-                            var savedTop = window._savedScrollTop || 0;
-                            window._scrollLockActive = true;
-                            (function lockFrame() {
-                                if (!window._scrollLockActive) return;
-                                var el = _getChatScrollEl();
-                                if (el) el.scrollTop = savedTop;
-                                requestAnimationFrame(lockFrame);
-                            })();
+                            _startScrollLock();
                         } else {
-                            window._scrollLockActive = false;
+                            window._scrollLockId++;
                         }
                     }).observe(indicator, {childList:true, subtree:true, characterData:true});
                 }
@@ -937,7 +940,7 @@ def build_ui():
             yield history, "", gr.update(), "", gr.update()
             return
           history = history or []
-          yield gr.update(), "", _THINKING_HTML, "", gr.update()
+          yield gr.update(), "", _THINKING_HTML, gr.update(), gr.update()
           updated_history, stats = chat_fn(message, history, n, temp, src_filter)
           tokens_user = stats.get("tokens_user", 0) if isinstance(stats, dict) else 0
           tokens_assistant = stats.get("tokens_assistant", 0) if isinstance(stats, dict) else 0
@@ -981,8 +984,7 @@ def build_ui():
           fn=None,
           inputs=[tts_audio_box],
           js="""(val) => {
-            window._scrollLockActive = false;
-            if (window._scrollLockInterval) { clearInterval(window._scrollLockInterval); window._scrollLockInterval = null; }
+            if (window._scrollLockId !== undefined) window._scrollLockId++;
             if (window.speechSynthesis && window.speechSynthesis.speaking)
                 window.speechSynthesis.cancel();
             window._ttsPlaying = false;

@@ -73,6 +73,17 @@ class TableStore:
             conn = sqlite3.connect(str(db_path))
             for i, df in enumerate(dataframes):
                 try:
+                    df = df.copy()
+                    seen: dict = {}
+                    new_cols = []
+                    for col in df.columns:
+                        if col in seen:
+                            seen[col] += 1
+                            new_cols.append(f"{col}_{seen[col]}")
+                        else:
+                            seen[col] = 0
+                            new_cols.append(col)
+                    df.columns = new_cols
                     df.to_sql(f"t{i}", conn, if_exists="replace", index=False)
                     n += 1
                 except Exception as e:
