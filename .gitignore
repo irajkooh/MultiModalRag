@@ -3,10 +3,8 @@ __pycache__/
 *.pyo
 .env
 vectorstore/
-# data/ is intentionally tracked so source PDFs/images are baked into the Docker image.
-# Generated directories (images/, tables/) are excluded — they restore from HF Hub on cold start.
-data/images/
-data/tables/
+# data/ is intentionally tracked so source files and extracted data are in GitHub.
+# Generated directories are excluded from the Space push (see deploy_changes.sh) but committed to GitHub.
 _secrets/
 *.egg-info/
 dist/

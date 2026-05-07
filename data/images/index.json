@@ -1,0 +1,2536 @@
+{
+  "img_1.png": [
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/img_1.png/p1_i0.png",
+      "page": 1,
+      "image_index": 0
+    }
+  ],
+  "img_2.png": [
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/img_2.png/p1_i0.png",
+      "page": 1,
+      "image_index": 0
+    }
+  ],
+  "txt_1.txt": [],
+  "2010-design-standards.pdf": [
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i0.png",
+      "page": 1,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i1.png",
+      "page": 1,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i2.png",
+      "page": 1,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i3.png",
+      "page": 1,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i4.png",
+      "page": 1,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i5.png",
+      "page": 1,
+      "image_index": 5
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i6.png",
+      "page": 1,
+      "image_index": 6
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i7.png",
+      "page": 1,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p1_i8.png",
+      "page": 1,
+      "image_index": 8
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i0.png",
+      "page": 3,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i1.png",
+      "page": 3,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i2.png",
+      "page": 3,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i3.png",
+      "page": 3,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i6.png",
+      "page": 3,
+      "image_index": 6
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i7.png",
+      "page": 3,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i8.png",
+      "page": 3,
+      "image_index": 8
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p3_i9.png",
+      "page": 3,
+      "image_index": 9
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i0.png",
+      "page": 5,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i1.png",
+      "page": 5,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i2.png",
+      "page": 5,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i4.png",
+      "page": 5,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i5.png",
+      "page": 5,
+      "image_index": 5
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i7.png",
+      "page": 5,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i10.png",
+      "page": 5,
+      "image_index": 10
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i11.png",
+      "page": 5,
+      "image_index": 11
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i12.png",
+      "page": 5,
+      "image_index": 12
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p5_i13.png",
+      "page": 5,
+      "image_index": 13
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i0.png",
+      "page": 7,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i1.png",
+      "page": 7,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i2.png",
+      "page": 7,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i3.png",
+      "page": 7,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i4.png",
+      "page": 7,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i7.png",
+      "page": 7,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i8.png",
+      "page": 7,
+      "image_index": 8
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i9.png",
+      "page": 7,
+      "image_index": 9
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p7_i10.png",
+      "page": 7,
+      "image_index": 10
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i0.png",
+      "page": 19,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i1.png",
+      "page": 19,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i2.png",
+      "page": 19,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i3.png",
+      "page": 19,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i4.png",
+      "page": 19,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i7.png",
+      "page": 19,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i8.png",
+      "page": 19,
+      "image_index": 8
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i9.png",
+      "page": 19,
+      "image_index": 9
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p19_i10.png",
+      "page": 19,
+      "image_index": 10
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i0.png",
+      "page": 35,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i1.png",
+      "page": 35,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i2.png",
+      "page": 35,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i3.png",
+      "page": 35,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i6.png",
+      "page": 35,
+      "image_index": 6
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i7.png",
+      "page": 35,
+      "image_index": 7
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i8.png",
+      "page": 35,
+      "image_index": 8
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p35_i9.png",
+      "page": 35,
+      "image_index": 9
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p43_i0.png",
+      "page": 43,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p108_i0.png",
+      "page": 108,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p109_i0.png",
+      "page": 109,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p109_i1.png",
+      "page": 109,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p110_i0.png",
+      "page": 110,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p111_i0.png",
+      "page": 111,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p112_i0.png",
+      "page": 112,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p112_i1.png",
+      "page": 112,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p113_i0.png",
+      "page": 113,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p113_i1.png",
+      "page": 113,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p114_i0.png",
+      "page": 114,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p115_i0.png",
+      "page": 115,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p116_i0.png",
+      "page": 116,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p116_i1.png",
+      "page": 116,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p117_i0.png",
+      "page": 117,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p118_i0.png",
+      "page": 118,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p118_i1.png",
+      "page": 118,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p119_i0.png",
+      "page": 119,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p120_i0.png",
+      "page": 120,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p122_i0.png",
+      "page": 122,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p122_i1.png",
+      "page": 122,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p124_i0.png",
+      "page": 124,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i0.png",
+      "page": 125,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i1.png",
+      "page": 125,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i2.png",
+      "page": 125,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i3.png",
+      "page": 125,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i4.png",
+      "page": 125,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p125_i5.png",
+      "page": 125,
+      "image_index": 5
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p126_i0.png",
+      "page": 126,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p126_i1.png",
+      "page": 126,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p126_i2.png",
+      "page": 126,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p126_i3.png",
+      "page": 126,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p126_i4.png",
+      "page": 126,
+      "image_index": 4
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p127_i0.png",
+      "page": 127,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p127_i1.png",
+      "page": 127,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p127_i2.png",
+      "page": 127,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p127_i3.png",
+      "page": 127,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p128_i0.png",
+      "page": 128,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p128_i1.png",
+      "page": 128,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p128_i2.png",
+      "page": 128,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p128_i3.png",
+      "page": 128,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p129_i0.png",
+      "page": 129,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p133_i0.png",
+      "page": 133,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p134_i0.png",
+      "page": 134,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p134_i1.png",
+      "page": 134,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p135_i0.png",
+      "page": 135,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p135_i1.png",
+      "page": 135,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p136_i0.png",
+      "page": 136,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p136_i1.png",
+      "page": 136,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p137_i0.png",
+      "page": 137,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p139_i0.png",
+      "page": 139,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p140_i0.png",
+      "page": 140,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p140_i1.png",
+      "page": 140,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p142_i0.png",
+      "page": 142,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p142_i1.png",
+      "page": 142,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p143_i0.png",
+      "page": 143,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p143_i1.png",
+      "page": 143,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p143_i2.png",
+      "page": 143,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p148_i0.png",
+      "page": 148,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p148_i1.png",
+      "page": 148,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p148_i2.png",
+      "page": 148,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p150_i0.png",
+      "page": 150,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p152_i0.png",
+      "page": 152,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p153_i0.png",
+      "page": 153,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p154_i0.png",
+      "page": 154,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p156_i0.png",
+      "page": 156,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p157_i0.png",
+      "page": 157,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p158_i0.png",
+      "page": 158,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p159_i0.png",
+      "page": 159,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p159_i1.png",
+      "page": 159,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p160_i0.png",
+      "page": 160,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p161_i0.png",
+      "page": 161,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p161_i1.png",
+      "page": 161,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p162_i0.png",
+      "page": 162,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p163_i0.png",
+      "page": 163,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p165_i0.png",
+      "page": 165,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p166_i0.png",
+      "page": 166,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p166_i1.png",
+      "page": 166,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p167_i0.png",
+      "page": 167,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p168_i0.png",
+      "page": 168,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p169_i0.png",
+      "page": 169,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p170_i0.png",
+      "page": 170,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p170_i1.png",
+      "page": 170,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p171_i0.png",
+      "page": 171,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p172_i0.png",
+      "page": 172,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p174_i0.png",
+      "page": 174,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p176_i0.png",
+      "page": 176,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p177_i0.png",
+      "page": 177,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p177_i1.png",
+      "page": 177,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p178_i0.png",
+      "page": 178,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p179_i0.png",
+      "page": 179,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p180_i0.png",
+      "page": 180,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p180_i1.png",
+      "page": 180,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p181_i0.png",
+      "page": 181,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p181_i1.png",
+      "page": 181,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p182_i0.png",
+      "page": 182,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p182_i1.png",
+      "page": 182,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p183_i0.png",
+      "page": 183,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p184_i0.png",
+      "page": 184,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p185_i0.png",
+      "page": 185,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p186_i0.png",
+      "page": 186,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p187_i0.png",
+      "page": 187,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p187_i1.png",
+      "page": 187,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p188_i0.png",
+      "page": 188,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p188_i1.png",
+      "page": 188,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p189_i0.png",
+      "page": 189,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p191_i0.png",
+      "page": 191,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p192_i0.png",
+      "page": 192,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p193_i0.png",
+      "page": 193,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p193_i1.png",
+      "page": 193,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p194_i0.png",
+      "page": 194,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p196_i0.png",
+      "page": 196,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p197_i0.png",
+      "page": 197,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p197_i1.png",
+      "page": 197,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p197_i2.png",
+      "page": 197,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p198_i0.png",
+      "page": 198,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p198_i1.png",
+      "page": 198,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p199_i0.png",
+      "page": 199,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p201_i0.png",
+      "page": 201,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p204_i0.png",
+      "page": 204,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p206_i0.png",
+      "page": 206,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p207_i0.png",
+      "page": 207,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p208_i0.png",
+      "page": 208,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p208_i1.png",
+      "page": 208,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p209_i0.png",
+      "page": 209,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p209_i1.png",
+      "page": 209,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p211_i0.png",
+      "page": 211,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p212_i0.png",
+      "page": 212,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p219_i0.png",
+      "page": 219,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p220_i0.png",
+      "page": 220,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p222_i0.png",
+      "page": 222,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p224_i0.png",
+      "page": 224,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p225_i0.png",
+      "page": 225,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p226_i0.png",
+      "page": 226,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p230_i0.png",
+      "page": 230,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p234_i0.png",
+      "page": 234,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p235_i0.png",
+      "page": 235,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p235_i1.png",
+      "page": 235,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p236_i0.png",
+      "page": 236,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p237_i0.png",
+      "page": 237,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p237_i1.png",
+      "page": 237,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p239_i0.png",
+      "page": 239,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p241_i0.png",
+      "page": 241,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p244_i0.png",
+      "page": 244,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p245_i0.png",
+      "page": 245,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p247_i0.png",
+      "page": 247,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p248_i0.png",
+      "page": 248,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p248_i1.png",
+      "page": 248,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p249_i0.png",
+      "page": 249,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p250_i0.png",
+      "page": 250,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p251_i0.png",
+      "page": 251,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p251_i1.png",
+      "page": 251,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p252_i0.png",
+      "page": 252,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p252_i1.png",
+      "page": 252,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p253_i0.png",
+      "page": 253,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p253_i1.png",
+      "page": 253,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p254_i0.png",
+      "page": 254,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p254_i1.png",
+      "page": 254,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p255_i0.png",
+      "page": 255,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2010-design-standards.pdf/p255_i1.png",
+      "page": 255,
+      "image_index": 1
+    }
+  ],
+  "Significant Changes to the International Codes.pdf": [],
+  "Building_code samples.txt": [],
+  "2024 IBC.pdf": [
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p1_i0.png",
+      "page": 1,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p1_i1.png",
+      "page": 1,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p3_i0.png",
+      "page": 3,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p3_i1.png",
+      "page": 3,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p4_i0.png",
+      "page": 4,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p4_i1.png",
+      "page": 4,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p7_i0.png",
+      "page": 7,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p7_i1.png",
+      "page": 7,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p8_i0.png",
+      "page": 8,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p8_i1.png",
+      "page": 8,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p108_i0.png",
+      "page": 108,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p108_i1.png",
+      "page": 108,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p110_i0.png",
+      "page": 110,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p110_i1.png",
+      "page": 110,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p136_i0.png",
+      "page": 136,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p136_i1.png",
+      "page": 136,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p152_i0.png",
+      "page": 152,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p152_i1.png",
+      "page": 152,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p164_i0.png",
+      "page": 164,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p164_i1.png",
+      "page": 164,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p184_i0.png",
+      "page": 184,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p184_i1.png",
+      "page": 184,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p187_i0.png",
+      "page": 187,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p187_i1.png",
+      "page": 187,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p206_i0.png",
+      "page": 206,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p206_i1.png",
+      "page": 206,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p224_i0.png",
+      "page": 224,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p224_i1.png",
+      "page": 224,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p228_i0.png",
+      "page": 228,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p228_i1.png",
+      "page": 228,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p232_i0.png",
+      "page": 232,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p232_i1.png",
+      "page": 232,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p234_i0.png",
+      "page": 234,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p234_i1.png",
+      "page": 234,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p236_i0.png",
+      "page": 236,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p236_i1.png",
+      "page": 236,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p246_i0.png",
+      "page": 246,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p246_i1.png",
+      "page": 246,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p250_i0.png",
+      "page": 250,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p250_i1.png",
+      "page": 250,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p252_i0.png",
+      "page": 252,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p252_i1.png",
+      "page": 252,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p258_i0.png",
+      "page": 258,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p258_i1.png",
+      "page": 258,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p260_i0.png",
+      "page": 260,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p260_i1.png",
+      "page": 260,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p266_i0.png",
+      "page": 266,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p266_i1.png",
+      "page": 266,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p283_i0.png",
+      "page": 283,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p283_i1.png",
+      "page": 283,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p295_i0.png",
+      "page": 295,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p295_i1.png",
+      "page": 295,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p301_i0.png",
+      "page": 301,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p301_i1.png",
+      "page": 301,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p313_i0.png",
+      "page": 313,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p313_i1.png",
+      "page": 313,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p316_i0.png",
+      "page": 316,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p316_i1.png",
+      "page": 316,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p317_i0.png",
+      "page": 317,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p317_i1.png",
+      "page": 317,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p329_i0.png",
+      "page": 329,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p329_i1.png",
+      "page": 329,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p333_i0.png",
+      "page": 333,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p333_i1.png",
+      "page": 333,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p354_i0.png",
+      "page": 354,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p354_i1.png",
+      "page": 354,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p355_i0.png",
+      "page": 355,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p355_i1.png",
+      "page": 355,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p361_i0.png",
+      "page": 361,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p361_i1.png",
+      "page": 361,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p365_i0.png",
+      "page": 365,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p365_i1.png",
+      "page": 365,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p371_i0.png",
+      "page": 371,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p371_i1.png",
+      "page": 371,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p382_i0.png",
+      "page": 382,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p382_i1.png",
+      "page": 382,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p389_i0.png",
+      "page": 389,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p389_i1.png",
+      "page": 389,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p398_i0.png",
+      "page": 398,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p398_i1.png",
+      "page": 398,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p409_i0.png",
+      "page": 409,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p409_i1.png",
+      "page": 409,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p422_i0.png",
+      "page": 422,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p422_i1.png",
+      "page": 422,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p425_i0.png",
+      "page": 425,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p425_i1.png",
+      "page": 425,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p426_i0.png",
+      "page": 426,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p426_i1.png",
+      "page": 426,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p430_i0.png",
+      "page": 430,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p430_i1.png",
+      "page": 430,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p435_i0.png",
+      "page": 435,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p435_i1.png",
+      "page": 435,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p447_i0.png",
+      "page": 447,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p447_i1.png",
+      "page": 447,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p452_i0.png",
+      "page": 452,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p452_i1.png",
+      "page": 452,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p453_i0.png",
+      "page": 453,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p453_i1.png",
+      "page": 453,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p454_i0.png",
+      "page": 454,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p454_i1.png",
+      "page": 454,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p454_i2.png",
+      "page": 454,
+      "image_index": 2
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p454_i3.png",
+      "page": 454,
+      "image_index": 3
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p455_i0.png",
+      "page": 455,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p455_i1.png",
+      "page": 455,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i0.png",
+      "page": 458,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i1.png",
+      "page": 458,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i9.png",
+      "page": 458,
+      "image_index": 9
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i10.png",
+      "page": 458,
+      "image_index": 10
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i11.png",
+      "page": 458,
+      "image_index": 11
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p458_i17.png",
+      "page": 458,
+      "image_index": 17
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p459_i0.png",
+      "page": 459,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p459_i1.png",
+      "page": 459,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p460_i0.png",
+      "page": 460,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p460_i1.png",
+      "page": 460,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p461_i0.png",
+      "page": 461,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p461_i1.png",
+      "page": 461,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p464_i0.png",
+      "page": 464,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p464_i1.png",
+      "page": 464,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p467_i0.png",
+      "page": 467,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p467_i1.png",
+      "page": 467,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p468_i0.png",
+      "page": 468,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p468_i1.png",
+      "page": 468,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p469_i0.png",
+      "page": 469,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p469_i1.png",
+      "page": 469,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p470_i0.png",
+      "page": 470,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p470_i1.png",
+      "page": 470,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p471_i0.png",
+      "page": 471,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p471_i1.png",
+      "page": 471,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p473_i0.png",
+      "page": 473,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p473_i1.png",
+      "page": 473,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p475_i0.png",
+      "page": 475,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p475_i1.png",
+      "page": 475,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p477_i0.png",
+      "page": 477,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p477_i1.png",
+      "page": 477,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p483_i0.png",
+      "page": 483,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p483_i1.png",
+      "page": 483,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p485_i0.png",
+      "page": 485,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p485_i1.png",
+      "page": 485,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p489_i0.png",
+      "page": 489,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p489_i1.png",
+      "page": 489,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p493_i0.png",
+      "page": 493,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p493_i1.png",
+      "page": 493,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p495_i0.png",
+      "page": 495,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p495_i1.png",
+      "page": 495,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p496_i0.png",
+      "page": 496,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p496_i1.png",
+      "page": 496,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p497_i0.png",
+      "page": 497,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p497_i1.png",
+      "page": 497,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p499_i0.png",
+      "page": 499,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p499_i1.png",
+      "page": 499,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p501_i0.png",
+      "page": 501,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p501_i1.png",
+      "page": 501,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p507_i0.png",
+      "page": 507,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p507_i1.png",
+      "page": 507,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p509_i0.png",
+      "page": 509,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p509_i1.png",
+      "page": 509,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p511_i0.png",
+      "page": 511,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p511_i1.png",
+      "page": 511,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p513_i0.png",
+      "page": 513,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p513_i1.png",
+      "page": 513,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p515_i0.png",
+      "page": 515,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p515_i1.png",
+      "page": 515,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p517_i0.png",
+      "page": 517,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p517_i1.png",
+      "page": 517,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p519_i0.png",
+      "page": 519,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p519_i1.png",
+      "page": 519,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p521_i0.png",
+      "page": 521,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p521_i1.png",
+      "page": 521,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p523_i0.png",
+      "page": 523,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p523_i1.png",
+      "page": 523,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p525_i0.png",
+      "page": 525,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p525_i1.png",
+      "page": 525,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p529_i0.png",
+      "page": 529,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p529_i1.png",
+      "page": 529,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p533_i0.png",
+      "page": 533,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p533_i1.png",
+      "page": 533,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p537_i0.png",
+      "page": 537,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p537_i1.png",
+      "page": 537,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p539_i0.png",
+      "page": 539,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p539_i1.png",
+      "page": 539,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p541_i0.png",
+      "page": 541,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p541_i1.png",
+      "page": 541,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p543_i0.png",
+      "page": 543,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p543_i1.png",
+      "page": 543,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p544_i0.png",
+      "page": 544,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p544_i1.png",
+      "page": 544,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p545_i0.png",
+      "page": 545,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p545_i1.png",
+      "page": 545,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p548_i0.png",
+      "page": 548,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p548_i1.png",
+      "page": 548,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p553_i0.png",
+      "page": 553,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p553_i1.png",
+      "page": 553,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p555_i0.png",
+      "page": 555,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p555_i1.png",
+      "page": 555,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p559_i0.png",
+      "page": 559,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p559_i1.png",
+      "page": 559,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p561_i0.png",
+      "page": 561,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p561_i1.png",
+      "page": 561,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p563_i0.png",
+      "page": 563,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p563_i1.png",
+      "page": 563,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p564_i0.png",
+      "page": 564,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p564_i1.png",
+      "page": 564,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p565_i0.png",
+      "page": 565,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p565_i1.png",
+      "page": 565,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p567_i0.png",
+      "page": 567,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p567_i1.png",
+      "page": 567,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p569_i0.png",
+      "page": 569,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p569_i1.png",
+      "page": 569,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p571_i0.png",
+      "page": 571,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p571_i1.png",
+      "page": 571,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p573_i0.png",
+      "page": 573,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p573_i1.png",
+      "page": 573,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p577_i0.png",
+      "page": 577,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p577_i1.png",
+      "page": 577,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p581_i0.png",
+      "page": 581,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p581_i1.png",
+      "page": 581,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p582_i0.png",
+      "page": 582,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p582_i1.png",
+      "page": 582,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p583_i0.png",
+      "page": 583,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p583_i1.png",
+      "page": 583,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p584_i0.png",
+      "page": 584,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p584_i1.png",
+      "page": 584,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p585_i0.png",
+      "page": 585,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p585_i1.png",
+      "page": 585,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p586_i0.png",
+      "page": 586,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p586_i1.png",
+      "page": 586,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p587_i0.png",
+      "page": 587,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p587_i1.png",
+      "page": 587,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p589_i0.png",
+      "page": 589,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p589_i1.png",
+      "page": 589,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p591_i0.png",
+      "page": 591,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p591_i1.png",
+      "page": 591,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p599_i0.png",
+      "page": 599,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p599_i1.png",
+      "page": 599,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p600_i0.png",
+      "page": 600,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p600_i1.png",
+      "page": 600,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p601_i0.png",
+      "page": 601,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p601_i1.png",
+      "page": 601,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p605_i0.png",
+      "page": 605,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p605_i1.png",
+      "page": 605,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p607_i0.png",
+      "page": 607,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p607_i1.png",
+      "page": 607,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p608_i0.png",
+      "page": 608,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p608_i1.png",
+      "page": 608,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p609_i0.png",
+      "page": 609,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p609_i1.png",
+      "page": 609,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p611_i0.png",
+      "page": 611,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p611_i1.png",
+      "page": 611,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p612_i0.png",
+      "page": 612,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p612_i1.png",
+      "page": 612,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p615_i0.png",
+      "page": 615,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p615_i1.png",
+      "page": 615,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p617_i0.png",
+      "page": 617,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p617_i1.png",
+      "page": 617,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p619_i0.png",
+      "page": 619,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p619_i1.png",
+      "page": 619,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p621_i0.png",
+      "page": 621,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p621_i1.png",
+      "page": 621,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p623_i0.png",
+      "page": 623,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p623_i1.png",
+      "page": 623,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p625_i0.png",
+      "page": 625,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p625_i1.png",
+      "page": 625,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p639_i0.png",
+      "page": 639,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p639_i1.png",
+      "page": 639,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p650_i0.png",
+      "page": 650,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p650_i1.png",
+      "page": 650,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p651_i0.png",
+      "page": 651,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p651_i1.png",
+      "page": 651,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p673_i0.png",
+      "page": 673,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p673_i1.png",
+      "page": 673,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p689_i0.png",
+      "page": 689,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p689_i1.png",
+      "page": 689,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p707_i0.png",
+      "page": 707,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p707_i1.png",
+      "page": 707,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p711_i0.png",
+      "page": 711,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p711_i1.png",
+      "page": 711,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p718_i0.png",
+      "page": 718,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p718_i1.png",
+      "page": 718,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p725_i0.png",
+      "page": 725,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p725_i1.png",
+      "page": 725,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p741_i0.png",
+      "page": 741,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p741_i1.png",
+      "page": 741,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p743_i0.png",
+      "page": 743,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p743_i1.png",
+      "page": 743,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p757_i0.png",
+      "page": 757,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p757_i1.png",
+      "page": 757,
+      "image_index": 1
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p771_i0.png",
+      "page": 771,
+      "image_index": 0
+    },
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/2024 IBC.pdf/p771_i1.png",
+      "page": 771,
+      "image_index": 1
+    }
+  ],
+  "word.docx": [],
+  "img_3.png": [
+    {
+      "path": "/Users/ik/UVcodes/Multi-modal RAG_3/data/images/img_3.png/p1_i0.png",
+      "page": 1,
+      "image_index": 0
+    }
+  ]
+}
