@@ -223,6 +223,7 @@ def push_tables_to_hf_hub():
 
 def sync_tables_from_hf_hub():
     if not (HF_DATASET_REPO and HF_TOKEN):
+        print("[STARTUP] sync_tables: SKIPPED — HF_DATASET_REPO or HF_TOKEN not set", flush=True)
         return
     try:
         import huggingface_hub
@@ -231,7 +232,9 @@ def sync_tables_from_hf_hub():
         files = list(api.list_repo_files(HF_DATASET_REPO, repo_type="dataset"))
         table_files = [f for f in files if f.startswith("tables/")]
         if not table_files:
+            print("[STARTUP] sync_tables: no tables found on HF Hub — will rely on on-demand extraction", flush=True)
             return
+        print(f"[STARTUP] sync_tables: downloading {len(table_files)} file(s)...", flush=True)
         tables_dir = Path(DATA_DIR) / "tables"
         tables_dir.mkdir(parents=True, exist_ok=True)
         for path_in_repo in table_files:
@@ -247,7 +250,9 @@ def sync_tables_from_hf_hub():
             )
             shutil.copy2(dl, str(local))
             logger.info(f"HF Hub tables: restored '{rel}'")
+        print(f"[STARTUP] sync_tables: restored {len(table_files)} file(s) OK", flush=True)
     except Exception as e:
+        print(f"[STARTUP] sync_tables: FAILED — {e}", flush=True)
         logger.warning(f"HF Hub tables sync failed: {e}")
 
 
