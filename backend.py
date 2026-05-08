@@ -964,12 +964,26 @@ def _extract_tables(filepath: str) -> list:
 
 
 def _call_llm(messages) -> str:
-    """Direct LLM call with no RAG context."""
+    """Direct LLM call with no RAG context. Falls back to HF Inference on Groq rate-limit."""
     if BACKEND == "groq":
-        resp = rag._client.chat.completions.create(
-            model=rag.model, messages=messages, temperature=0.0,
-        )
-        return resp.choices[0].message.content
+        try:
+            resp = rag._client.chat.completions.create(
+                model=rag.model, messages=messages, temperature=0.0,
+            )
+            return resp.choices[0].message.content
+        except Exception as e:
+            msg = str(e).lower()
+            if ("429" in msg or "rate_limit" in msg or "rate limit" in msg) and HF_TOKEN:
+                logger.warning("Groq rate limit in _call_llm — falling back to HF Inference")
+                from huggingface_hub import InferenceClient
+                from utils.rag_engine import DEFAULT_HF_MODEL
+                client = InferenceClient(token=HF_TOKEN)
+                resp = client.chat_completion(
+                    model=os.environ.get("HF_MODEL", DEFAULT_HF_MODEL),
+                    messages=messages, temperature=0.01, max_tokens=512,
+                )
+                return resp.choices[0].message.content
+            raise
     elif BACKEND == "hf":
         resp = rag._client.chat_completion(
             model=rag.model, messages=messages, temperature=0.01, max_tokens=2048,
@@ -1124,9 +1138,7 @@ _TABLE_INTENT_RE = re.compile(
 
 def _is_table_question(question: str) -> bool:
     """Return True only if the question is asking for quantitative/analytical data from tables."""
-    result = bool(_TABLE_INTENT_RE.search(question))
-    print(f"[TABLE] _is_table_question({question!r}) → {result}", flush=True)
-    return result
+    return bool(_TABLE_INTENT_RE.search(question))
 
 
 def _run_table_query(question: str, source_filter=None) -> tuple[str, str] | None:
@@ -1139,14 +1151,10 @@ def _run_table_query(question: str, source_filter=None) -> tuple[str, str] | Non
         # Use all files in DATA_DIR, not just embedded ones
         sources = [f.name for f in Path(DATA_DIR).iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
 
-    print(f"[TABLE] sources={sources}", flush=True)
-    print(f"[TABLE] ts._index keys={list(ts._index.keys())}", flush=True)
-
     # On-demand extraction for sources not yet attempted
     for src in sources:
         if not ts.was_attempted(src):
             fp = Path(DATA_DIR) / src
-            print(f"[TABLE] on-demand extract: {src} (exists={fp.exists()})", flush=True)
             if fp.exists():
                 try:
                     extracted = _extract_tables(str(fp))
@@ -1156,7 +1164,6 @@ def _run_table_query(question: str, source_filter=None) -> tuple[str, str] | Non
                     ts.save(src, [])
 
     conn, schema_info = ts.load_into_memory(sources)
-    print(f"[TABLE] schema_info tables={[s['table_name'] for s in schema_info]}", flush=True)
     if not schema_info:
         conn.close()
         return None
