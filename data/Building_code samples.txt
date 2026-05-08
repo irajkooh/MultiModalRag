@@ -45,7 +45,26 @@ what is the total price of sold apples by william?
 what is the total sales of all items for william?
 what is the total sales of all sellers in 1/2/2022?
 what is the max, min, and avg values in column credit?
-what is the max, min, and avg values in column balance?
+what is the max, min, and avg credit, and balance?
 what are spendings in march 2026?
 how much i paid for grocery in march?
 how much i paid for grocery in april?
+
+####################################################
+Gror's Error:
+Error: 402 Client Error: Payment Required for url: https://router.huggingface.co/novita/v3/openai/chat/completions (Request ID: Root=1-69fd387c-648e5ad31d07898b025aaa7d;c90a160d-db1d-4faa-9301-1ff7070db91f)
+
+You have depleted your monthly included credits. Purchase pre-paid credits to continue using Inference Providers. Alternatively, subscribe to PRO to get 20x more included usage.
+
+🔍 Answer retrieved from document chunks (8 chunks)
+📄 Sources: 2010-design-standards.pdf, 2024 IBC.pdf
+
+##### On Groq's free tier there are two limits:
+
+RPM (requests per minute) — resets in seconds to ~1 minute
+Daily token limit (100K/day) — resets at midnight UTC
+If you only see the error occasionally and other questions work fine right after, it's RPM throttling — just wait 10–30 seconds and retry.
+
+If every question fails consistently, you've hit the daily 100K token cap — wait until midnight UTC (that's when the counter resets).
+
+You can check your actual usage at console.groq.com/settings/limits.
