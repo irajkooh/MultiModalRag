@@ -975,14 +975,18 @@ def _call_llm(messages) -> str:
             msg = str(e).lower()
             if ("429" in msg or "rate_limit" in msg or "rate limit" in msg) and HF_TOKEN:
                 logger.warning("Groq rate limit in _call_llm — falling back to HF Inference")
-                from huggingface_hub import InferenceClient
-                from utils.rag_engine import DEFAULT_HF_MODEL
-                client = InferenceClient(token=HF_TOKEN)
-                resp = client.chat_completion(
-                    model=os.environ.get("HF_MODEL", DEFAULT_HF_MODEL),
-                    messages=messages, temperature=0.01, max_tokens=512,
-                )
-                return resp.choices[0].message.content
+                try:
+                    from huggingface_hub import InferenceClient
+                    from utils.rag_engine import DEFAULT_HF_MODEL
+                    client = InferenceClient(token=HF_TOKEN)
+                    resp = client.chat_completion(
+                        model=os.environ.get("HF_MODEL", DEFAULT_HF_MODEL),
+                        messages=messages, temperature=0.01, max_tokens=512,
+                    )
+                    return resp.choices[0].message.content
+                except Exception as hf_err:
+                    logger.warning(f"HF Inference fallback also failed in _call_llm: {hf_err}")
+                    raise e
             raise
     elif BACKEND == "hf":
         resp = rag._client.chat_completion(
